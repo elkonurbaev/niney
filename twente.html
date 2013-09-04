@@ -1,0 +1,58 @@
+<!doctype html>
+<html ng-app="test-app">
+  <head>
+    <meta charset="UTF-8">
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0rc1/angular.min.js"></script>
+    <script src="mousewheel.js"></script>
+    <script src="utils.js"></script>
+    <script src="nine-e.js"></script>
+    <script src="twente.js"></script>
+    <link rel="stylesheet" href="nine-e.css">
+    <link rel="stylesheet" href="twente.css">
+  </head>
+  <body>
+  <div id="twentie_app">
+  	<div id="legend" ng-controller="LegendCtrl">
+  		<ul>
+  			<li ng-repeat="layer in layers">
+          		<input id="{{'layer_'+layer.id}}" type="checkbox" ng-model="layer.visible">
+         		<label for="{{'layer_'+layer.id}}" class="visible-{{layer.visible}}">{{layer.title}}</label>
+        	</li>
+  		</ul>
+  	</div>
+    <div ng-controller="MapCtrl">
+      <map id="map" focusmodel="focusModel">
+        <tileslayer tilemodel="tileModel"></tileslayer>
+        <div ng-repeat="layer in layers">
+        	<p ng-if="layer.visible">{{layer.title}}</p>
+        </div>
+        <h1 style="position: relative; margin: 30%;">{{tileModel.tileZ}}</h1>
+      </map>
+    </div>
+    <div id="navigationControl" focusmodel="focusModel" ng-controller="FocusButtonBarCtrl">
+        <button ng-click="panWest()">West</button>
+        <button ng-click="panEast()">East</button>
+        <button ng-click="zoomIn()">Zoom In</button>
+        <button ng-click="zoomOut()">Zoom Out</button>
+        <button onclick="setMapSize(900, 500)">Big</button>
+     	<button onclick="setMapSize(700, 300)">Small</button>
+    </div>
+	<div id="infoPanel">
+      	<div class="temp">
+        	Tiles:
+        	<ul>
+         		<li ng-repeat="tile in tileModel.tiles">{{tile.tileY +', '+ tile.tileX}}</li>
+        	</ul>
+     	 </div>
+      	 <div ng-controller="FocusPanelCtrl" class="temp">
+        	Center X: {{focusModel.centerScale.centerX}}<br><br>
+        	Center Y: {{focusModel.centerScale.centerY}}<br><br>
+       		Scale:<br><br>
+       	 	1: {{focusModel.centerScale.scale}}
+      	</div>
+    </div>
+  </div>
+  
+  </body>
+</html>
+
