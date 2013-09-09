@@ -185,8 +185,6 @@ function getZoomLevel(scale, round) {
     return zoomLevels[zoomLevels.length - 1];
 }
 
-
-
 function TileModel() {
     this.bounds = null;
     this.centerScale = null;
@@ -309,36 +307,280 @@ Tile.prototype.toCSS = function() {
 
 /* incomplete */
 
-function FeatureModel(data) {
-    this.features = data;
-    this.point = null;
+function FeatureModel(features, type) {
+    this.features = features;
+    this.featureType = type;
 }
 
-function Point(x, y) {
-    this.x = x;
+function FeatureType(name, properties) {
+    this.name = name;
+    this.properties = properties;
+}
+
+function Property(name, type){
+  	this.name = name;
+	this.type = type;
+}
+
+function PropertyType(){}
+
+PropertyType.prototype.BOOLEAN = "boolean";
+PropertyType.prototype.DOUBLE = "double";
+PropertyType.prototype.INTEGER = "integer";
+PropertyType.prototype.STRING = "string";
+PropertyType.prototype.GEOMETRY = "geometry";
+
+function Feature(featureType, propertyValues) {
+    this.featureType = featureType;
+    this.propertyValues = propertyValues;
+}
+
+function Geometry(){ }
+
+Point.prototype = Object.create(Geometry.prototype);
+
+function Point(x, y){ 
+	this.x = x;
     this.y = y;
 }
 
-function CSVServiceConnector(fieldSeparator, textDelimeter, url) {
-    this.fieldSeparator = fieldSeparator;
-    this.textDelimeter = textDelimeter;
+LineString.prototype = Object.create(Geometry.prototype);
+
+function LineString(points){
+    this.points = points;
+}
+
+Polygon.prototype = Object.create(Geometry.prototype);
+
+function Polygon(points){
+    this._super(this);
+    this.points = points;
+}
+
+function GeometryCollection(geometries){
+    this._super();
+    this.geometries = geometries;
+}
+
+function GeometryTools(){ }
+
+GeometryTools.prototype.transform = function(geometry, srid){
+	if (geometry == null) {
+		alert("No geometry given.");
+	}
+	if (!(geometry instanceof Point)) {
+		alert("The given geometry is not a point. Only point geometries are currently supported.");
+	}
+	var point = Point(geometry);
+			
+	if ((point.srid == 4326) && (srid == 900913)) {
+		var x = point.x * 20037508.3427892 / 180;
+		var y = Math.log(Math.tan((90 + point.y) * Math.PI / 360)) * 180 / Math.PI;
+		y = y * 20037508.3427892 / 180;
+		point = new Point(x, y);
+		point.srid = srid;
+		return point;
+	}
+	alert("The given srid transformation is currently not supported.");
+} 
+
+function CSVServiceConnector(http, featureModel, url) {
+	this.http = http;
+    this.fieldSeparator = ";";
+    this.textDelimeter = "\"";
+    this.featureModel = featureModel;
     this.url = url;
-    this.featureModel = null;
 }
 
 CSVServiceConnector.prototype.load = function(){
-  	var xhr = new XMLHttpRequest();
-	xhr.onreadystatechange = process;
-	xhr.open("GET", this.url, true);
-	xhr.send();
-
-	function process(){		
- 		 if (xhr.readyState == 4){
-  			this.featureModel = new FeatureModel(xhr.responseText);
-  		}
-	}
+	var obj = this;
+	var features = new Array();
+	this.http({method: 'GET', url: this.url}).
+  	success(function(data, status, headers, config) {
+  		features = obj.csvToFeatures(data);
+  	}).
+  	error(function(data, status, headers, config) {
+    	alert('error'+status);
+  	});	
 } 
-CSVServiceConnector.prototype.csvToFeatures = function(data){
-	 return data.splice(this.fieldSeparator);
+
+CSVServiceConnector.prototype.csvToFeatures = function(csv){
+	var features = new Array();
+	var lines = this.csvToLines(csv);
+	var feature = null;
+	var errorLines = new Array();
+	for (var i = 0; i < lines.length; i++) {
+		try {
+			feature = this.lineToFeature(lines[i], this.featureModel.featureType);
+			features.push(feature);
+		} catch (e) {
+			errorLines.push(i);
+		}
+	}
+	if (errorLines.length > 0) {
+		alert("Could not convert " + errorLines.length + " out of " + lines.length + " csv lines to features. Error lines: " + errorLines);
+	}
+	return features;
 }
 
+CSVServiceConnector.prototype.csvToLines = function(csv){
+	csv = csv.replace(new RegExp("^\\s+"), "").replace(new RegExp("\\s+$"), ""); 
+	var endOfFile = false;
+	var endOfLine = false;
+	var i = -1;
+	var j = -1;
+	var fields = new Array();
+	var lines = new Array();
+	while (!endOfFile) {
+		endOfLine = false;
+		while (!endOfLine) {
+			if (csv.indexOf(this.textDelimiter) == 0) {
+				csv = csv.substring(this.textDelimiter.length);
+				i = csv.search(new RegExp(this.textDelimiter + "($|\n|" + this.fieldSeparator + ")"));
+				j = i + this.textDelimiter.length;
+			} else {
+				i = csv.search(new RegExp("($|\n|" + this.fieldSeparator + ")"));
+				j = i;
+			}
+			fields.push(csv.substring(0, i));
+			csv = csv.substring(j);
+						
+			if (csv.indexOf(this.fieldSeparator) == 0) {
+				csv = csv.substring(this.fieldSeparator.length);
+			} else if (csv.indexOf("\n") == 0) {
+				csv = csv.substring(1);
+				lines.push(fields);
+				fields = new Array();
+				endOfLine = true;
+			} else if (csv.length == 0) {
+				lines.push(fields);
+				endOfFile = true;
+				endOfLine = true;
+			}
+		}
+	}
+	return lines;
+}
+
+CSVServiceConnector.prototype.lineToFeature = function(fields, featureType){
+	var propertyTypes = featureType.properties;
+	if (fields.length != propertyTypes.length) {
+		alert("Number of fields of " + fields.length + " in the csv does not match the number of properties of " + propertyTypes.length + " in the featuretype. " );
+	}
+	var propertyValues = new Array();
+	var wktConverter = new WKTConverter();
+	for (var i = 0; i < propertyTypes.length; i++) {
+		//if (fields[i] == null) { ?
+			//propertyValues.push(null); ?
+		//} else 
+		if (propertyTypes[i].type == PropertyType.prototype.GEOMETRY) {
+			//incomplete
+			propertyValues.push(wktConverter.wktToGeometry(fields[i]));
+		} else {
+			propertyValues.push(fields[i]);
+		}
+	}
+	return new Feature(featureType, propertyValues);
+}
+
+function WKTConverter() {
+	this.sridRegExp = /^"?SRID=(\d+);(.*)/;
+	this.geometryCollectionRegExp = /^"?GEOMETRYCOLLECTION\((.*?)\)"?$/;
+	this.pointRegExp = /^"?POINT\(([-\d\s\.]*)\)"?$/;
+	this.lineStringRegExp = /^"?LINESTRING\(([-\d\s\.,]*)\)"?$/; 
+	this.polygonRegExp = /^"?POLYGON\(\(([-\d\s\.,]*)\)\)"?$/;
+}
+
+WKTConverter.prototype.wktToGeometry = function(wkt){
+	var sridString = null;
+	if (wkt.search(this.sridRegExp) == 0) {
+		sridString = wkt.replace(this.sridRegExp, "$1");
+		wkt = wkt.replace(this.sridRegExp, "$2");
+	}		
+	var geometry = null;
+	if (wkt.search(this.geometryCollectionRegExp) == 0) {
+		geometry = this.wktToGeometryCollection(wkt);
+	} else if (wkt.search(this.pointRegExp) == 0) {
+		geometry = this.wktToPoint(wkt);
+	} else if (wkt.search(this.lineStringRegExp) == 0) {
+		geometry = this.wktToLineString(wkt);
+	} else if (wkt.search(this.polygonRegExp) == 0) {
+		geometry = this.wktToPolygon(wkt);
+	}
+	if ((geometry != null) && (sridString != null) && (sridString != "") && (sridString != "900913")) {
+		geometry.srid = int(sridString);
+		geometry = GeometryTools.transform(geometry, 900913);
+	}
+	return geometry;
+}
+
+WKTConverter.prototype.wktToGeometryCollection = function(wkt){
+	wkt = wkt.replace(this.geometryCollectionRegExp, "$1");
+	var endOfLine = false;
+	var i = -1;
+	var geometries = new Array();
+	while (!endOfLine) {
+		i = wkt.search(new RegExp(",(POINT|LINESTRING|POLYGON)"));
+		if (i > -1) {
+			geometries.push(wktToGeometry(wkt.substring(0, i)));
+			wkt = wkt.substring(i + 1);
+		} else {
+			geometries.push(wktToGeometry(wkt));
+			endOfLine = true;
+		}
+	}
+	return new GeometryCollection(geometries);
+}
+	
+WKTConverter.prototype.wktToPoint = function(wkt){
+	wkt = wkt.replace(this.pointRegExp, "$1");
+	var coords = wkt.split(" ");
+	return new Point(coords[0], coords[1]);
+}
+	
+WKTConverter.prototype.wktToLineString = function(wkt){		
+	wkt = wkt.replace(this.lineStringRegExp, "$1");
+	var pointStrings = wkt.split(",");
+	var coords = null;
+	var points = new Array();
+	for(var i = 0; i < pointStrings.length; ++i) {
+		coords = pointString[i].split(" ");
+		points.push(new Point(coords[0], coords[1]));
+	}
+	return new LineString(points);
+}
+
+WKTConverter.prototype.wktToPolygon = function(wkt){	
+	wkt = wkt.replace(this.polygonRegExp, "$1");
+	var pointStrings = wkt.split(",");
+	var coords = null;
+	var points = new Array();
+	for(var i = 0; i < pointStrings.length; ++i) {
+		coords = pointString[i].split(" ");
+		points.push(new Point(coords[0], coords[1]));
+	}
+	return new Polygon(new LineString(points));
+}
+		
+WKTConverter.prototype.geometryToWKT = function(geometry){		
+	if (geometry instanceof Point) {
+		return pointToWKT(Point(geometry));
+	} else if (geometry instanceof Polygon) {
+		return this.polygonToWKT(Polygon(geometry));
+	}
+	return null;
+}
+	
+WKTConverter.prototype.pointToWKT = function(point){		
+	return "POINT(" + point.x + " " + point.y + ")";
+}
+
+WKTConverter.prototype.polygonToWKT = function(polygon){	
+	var wkt = "POLYGON((";
+	var polyPoints = polygon.points;
+	for(var i = 0; i < polyPoints.length; ++i) {
+		wkt += polyPoints[i].x + " " + polyPoints[i].y + ",";
+	}
+	wkt = wkt.substring(0, wkt.length - 1) + "))";
+	return wkt;
+}

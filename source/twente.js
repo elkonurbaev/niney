@@ -40,13 +40,14 @@ angular.module('test-app', ['nine-e']).
         return scope;
     }]).
     factory('serviceScope', ['$rootScope', function($rootScope) {
-       var services = [
-        {id:1, url:'http://www.wegwerkmeldingen.nl/nine-e/trains.csv', fieldSeparator="\"", textDelimeter=";", type=''},
-    	{id:2, url:'http://www.wegwerkmeldingen.nl/nine-e/bikes.csv', fieldSeparator="\"", textDelimeter=";", type=''},
-    	{id:3, url:'http://www.wegwerkmeldingen.nl/nine-e/parkrides.csv', fieldSeparator="\"", textDelimeter=";", type=''},
-    	{id:4, url:'http://www.wegwerkmeldingen.nl/nine-e/carpools.csv', fieldSeparator="\"", textDelimeter=";", type=''},
-    	{id:5, url:'http://www.wegwerkmeldingen.nl/nine-e/carparks.csv', fieldSeparator="\"", textDelimeter=";", type=''},
-    	{id:6, url:'http://www.wegwerkmeldingen.nl/nine-e/webcams.csv', fieldSeparator="\"", textDelimeter=";", type=''}
+  	   var scope = $rootScope.$new();
+  	   var features = [
+        {id:1, url:'twentemobiel/trains.csv', featureName:'trainFeature', featureType:new FeatureType('trainFeature', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY), new Property('e', PropertyType.prototype.GEOMETRY), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING), new Property('e', PropertyType.prototype.STRING)))}/*,
+    	{id:2, url:'twentemobiel/bikes.csv', featureName:'bikesFeature', featureType:''},
+    	{id:3, url:'twentemobiel/parkrides.csv', featureName:'parkridesFeature', featureType:''},
+    	{id:4, url:'twentemobiel/carpools.csv', featureName:'carpoolsFeature', featureType:''},
+    	{id:5, url:'twentemobiel/carparks.csv', featureName:'carparksFeature', featureType:''},
+    	{id:6, url:'twentemobiel/webcams.csv', featureName:'webcamsFeature', featureType:''}*/
        ];
        scope.features = features;
        return scope;
@@ -98,8 +99,14 @@ angular.module('test-app', ['nine-e']).
     controller('LegendCtrl', ['$scope', 'layerScope', function ($scope, layerScope) {
         $scope.layers = layerScope.layers;
     }]).
-    controller('ServiceCtrl',  function ($scope, serviceScope) {
-    	$scope.services = serviceScope.services;
+    controller('ServiceCtrl',  function ($scope, $http, serviceScope) {
+    	$scope.features = serviceScope.features;
+    	for(var i = 0; i < $scope.features.length; ++i){
+    		var featureModel = new FeatureModel(null, $scope.features[i].featureType);
+    		var serviceConnector = new CSVServiceConnector($http, featureModel, $scope.features[i].url);
+    		serviceConnector.load();
+    	}
+    	
 	});
 
 function setMapSize(width, height) {
