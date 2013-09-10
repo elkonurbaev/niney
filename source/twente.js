@@ -41,7 +41,7 @@ angular.module('test-app', ['nine-e']).
     }]).
     factory('serviceScope', ['$rootScope', function($rootScope) {
   	   var scope = $rootScope.$new();
-  	   var features = [
+  	   var services = [
         {id:1, url:'twentemobiel/trains.csv', featureName:'trainFeature', featureType:new FeatureType('trainFeature', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY), new Property('e', PropertyType.prototype.GEOMETRY), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING), new Property('e', PropertyType.prototype.STRING)))}/*,
     	{id:2, url:'twentemobiel/bikes.csv', featureName:'bikesFeature', featureType:new FeatureType('trainFeature', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.GEOMETRY), new Property('d', PropertyType.prototype.STRING), new Property('e', PropertyType.prototype.STRING), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING), new Property('h', PropertyType.prototype.STRING), new Property('e', PropertyType.prototype.STRING), new Property('k', PropertyType.prototype.STRING), new Property('l', PropertyType.prototype.STRING), new Property('n', PropertyType.prototype.STRING), new Property('m', PropertyType.prototype.STRING), new Property('o', PropertyType.prototype.STRING), new Property('p', PropertyType.prototype.STRING), new Property('r', PropertyType.prototype.STRING)))},
     	{id:3, url:'twentemobiel/parkrides.csv', featureName:'parkridesFeature', featureType:new FeatureType('trainFeature', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY), new Property('e', PropertyType.prototype.GEOMETRY)))},
@@ -49,7 +49,7 @@ angular.module('test-app', ['nine-e']).
     	{id:5, url:'twentemobiel/carparks.csv', featureName:'carparksFeature', featureType:new FeatureType('trainFeature', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY), new Property('e', PropertyType.prototype.GEOMETRY)))},
     	{id:6, url:'twentemobiel/webcams.csv', featureName:'webcamsFeature', featureType:new FeatureType('trainFeature', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))}*/
        ];
-       scope.features = features;
+       scope.services = services;
        return scope;
     }]).
     factory('tileScope', ['$rootScope', function($rootScope) {
@@ -67,11 +67,20 @@ angular.module('test-app', ['nine-e']).
         boundsScope.timer.start();
         focusScope.model.centerScale = new CenterScale(0, 3000000, 110936068.18103503);
     }]).
-    controller('MapCtrl', ['$scope', 'boundsScope', 'focusScope', 'tileScope', 'layerScope', function ($scope, boundsScope, focusScope, tileScope, layerScope) {
+    controller('MapCtrl', ['$scope', '$http', 'boundsScope', 'focusScope', 'tileScope', 'layerScope', 'serviceScope', function ($scope, $http, boundsScope, focusScope, tileScope, layerScope, serviceScope) {
         $scope.boundsModel = boundsScope.model;
         $scope.focusModel = focusScope.model;
         $scope.tileModel = tileScope.model;
         $scope.layers = layerScope.layers;
+
+    	var services = serviceScope.services;
+    	var featureModels = new Array();
+    	for(var i = 0; i < services.length; ++i){
+    		var serviceConnector = new CSVServiceConnector($http, services[i].featureType, services[i].url);
+    		var features = serviceConnector.load($scope);
+    		var featureModel = new FeatureModel(features, services[i].featureType);
+    		featureModels.push(featureModel);
+    	}
     }]).
     controller('FocusButtonBarCtrl', ['$scope', 'focusScope', function ($scope, focusScope) {
         var focusModel = focusScope.model;
@@ -100,16 +109,7 @@ angular.module('test-app', ['nine-e']).
         $scope.layers = layerScope.layers;
     }]).
     controller('ServiceCtrl',  function ($scope, $http, serviceScope) {
-    	$scope.features = serviceScope.features;
-    	var featureModels = new Array();
-    	for(var i = 0; i < $scope.features.length; ++i){
-    		var serviceConnector = new CSVServiceConnector($http, $scope.features[i].featureType, $scope.features[i].url);
-    		var features = serviceConnector.load();
-    		var featureModel = new FeatureModel(features, $scope.features[i].featureType);
-    		featureModels.push(featureModel);
-    	}
-    	
-	});
+    });
 
 function setMapSize(width, height) {
     var mapStyle = document.getElementById("map").style;

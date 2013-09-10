@@ -392,12 +392,13 @@ function CSVServiceConnector(http, featureType, url) {
     this.url = url;
 }
 
-CSVServiceConnector.prototype.load = function(){
+CSVServiceConnector.prototype.load = function(scope){
 	var obj = this;
 	var features = new Array();
 	this.http({method: 'GET', url: this.url}).
   	success(function(data, status, headers, config) {
   		features = obj.csvToFeatures(data);
+                scope.features = features;
   		return features;
   	}).
   	error(function(data, status, headers, config) {
