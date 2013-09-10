@@ -384,11 +384,11 @@ GeometryTools.prototype.transform = function(geometry, srid){
 	alert("The given srid transformation is currently not supported.");
 } 
 
-function CSVServiceConnector(http, featureModel, url) {
+function CSVServiceConnector(http, featureType, url) {
 	this.http = http;
     this.fieldSeparator = ";";
     this.textDelimeter = "\"";
-    this.featureModel = featureModel;
+    this.featureType = featureType;
     this.url = url;
 }
 
@@ -398,6 +398,7 @@ CSVServiceConnector.prototype.load = function(){
 	this.http({method: 'GET', url: this.url}).
   	success(function(data, status, headers, config) {
   		features = obj.csvToFeatures(data);
+  		return features;
   	}).
   	error(function(data, status, headers, config) {
     	alert('error'+status);
@@ -411,7 +412,7 @@ CSVServiceConnector.prototype.csvToFeatures = function(csv){
 	var errorLines = new Array();
 	for (var i = 0; i < lines.length; i++) {
 		try {
-			feature = this.lineToFeature(lines[i], this.featureModel.featureType);
+			feature = this.lineToFeature(lines[i], this.featureType);
 			features.push(feature);
 		} catch (e) {
 			errorLines.push(i);
