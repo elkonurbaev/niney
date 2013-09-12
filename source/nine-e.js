@@ -49,8 +49,6 @@ Envelope.prototype.getHeight = function() {
     return this.maxY - this.minY;
 }
 
-
-
 function CenterScale(centerX, centerY, scale) {
     this.coordPixFactor = 0.000352778;
     this.centerX = centerX;
@@ -96,8 +94,6 @@ CenterScale.prototype.getPixY = function(height, worldY) {
     return pixY;
 }
 
-
-
 function FocusModel() {
     this.timer = null;
     this.centerScale = null;
@@ -133,15 +129,11 @@ FocusModel.prototype.setAnimationCenterScale = function(animationCenterScale) {
     }
 }
 
-
-
 function ZoomLevel(zoomLevel, scale, resolution) {
     this.zoomLevel = zoomLevel;
     this.scale = scale;
     this.resolution = resolution;
 }
-
-
 
 var zoomLevels = [
     new ZoomLevel(0, 443744272.72414012, 156543.0339),
@@ -213,7 +205,6 @@ TileModel.prototype.setBounds = function(bounds) {
 
 TileModel.prototype.setCenterScale = function(centerScale) {
     this.centerScale = centerScale;
-    
     this.resetLoaders();
 }
 
@@ -353,12 +344,12 @@ function LineString(points){
 Polygon.prototype = Object.create(Geometry.prototype);
 
 function Polygon(points){
-    this._super(this);
+    //this._super(this);
     this.points = points;
 }
 
 function GeometryCollection(geometries){
-    this._super();
+   // this._super();
     this.geometries = geometries;
 }
 
@@ -371,7 +362,7 @@ GeometryTools.prototype.transform = function(geometry, srid){
 	if (!(geometry instanceof Point)) {
 		alert("The given geometry is not a point. Only point geometries are currently supported.");
 	}
-	var point = Point(geometry);
+	var point = geometry;
 			
 	if ((point.srid == 4326) && (srid == 900913)) {
 		var x = point.x * 20037508.3427892 / 180;
@@ -387,19 +378,20 @@ GeometryTools.prototype.transform = function(geometry, srid){
 function CSVServiceConnector(http, featureType, url) {
 	this.http = http;
     this.fieldSeparator = ";";
-    this.textDelimeter = "\"";
+    this.textDelimiter = "\"";
     this.featureType = featureType;
     this.url = url;
 }
 
-CSVServiceConnector.prototype.load = function(scope){
+CSVServiceConnector.prototype.load = function(scope, callback){
 	var obj = this;
 	var features = new Array();
 	this.http({method: 'GET', url: this.url}).
   	success(function(data, status, headers, config) {
   		features = obj.csvToFeatures(data);
-                scope.features = features;
-  		return features;
+  		var featureModel = new FeatureModel(features, obj.featureType);
+  		scope.featureModels.push(featureModel);
+        //callback(featureModel);
   	}).
   	error(function(data, status, headers, config) {
     	alert('error'+status);
@@ -411,13 +403,13 @@ CSVServiceConnector.prototype.csvToFeatures = function(csv){
 	var lines = this.csvToLines(csv);
 	var feature = null;
 	var errorLines = new Array();
-	for (var i = 0; i < lines.length; i++) {
-		try {
+	for (var i = 0; i < 1; i++) {
+		//try {
 			feature = this.lineToFeature(lines[i], this.featureType);
 			features.push(feature);
-		} catch (e) {
-			errorLines.push(i);
-		}
+		//} catch (e) {
+		//	errorLines.push(i);
+		//}
 	}
 	if (errorLines.length > 0) {
 		alert("Could not convert " + errorLines.length + " out of " + lines.length + " csv lines to features. Error lines: " + errorLines);
@@ -442,11 +434,12 @@ CSVServiceConnector.prototype.csvToLines = function(csv){
 				j = i + this.textDelimiter.length;
 			} else {
 				i = csv.search(new RegExp("($|\n|" + this.fieldSeparator + ")"));
+				
 				j = i;
 			}
 			fields.push(csv.substring(0, i));
 			csv = csv.substring(j);
-						
+			
 			if (csv.indexOf(this.fieldSeparator) == 0) {
 				csv = csv.substring(this.fieldSeparator.length);
 			} else if (csv.indexOf("\n") == 0) {
@@ -459,7 +452,7 @@ CSVServiceConnector.prototype.csvToLines = function(csv){
 				endOfFile = true;
 				endOfLine = true;
 			}
-		}
+	    }
 	}
 	return lines;
 }
@@ -472,9 +465,9 @@ CSVServiceConnector.prototype.lineToFeature = function(fields, featureType){
 	var propertyValues = new Array();
 	var wktConverter = new WKTConverter();
 	for (var i = 0; i < propertyTypes.length; i++) {
-		//if (fields[i] == null) { ?
-			//propertyValues.push(null); ?
-		//} else 
+		if (fields[i] == "") { 
+			propertyValues.push(null); 
+		} else 
 		if (propertyTypes[i].type == PropertyType.prototype.GEOMETRY) {
 			//incomplete
 			propertyValues.push(wktConverter.wktToGeometry(fields[i]));
@@ -510,8 +503,8 @@ WKTConverter.prototype.wktToGeometry = function(wkt){
 		geometry = this.wktToPolygon(wkt);
 	}
 	if ((geometry != null) && (sridString != null) && (sridString != "") && (sridString != "900913")) {
-		geometry.srid = int(sridString);
-		geometry = GeometryTools.transform(geometry, 900913);
+		geometry.srid = parseInt(sridString);
+		geometry = GeometryTools.prototype.transform(geometry, 900913);
 	}
 	return geometry;
 }
@@ -524,10 +517,10 @@ WKTConverter.prototype.wktToGeometryCollection = function(wkt){
 	while (!endOfLine) {
 		i = wkt.search(new RegExp(",(POINT|LINESTRING|POLYGON)"));
 		if (i > -1) {
-			geometries.push(wktToGeometry(wkt.substring(0, i)));
+			geometries.push(this.wktToGeometry(wkt.substring(0, i)));
 			wkt = wkt.substring(i + 1);
 		} else {
-			geometries.push(wktToGeometry(wkt));
+			geometries.push(this.wktToGeometry(wkt));
 			endOfLine = true;
 		}
 	}

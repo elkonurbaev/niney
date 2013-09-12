@@ -2,7 +2,7 @@
 <html ng-app="test-app">
   <head>
     <meta charset="UTF-8">
-    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0rc1/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0-rc.2/angular.min.js"></script>
     <script src="mousewheel.js"></script>
     <script src="utils.js"></script>
     <script src="nine-e.js"></script>
@@ -29,8 +29,8 @@
         <div ng-repeat="layer in layers">
         	<p ng-if="layer.visible">{{layer.title}}</p>
         </div>
-        <p ng-repeat="feature in features">
-            {{feature.propertyValues[4].x}} {{feature.propertyValues[4].y}}
+        <p ng-repeat="featureModel in featureModels">
+            {{featureModel.featureType}} {{featureModel.featureType}}
         </p>
         <h1 style="position: relative; margin: 30%;">{{tileModel.tileZ}}</h1>
       </map>
