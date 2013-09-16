@@ -32,3 +32,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
         return directiveDefinitionObject;
     }
 );
+
+var p = new Point(2, 2);
+console.log(p.name);
+p.name = 'edilbek';
+console.log(p.name);

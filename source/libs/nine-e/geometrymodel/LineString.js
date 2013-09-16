@@ -2,4 +2,4 @@ function LineString(points){
     this.points = points;
 }
 
-LineString.prototype = Object.create(Geometry.prototype);
+LineString.prototype = new Geometry();

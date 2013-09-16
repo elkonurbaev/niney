@@ -3,4 +3,5 @@ function Polygon(points){
     this.points = points;
 }
 
-Polygon.prototype = Object.create(Geometry.prototype);
+Polygon.prototype = new Geometry();
+//Geometry.prototype.parent = null;

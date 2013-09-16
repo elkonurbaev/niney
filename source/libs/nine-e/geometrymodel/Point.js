@@ -1,6 +1,7 @@
 function Point(x, y){ 
 	this.x = x;
     this.y = y;
+    this.getParent();
 }
 
-Point.prototype = Object.create(Geometry.prototype);
+Point.prototype = new Geometry();

@@ -5,6 +5,8 @@ function Envelope(minX, minY, maxX, maxY) {
     this.maxY = maxY;
 }
 
+Envelope.prototype = new Geometry();
+
 Envelope.prototype.getWidth = function() {
     return this.maxX - this.minX;
 }
@@ -12,3 +14,4 @@ Envelope.prototype.getWidth = function() {
 Envelope.prototype.getHeight = function() {
     return this.maxY - this.minY;
 }
+

@@ -5,12 +5,10 @@ jsimport = function(url) {
     _script.src = url;
     _head.appendChild(_script);
 }
-jsimport("libs/nine-e/app/mousewheel.js");
-jsimport("libs/nine-e/app/utils.js");
-jsimport("libs/nine-e/app/nine-e.js");
-jsimport("libs/nine-e/geometrymodel/Envelope.js");
+
 jsimport("libs/nine-e/geometrymodel/Geometry.js");
 jsimport("libs/nine-e/geometrymodel/GeometryCollection.js");
+jsimport("libs/nine-e/geometrymodel/Envelope.js");
 jsimport("libs/nine-e/geometrymodel/GeometryTools.js");
 jsimport("libs/nine-e/geometrymodel/LineString.js");
 jsimport("libs/nine-e/geometrymodel/Point.js");
@@ -27,6 +25,9 @@ jsimport("libs/nine-e/focusmodel/ZoomLevel.js");
 jsimport("libs/nine-e/layermodel/Tile.js");
 jsimport("libs/nine-e/layermodel/TileModel.js");
 jsimport("libs/nine-e/service/CSVServiceConnector.js");
+jsimport("libs/nine-e/app/mousewheel.js");
+jsimport("libs/nine-e/app/utils.js");
+jsimport("libs/nine-e/app/nine-e.js");
 
 
 
