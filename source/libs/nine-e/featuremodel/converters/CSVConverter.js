@@ -1,38 +1,19 @@
-function CSVServiceConnector(http, featureType, url) {
-	this.http = http;
-    this.fieldSeparator = ";";
-    this.textDelimiter = "\"";
-    this.featureType = featureType;
-    this.url = url;
+
+function CSVConverter() {
 }
 
-CSVServiceConnector.prototype.load = function(scope, callback){
-	var obj = this;
+CSVConverter.prototype.csvToFeatures = function(csv, fieldSeparator, textDelimiter, featureType){
 	var features = new Array();
-	this.http({method: 'GET', url: this.url}).
-  	success(function(data, status, headers, config) {
-  		features = obj.csvToFeatures(data);
-  		var featureModel = new FeatureModel(features, obj.featureType);
-  		scope.featureModels.push(featureModel);
-        //callback(featureModel);
-  	}).
-  	error(function(data, status, headers, config) {
-    	alert('error'+status);
-  	});	
-} 
-
-CSVServiceConnector.prototype.csvToFeatures = function(csv){
-	var features = new Array();
-	var lines = this.csvToLines(csv);
+	var lines = this.csvToLines(csv, fieldSeparator, textDelimiter);
 	var feature = null;
 	var errorLines = new Array();
 	for (var i = 0; i < 1; i++) {
-		//try {
-			feature = this.lineToFeature(lines[i], this.featureType);
+		try {
+			feature = this.lineToFeature(lines[i], featureType);
 			features.push(feature);
-		//} catch (e) {
-		//	errorLines.push(i);
-		//}
+		} catch (e) {
+			errorLines.push(i);
+		}
 	}
 	if (errorLines.length > 0) {
 		alert("Could not convert " + errorLines.length + " out of " + lines.length + " csv lines to features. Error lines: " + errorLines);
@@ -40,7 +21,7 @@ CSVServiceConnector.prototype.csvToFeatures = function(csv){
 	return features;
 }
 
-CSVServiceConnector.prototype.csvToLines = function(csv){
+CSVConverter.prototype.csvToLines = function(csv, fieldSeparator, textDelimiter){
 	csv = csv.replace(new RegExp("^\\s+"), "").replace(new RegExp("\\s+$"), ""); 
 	var endOfFile = false;
 	var endOfLine = false;
@@ -51,20 +32,19 @@ CSVServiceConnector.prototype.csvToLines = function(csv){
 	while (!endOfFile) {
 		endOfLine = false;
 		while (!endOfLine) {
-			if (csv.indexOf(this.textDelimiter) == 0) {
-				csv = csv.substring(this.textDelimiter.length);
-				i = csv.search(new RegExp(this.textDelimiter + "($|\n|" + this.fieldSeparator + ")"));
-				j = i + this.textDelimiter.length;
+			if (csv.indexOf(textDelimiter) == 0) {
+				csv = csv.substring(textDelimiter.length);
+				i = csv.search(new RegExp(textDelimiter + "($|\n|" + fieldSeparator + ")"));
+				j = i + textDelimiter.length;
 			} else {
-				i = csv.search(new RegExp("($|\n|" + this.fieldSeparator + ")"));
-				
+				i = csv.search(new RegExp("($|\n|" + fieldSeparator + ")"));
 				j = i;
 			}
 			fields.push(csv.substring(0, i));
 			csv = csv.substring(j);
 			
-			if (csv.indexOf(this.fieldSeparator) == 0) {
-				csv = csv.substring(this.fieldSeparator.length);
+			if (csv.indexOf(fieldSeparator) == 0) {
+				csv = csv.substring(fieldSeparator.length);
 			} else if (csv.indexOf("\n") == 0) {
 				csv = csv.substring(1);
 				lines.push(fields);
@@ -80,7 +60,7 @@ CSVServiceConnector.prototype.csvToLines = function(csv){
 	return lines;
 }
 
-CSVServiceConnector.prototype.lineToFeature = function(fields, featureType){
+CSVConverter.prototype.lineToFeature = function(fields, featureType){
 	var propertyTypes = featureType.properties;
 	if (fields.length != propertyTypes.length) {
 		alert("Number of fields of " + fields.length + " in the csv does not match the number of properties of " + propertyTypes.length + " in the featuretype. " );
@@ -92,7 +72,6 @@ CSVServiceConnector.prototype.lineToFeature = function(fields, featureType){
 			propertyValues.push(null); 
 		} else 
 		if (propertyTypes[i].type == PropertyType.prototype.GEOMETRY) {
-			//incomplete
 			propertyValues.push(wktConverter.wktToGeometry(fields[i]));
 		} else {
 			propertyValues.push(fields[i]);
