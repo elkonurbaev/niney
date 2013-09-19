@@ -84,6 +84,14 @@ angular.module('test-app', ['nine-e']).
     controller('FocusButtonBarCtrl', ['$scope', 'focusScope', function ($scope, focusScope) {
         var focusModel = focusScope.model;
         
+        $scope.panNorth = function() {
+            var cs = focusModel.centerScale;
+            focusModel.setAnimationCenterScale(new CenterScale(cs.centerX, cs.centerY + 3000000, cs.scale));
+        }
+        $scope.panSouth = function() {
+            var cs = focusModel.centerScale;
+            focusModel.setAnimationCenterScale(new CenterScale(cs.centerX, cs.centerY - 3000000, cs.scale));
+        }
         $scope.panWest = function() {
             var cs = focusModel.centerScale;
             focusModel.setAnimationCenterScale(new CenterScale(cs.centerX - 3000000, cs.centerY, cs.scale));
