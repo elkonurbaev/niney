@@ -43,8 +43,8 @@ GeometryTools.prototype.transform = function(geometry, srid){
 	var point = geometry;
 			
 	if ((point.srid == 4326) && (srid == 900913)) {
-		var x = point.x * 20037508.3427892 / 180;
-		var y = Math.log(Math.tan((90 + point.y) * Math.PI / 360)) * 180 / Math.PI;
+		var x = Number(point.x) * 20037508.3427892 / 180;
+		var y = Math.log(Math.tan((90 + Number(point.y)) * Math.PI / 360)) * 180 / Math.PI;
 		y = y * 20037508.3427892 / 180;
 		point = new Point(x, y);
 		point.srid = srid;
