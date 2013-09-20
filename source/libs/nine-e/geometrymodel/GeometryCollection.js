@@ -11,6 +11,29 @@ function GeometryCollection(geometries){
 
 GeometryCollection.prototype = new Geometry();
 
+GeometryCollection.prototype.addChild = function(child) {
+	if (isChild(child)) {
+		return;
+	}
+			
+	_geometries.push(child);
+	child.parent = this;
+}
+		
+GeometryCollection.prototype.removeChild = function(child) {
+	if (!isChild(child)) {
+		return;
+	}
+			
+	for (var i = 0; i < points.length; i++) {
+		if (points[i] == child) {
+			points.splice(i, 1);
+			break;
+		}
+	}
+	child.parent = null;
+}
+		
 GeometryCollection.prototype.getChildGeometries = function(){
 	return this.geometries;
 }
