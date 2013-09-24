@@ -27,21 +27,22 @@
     <div ng-controller="MapCtrl">
       <map id="map" focusmodel="focusModel">
         <tileslayer tilemodel="tileModel"></tileslayer>
-<!--        <div ng-repeat="layer in layers">
-        	<p ng-if="layer.visible">{{layer.title}}</p>
-        </div> -->
         <div ng-repeat="layer in layers">
-        <div ng-if="layer.visible">
-        <div id="feature_{{layer.id}}" >
-        	<img src="{{layer.icon}}" ng-repeat="feature in featureModels[layer.id].features" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[feature.propertyValues.length-1].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[feature.propertyValues.length-1].x)}}px">
-      	 	</img>
-        </div>
-        </div>
+        	<div ng-if="layer.visible" id="feature_{{layer.id}}" >
+        		<div ng-repeat="feature in featureModels[layer.id].features" ng-switch on="!!feature.propertyValues[feature.propertyValues.length-1].geometries">
+         			<div ng-switch-when="false">
+         				<img src="{{layer.icon}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[feature.propertyValues.length-1].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[feature.propertyValues.length-1].x)}}px" />
+         			</div>
+         			<div ng-switch-when="true">
+         				<img ng-repeat="geometry in feature.propertyValues[feature.propertyValues.length-1].geometries track by $index" src="{{layer.icon}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, geometry.y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, geometry.x)}}px" />
+         			</div>
+      			</div>
+        	</div>
         </div>
         <svg id="svgelem" xmlns="http://www.w3.org/2000/svg">
     		<line x1="100" y1="100" x2="300" y2="300" style="stroke:red;stroke-width:2"/>
 		</svg>
-        <h1 style="position: relative; margin: 30%;">features.length: {{featureModels[0].features.length}}</h1>
+        <h1 style="position:relative; margin:30%;">features.length: {{featureModels[0].features.length}}</h1>
       </map>
     </div>
     <div id="navigationControl" focusmodel="focusModel" ng-controller="FocusButtonBarCtrl">

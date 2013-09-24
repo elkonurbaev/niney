@@ -10,7 +10,6 @@ CSVConverter.prototype.csvToFeatures = function(csv, fieldSeparator, textDelimit
 	for (var i = 0; i < lines.length; i++) {
 		try {
 			feature = this.lineToFeature(lines[i], featureType);
-			console.log(feature);
 			features.push(feature);
 		} catch (e) {
 			errorLines.push(i);
