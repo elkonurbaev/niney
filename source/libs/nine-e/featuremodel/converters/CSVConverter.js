@@ -7,9 +7,10 @@ CSVConverter.prototype.csvToFeatures = function(csv, fieldSeparator, textDelimit
 	var lines = this.csvToLines(csv, fieldSeparator, textDelimiter);
 	var feature = null;
 	var errorLines = new Array();
-	for (var i = 0; i < 1; i++) {
+	for (var i = 0; i < lines.length; i++) {
 		try {
 			feature = this.lineToFeature(lines[i], featureType);
+			console.log(feature);
 			features.push(feature);
 		} catch (e) {
 			errorLines.push(i);
@@ -40,6 +41,7 @@ CSVConverter.prototype.csvToLines = function(csv, fieldSeparator, textDelimiter)
 				i = csv.search(new RegExp("($|\n|" + fieldSeparator + ")"));
 				j = i;
 			}
+			//console.log(csv.substring(0, i));
 			fields.push(csv.substring(0, i));
 			csv = csv.substring(j);
 			
@@ -67,15 +69,19 @@ CSVConverter.prototype.lineToFeature = function(fields, featureType){
 	}
 	var propertyValues = new Array();
 	var wktConverter = new WKTConverter();
+	var geometry = null;
 	for (var i = 0; i < propertyTypes.length; i++) {
 		if (fields[i] == "") { 
 			propertyValues.push(null); 
 		} else 
 		if (propertyTypes[i].type == PropertyType.prototype.GEOMETRY) {
-			propertyValues.push(wktConverter.wktToGeometry(fields[i]));
+			geometry = wktConverter.wktToGeometry(fields[i]);
 		} else {
 			propertyValues.push(fields[i]);
 		}
+	}
+	if(geometry != null){
+		propertyValues.push(geometry);
 	}
 	return new Feature(featureType, propertyValues);
 }

@@ -28,14 +28,12 @@ angular.module('test-app', ['nine-e']).
     factory('layerScope', ['$rootScope', function($rootScope) {
         var scope = $rootScope.$new();
         var layers = [
-    	{id:1, title:'Hinder en afsluitingen', visible:false},
-    	{id:2, title:'Treinstations', visible:false},
-    	{id:3, title:'OV-fietslocaties', visible:false},
-    	{id:4, title:'P&R-plaatsen', visible:false},
-    	{id:5, title:'Carpoolplaatsen', visible:false},
-    	{id:6, title:'Parkeren in het centrum', visible:false},
-    	{id:7, title:'Filemeldingen', visible:false},
-    	{id:8, title:'Buienradar', visible:false}
+    	{id:2, title:'Treinstations', visible:false, icon:'twentemobiel/images/trains.png'},
+    	{id:3, title:'OV-fietslocaties', visible:false, icon:'twentemobiel/images/bikes.png'},
+    	{id:4, title:'P&R-plaatsen', visible:false, icon:'twentemobiel/images/parkrides.png'},
+    	{id:5, title:'Carpoolplaatsen', visible:false, icon:'twentemobiel/images/carpools.png'},
+    	{id:6, title:'Parkeren in het centrum', visible:false, icon:'twentemobiel/images/carparks.png'},
+    	{id:7, title:'Webcams', visible:false, icon:'twentemobiel/images/webcams.png'}
   		];
         scope.layers = layers;
         return scope;
@@ -43,12 +41,12 @@ angular.module('test-app', ['nine-e']).
     factory('serviceScope', ['$rootScope', function($rootScope) {
   	   var scope = $rootScope.$new();
   	   var services = [
-        {id:1, url:'twentemobiel/trains.csv', featureName:'trainFeature', featureType:new FeatureType('trainFeature', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY), new Property('e', PropertyType.prototype.GEOMETRY), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING)))},
-    	{id:2, url:'twentemobiel/bikes.csv', featureName:'bikesFeature', featureType:new FeatureType('bikesFeature', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.GEOMETRY), new Property('d', PropertyType.prototype.STRING), new Property('e', PropertyType.prototype.STRING), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING), new Property('h', PropertyType.prototype.STRING), new Property('e', PropertyType.prototype.STRING), new Property('k', PropertyType.prototype.STRING), new Property('l', PropertyType.prototype.STRING)))},
-    	{id:3, url:'twentemobiel/parkrides.csv', featureName:'parkridesFeature', featureType:new FeatureType('parkridesFeature', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))},
-    	{id:4, url:'twentemobiel/carpools.csv', featureName:'carpoolsFeature', featureType:new FeatureType('carpoolsFeature', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))},
-    	{id:5, url:'twentemobiel/carparks.csv', featureName:'carparksFeature', featureType:new FeatureType('carparksFeature', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))},
-    	{id:6, url:'twentemobiel/webcams.csv', featureName:'webcamsFeature', featureType:new FeatureType('webcamsFeature', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))}
+        {id:2, url:'twentemobiel/trains.csv', featureName:'trainFeatureModel', featureType:new FeatureType('trainFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY), new Property('e', PropertyType.prototype.STRING), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING)))},
+    	{id:3, url:'twentemobiel/bikes.csv', featureName:'bikesFeatureModel', featureType:new FeatureType('bikesFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.GEOMETRY), new Property('d', PropertyType.prototype.STRING), new Property('e', PropertyType.prototype.STRING), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING), new Property('h', PropertyType.prototype.STRING), new Property('e', PropertyType.prototype.STRING), new Property('k', PropertyType.prototype.STRING), new Property('l', PropertyType.prototype.STRING)))},
+    	{id:4, url:'twentemobiel/parkrides.csv', featureName:'parkridesFeatureModel', featureType:new FeatureType('parkridesFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))},
+    	{id:5, url:'twentemobiel/carpools.csv', featureName:'carpoolsFeatureModel', featureType:new FeatureType('carpoolsFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))},
+    	{id:6, url:'twentemobiel/carparks.csv', featureName:'carparksFeatureModel', featureType:new FeatureType('carparksFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))},
+    	{id:7, url:'twentemobiel/webcams.csv', featureName:'webcamsFeatureModel', featureType:new FeatureType('webcamsFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))}
        ];
        scope.services = services;
        return scope;
@@ -66,7 +64,7 @@ angular.module('test-app', ['nine-e']).
         
         boundsScope.timer.tick();
         boundsScope.timer.start();
-        focusScope.model.centerScale = new CenterScale(0, 3000000, 110936068.18103503);
+        focusScope.model.centerScale = new CenterScale(700000, 7000000, 4000000);
     }]).
     controller('MapCtrl', ['$scope', '$http', 'boundsScope', 'focusScope', 'tileScope', 'layerScope', 'serviceScope', function ($scope, $http, boundsScope, focusScope, tileScope, layerScope, serviceScope) {
         $scope.boundsModel = boundsScope.model;
@@ -77,7 +75,7 @@ angular.module('test-app', ['nine-e']).
 
     	var services = serviceScope.services;
     	for(var i = 0; i < services.length; ++i){
-    		var serviceConnector = new CSVServiceConnector($http, services[i].featureType, services[i].url);
+    		var serviceConnector = new CSVServiceConnector($http, services[i].id, services[i].featureType, services[i].url);
     		serviceConnector.load($scope, didFinishLoadingFeatureModels);
     	}
     }]).

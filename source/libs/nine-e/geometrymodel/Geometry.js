@@ -1,7 +1,7 @@
 function Geometry(){ 
 	this.parent = null;
 	this.envelope = null;
-	this.childGeometries = null;
+	this.childGeometries = new Array();
 }
 
 Geometry.prototype.setParent = function(parent){

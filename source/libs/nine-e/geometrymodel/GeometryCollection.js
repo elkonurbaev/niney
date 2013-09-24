@@ -12,16 +12,16 @@ function GeometryCollection(geometries){
 GeometryCollection.prototype = new Geometry();
 
 GeometryCollection.prototype.addChild = function(child) {
-	if (isChild(child)) {
+	if (this.isChild(child)) {
 		return;
 	}
 			
-	_geometries.push(child);
+	this.geometries.push(child);
 	child.parent = this;
 }
 		
 GeometryCollection.prototype.removeChild = function(child) {
-	if (!isChild(child)) {
+	if (!this.isChild(child)) {
 		return;
 	}
 			

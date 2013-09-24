@@ -94,7 +94,7 @@ WKTConverter.prototype.polygonToWKT = function(polygon){
 	var wkt = "POLYGON((";
 	var polyPoints = polygon.points;
 	for(var i = 0; i < polyPoints.length; ++i) {
-		wkt += polyPoints[i].x + " " + polyPoints[i].y + ",";
+		wkt += Number(polyPoints[i].x) + " " + Number(polyPoints[i].y) + ",";
 	}
 	wkt = wkt.substring(0, wkt.length - 1) + "))";
 	return wkt;
