@@ -47,7 +47,7 @@ Point.prototype.equals = function(geometry) {
 	if (!(geometry instanceof Point)) {
 		return false;
 	}
-	if ((this.x == Point(geometry).x) && (this.y == Point(geometry).y)) {
+	if ((this.x == geometry.x) && (this.y == geometry.y)) {
 		return true;
 	}
 	return false;

@@ -27,21 +27,55 @@
     <div ng-controller="MapCtrl">
       <map id="map" focusmodel="focusModel">
         <tileslayer tilemodel="tileModel"></tileslayer>
-        <div ng-repeat="layer in layers">
-        	<div ng-if="layer.visible" id="feature_{{layer.id}}" >
-        		<div ng-repeat="feature in featureModels[layer.id].features" ng-switch on="!!feature.propertyValues[feature.propertyValues.length-1].geometries">
+       
+        <div class="mapFeatureLayer" ng-if="layers[0].visible" ng-init="featureModel=featureModels[1].features">
+        	<div class="symbolizer" ng-repeat="feature in featureModel"  ng-init="propertyIndex=2; asset=''">
+        		<img src="twentemobiel/images/symt{{feature.propertyValues[0]}}_18.png" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
+        		<svg id="svgelem" xmlns="http://www.w3.org/2000/svg">
+    				<line x1="100" y1="100" x2="300" y2="300" style="stroke:red;stroke-width:2"/>
+				</svg>
+        	</div>
+        </div>
+        <div class="mapFeatureLayer" ng-if="layers[1].visible" ng-init="featureModel=featureModels[2].features">
+        	<div class="symbolizer" ng-init="propertyIndex=3; asset='twentemobiel/images/trains.png'">
+        		<img src="{{asset}}" ng-repeat="feature in featureModel" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
+        	</div>
+        </div>
+        <div class="mapFeatureLayer" ng-if="layers[2].visible" ng-init="featureModel=featureModels[3].features">
+        	<div class="symbolizer" ng-init="propertyIndex=2; asset='twentemobiel/images/bikes.png'">
+        		<img src="{{asset}}" ng-repeat="feature in featureModel" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
+        	</div>
+        </div>
+        <div class="mapFeatureLayer" ng-if="layers[3].visible" ng-init="featureModel=featureModels[4].features">
+        	<div class="symbolizer" ng-init="propertyIndex=3; asset='twentemobiel/images/parkrides.png'">
+        		<img src="{{asset}}" ng-repeat="feature in featureModel" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
+        	</div>
+        </div>
+        <div class="mapFeatureLayer" ng-if="layers[4].visible" ng-init="featureModel=featureModels[5].features">
+        	<div class="symbolizer" ng-init="propertyIndex=3; asset='twentemobiel/images/carpools.png'">
+        		<img src="{{asset}}" ng-repeat="feature in featureModel" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
+        	</div>
+        </div>
+        <div class="mapFeatureLayer" ng-if="layers[5].visible" ng-init="featureModel=featureModels[6].features">
+        	<div class="symbolizer" ng-init="propertyIndex=3; asset='twentemobiel/images/carparks.png'">
+        		<img src="{{asset}}" ng-repeat="feature in featureModel" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
+        	</div>
+        </div>
+        <div class="mapFeatureLayer" ng-if="layers[6].visible" ng-init="featureModel=featureModels[7].features">
+        	<div class="symbolizer" ng-init="propertyIndex=3; asset='twentemobiel/images/webcams.png'">
+        		<div ng-repeat="feature in featureModel" ng-switch on="!!feature.propertyValues[feature.propertyValues.length-1].geometries">
          			<div ng-switch-when="false">
-         				<img src="{{layer.icon}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[feature.propertyValues.length-1].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[feature.propertyValues.length-1].x)}}px" />
+         				<img src="{{asset}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
          			</div>
          			<div ng-switch-when="true">
-         				<img ng-repeat="geometry in feature.propertyValues[feature.propertyValues.length-1].geometries track by $index" src="{{layer.icon}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, geometry.y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, geometry.x)}}px" />
+         				<img ng-repeat="geometry in feature.propertyValues[feature.propertyValues.length-1].geometries track by $index" src="{{asset}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, geometry.y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, geometry.x)}}px" />
          			</div>
       			</div>
         	</div>
         </div>
-        <svg id="svgelem" xmlns="http://www.w3.org/2000/svg">
-    		<line x1="100" y1="100" x2="300" y2="300" style="stroke:red;stroke-width:2"/>
-		</svg>
+        
+        
+        
         <h1 style="position:relative; margin:30%;">features.length: {{featureModels[0].features.length}}</h1>
       </map>
     </div>

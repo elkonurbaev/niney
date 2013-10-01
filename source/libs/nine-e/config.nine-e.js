@@ -8,10 +8,10 @@ jsimport = function(url) {
 
 jsimport("libs/nine-e/geometrymodel/Geometry.js");
 jsimport("libs/nine-e/geometrymodel/GeometryCollection.js");
+jsimport("libs/nine-e/geometrymodel/Point.js");
 jsimport("libs/nine-e/geometrymodel/Envelope.js");
 jsimport("libs/nine-e/geometrymodel/GeometryTools.js");
 jsimport("libs/nine-e/geometrymodel/LineString.js");
-jsimport("libs/nine-e/geometrymodel/Point.js");
 jsimport("libs/nine-e/geometrymodel/Polygon.js");
 jsimport("libs/nine-e/geometrymodel/converters/WKTConverter.js");
 jsimport("libs/nine-e/featuremodel/Feature.js");

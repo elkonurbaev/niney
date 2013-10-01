@@ -1,10 +1,11 @@
-function CSVServiceConnector(http, id, featureType, url) {
+function CSVServiceConnector(http, id, fieldSeparator, simple, featureType, url) {
 	this.http = http;
 	this.id = id;
-    this.fieldSeparator = ";";
+    this.fieldSeparator = fieldSeparator;
     this.textDelimiter = "\"";
     this.featureType = featureType;
     this.url = url;
+    this.simple = simple;
 }
 
 CSVServiceConnector.prototype.load = function(scope, callback){
@@ -13,10 +14,10 @@ CSVServiceConnector.prototype.load = function(scope, callback){
 	var features = new Array();
 	this.http({method: 'GET', url: this.url}).
   	success(function(data, status, headers, config) {
-  		features = csvConverter.csvToFeatures(data, obj.fieldSeparator, obj.textDelimiter, obj.featureType);
+  		features = csvConverter.csvToFeatures(data, obj.simple, obj.fieldSeparator, obj.textDelimiter, obj.featureType);
   		var featureModel = new FeatureModel(features, obj.featureType);
   		scope.featureModels[obj.id] = featureModel;
-  		//console.log(obj.id+' '+scope.featureModels[obj.id]);
+  		console.log(features);
         //callback(featureModel);
   	}).
   	error(function(data, status, headers, config) {

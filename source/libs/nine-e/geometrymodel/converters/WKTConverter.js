@@ -26,6 +26,7 @@ WKTConverter.prototype.wktToGeometry = function(wkt){
 		geometry.srid = parseInt(sridString);
 		geometry = GeometryTools.prototype.transform(geometry, 900913);
 	}
+	//console.log('here');
 	return geometry;
 }
 
@@ -59,9 +60,10 @@ WKTConverter.prototype.wktToLineString = function(wkt){
 	var coords = null;
 	var points = new Array();
 	for(var i = 0; i < pointStrings.length; ++i) {
-		coords = pointString[i].split(" ");
+		coords = pointStrings[i].split(" ");
 		points.push(new Point(coords[0], coords[1]));
 	}
+	//console.log('points.length='+points.length);
 	return new LineString(points);
 }
 
@@ -71,7 +73,7 @@ WKTConverter.prototype.wktToPolygon = function(wkt){
 	var coords = null;
 	var points = new Array();
 	for(var i = 0; i < pointStrings.length; ++i) {
-		coords = pointString[i].split(" ");
+		coords = pointStrings[i].split(" ");
 		points.push(new Point(coords[0], coords[1]));
 	}
 	return new Polygon(new LineString(points));

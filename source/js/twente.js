@@ -28,12 +28,13 @@ angular.module('test-app', ['nine-e']).
     factory('layerScope', ['$rootScope', function($rootScope) {
         var scope = $rootScope.$new();
         var layers = [
-    	{id:2, title:'Treinstations', visible:false, icon:'twentemobiel/images/trains.png'},
-    	{id:3, title:'OV-fietslocaties', visible:false, icon:'twentemobiel/images/bikes.png'},
-    	{id:4, title:'P&R-plaatsen', visible:false, icon:'twentemobiel/images/parkrides.png'},
-    	{id:5, title:'Carpoolplaatsen', visible:false, icon:'twentemobiel/images/carpools.png'},
-    	{id:6, title:'Parkeren in het centrum', visible:false, icon:'twentemobiel/images/carparks.png'},
-    	{id:7, title:'Webcams', visible:false, icon:'twentemobiel/images/webcams.png'}
+    	{id:1, title:'Hinder en afsluitingen', visible:false},
+    	{id:2, title:'Treinstations', visible:false},
+    	{id:3, title:'OV-fietslocaties', visible:false},
+    	{id:4, title:'P&R-plaatsen', visible:false},
+    	{id:5, title:'Carpoolplaatsen', visible:false},
+    	{id:6, title:'Parkeren in het centrum', visible:false},
+    	{id:7, title:'Webcams', visible:false}
   		];
         scope.layers = layers;
         return scope;
@@ -41,12 +42,13 @@ angular.module('test-app', ['nine-e']).
     factory('serviceScope', ['$rootScope', function($rootScope) {
   	   var scope = $rootScope.$new();
   	   var services = [
-        {id:2, url:'twentemobiel/trains.csv', featureName:'trainFeatureModel', featureType:new FeatureType('trainFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY), new Property('e', PropertyType.prototype.STRING), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING)))},
-    	{id:3, url:'twentemobiel/bikes.csv', featureName:'bikesFeatureModel', featureType:new FeatureType('bikesFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.GEOMETRY), new Property('d', PropertyType.prototype.STRING), new Property('e', PropertyType.prototype.STRING), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING), new Property('h', PropertyType.prototype.STRING), new Property('e', PropertyType.prototype.STRING), new Property('k', PropertyType.prototype.STRING), new Property('l', PropertyType.prototype.STRING)))},
-    	{id:4, url:'twentemobiel/parkrides.csv', featureName:'parkridesFeatureModel', featureType:new FeatureType('parkridesFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))},
-    	{id:5, url:'twentemobiel/carpools.csv', featureName:'carpoolsFeatureModel', featureType:new FeatureType('carpoolsFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))},
-    	{id:6, url:'twentemobiel/carparks.csv', featureName:'carparksFeatureModel', featureType:new FeatureType('carparksFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))},
-    	{id:7, url:'twentemobiel/webcams.csv', featureName:'webcamsFeatureModel', featureType:new FeatureType('webcamsFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))}
+  	   {id:1, url:'twentemobiel/objects.csv', fieldSeparator:'|', simple:true, featureName:'hinderFeatureModel', featureType:new FeatureType('hinderFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.GEOMETRY), new Property('d', PropertyType.prototype.GEOMETRY), new Property('e', PropertyType.prototype.GEOMETRY), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING), new Property('h', PropertyType.prototype.STRING), new Property('j', PropertyType.prototype.STRING), new Property('k', PropertyType.prototype.STRING), new Property('l', PropertyType.prototype.STRING)))},
+        {id:2, url:'twentemobiel/trains.csv', fieldSeparator:';', simple:false, featureName:'trainFeatureModel', featureType:new FeatureType('trainFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY), new Property('e', PropertyType.prototype.STRING), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING)))},
+    	{id:3, url:'twentemobiel/bikes.csv', fieldSeparator:';', simple:false, featureName:'bikesFeatureModel', featureType:new FeatureType('bikesFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.GEOMETRY), new Property('d', PropertyType.prototype.STRING), new Property('e', PropertyType.prototype.STRING), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING), new Property('h', PropertyType.prototype.STRING), new Property('e', PropertyType.prototype.STRING), new Property('k', PropertyType.prototype.STRING), new Property('l', PropertyType.prototype.STRING)))},
+    	{id:4, url:'twentemobiel/parkrides.csv', fieldSeparator:';', simple:false, featureName:'parkridesFeatureModel', featureType:new FeatureType('parkridesFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))},
+    	{id:5, url:'twentemobiel/carpools.csv', fieldSeparator:';', simple:false, featureName:'carpoolsFeatureModel', featureType:new FeatureType('carpoolsFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))},
+    	{id:6, url:'twentemobiel/carparks.csv', fieldSeparator:';', simple:false, featureName:'carparksFeatureModel', featureType:new FeatureType('carparksFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))},
+    	{id:7, url:'twentemobiel/webcams.csv', fieldSeparator:';', simple:false, featureName:'webcamsFeatureModel', featureType:new FeatureType('webcamsFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))}
        ];
        scope.services = services;
        return scope;
@@ -75,7 +77,7 @@ angular.module('test-app', ['nine-e']).
 
     	var services = serviceScope.services;
     	for(var i = 0; i < services.length; ++i){
-    		var serviceConnector = new CSVServiceConnector($http, services[i].id, services[i].featureType, services[i].url);
+    		var serviceConnector = new CSVServiceConnector($http, services[i].id, services[i].fieldSeparator, services[i].simple, services[i].featureType, services[i].url);
     		serviceConnector.load($scope, didFinishLoadingFeatureModels);
     	}
     }]).

@@ -5,7 +5,7 @@ function Geometry(){
 }
 
 Geometry.prototype.setParent = function(parent){
-	console.log("setParent");
+	//console.log("setParent");
 	if(this.parent == parent) {
 		return;
 	}
@@ -35,6 +35,7 @@ Geometry.prototype.getChildGeometries = function(){
 }
 
 Geometry.prototype.isChild = function(child){
+	//console.log('geometry.js:isChild');
 	for(var i = 0; i < this.childGeometries.length; ++i){
 		if(childGeometries[i] == child){
 			return true;
