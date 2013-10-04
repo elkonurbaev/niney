@@ -5,8 +5,9 @@ function Geometry(){
 }
 
 Geometry.prototype.setParent = function(parent){
-	//console.log("setParent");
+	//console.log("setParent: " + this.parent + ' ' + parent.constructor);
 	if(this.parent == parent) {
+		//console.log("return: " + this.parent.constructor + ' ' + parent.constructor);
 		return;
 	}
 	if(this.parent != null) {
@@ -26,18 +27,20 @@ Geometry.prototype.getParent = function(){
 	return this.parent;
 }
 
-Geometry.prototype.addChild = function(child){ }
+Geometry.prototype.addChild = function(child){}
 
-Geometry.prototype.removeChild = function(child){ }
+Geometry.prototype.removeChild = function(child){}
 
 Geometry.prototype.getChildGeometries = function(){
+	console.log('Geometry.prototype.getChildGeometries');
 	return null;
 }
 
 Geometry.prototype.isChild = function(child){
-	//console.log('geometry.js:isChild');
-	for(var i = 0; i < this.childGeometries.length; ++i){
-		if(childGeometries[i] == child){
+	var _childGeometries = this.getChildGeometries();
+	console.log('Geometry.prototype.isChild='+_childGeometries);
+	for(var i = 0; i < _childGeometries.length; ++i){
+		if(_childGeometries[i] == child){
 			return true;
 		}
 	}
@@ -46,8 +49,9 @@ Geometry.prototype.isChild = function(child){
 
 Geometry.prototype.getPoints = function(){
 	var points = new Array();
-	for(var i = 0; i < this.childGeometries.length; ++i){
-		points = points.concat(childGeometries[i].getPoints());
+	var _childGeometries = this.getChildGeometries();
+	for(var i = 0; i < _childGeometries.length; ++i){
+		points = points.concat(_childGeometries[i].getPoints());
 	}
 	return points;
 }

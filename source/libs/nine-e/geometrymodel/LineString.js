@@ -12,14 +12,15 @@ function LineString(points){
 LineString.prototype = new Geometry();
 
 LineString.prototype.addChild = function(child) {
-	/*if (this.isChild(child)) {
+	if (this.isChild(child)) {
 		return;
 	}
 	if (!(child instanceof Point)) {
 		return;
 	}
 	this.points.push(child);
-	child.setParent(this);*/
+	//console.log('-----LineString.prototype.addChild-----');
+	child.setParent(this);
 	//console.log('LineString.js:addChild '+this.points.length);
 }
 		
@@ -51,11 +52,13 @@ LineString.prototype.addChild = function(child) {
 }*/
 		
 LineString.prototype.getChildGeometries = function() {
-	return this.points;
+	console.log('LineString.prototype.getChildGeometries');
+	return this.getPoints();
 }
 		
 LineString.prototype.getPoints = function() {
-    return this.points; 
+	var copy = new Array();
+    return copy.concat(this.points); 
 }
 
 LineString.prototype.clone = function(){

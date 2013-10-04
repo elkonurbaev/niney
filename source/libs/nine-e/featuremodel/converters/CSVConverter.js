@@ -9,7 +9,7 @@ CSVConverter.prototype.csvToFeatures = function(csv, simple, fieldSeparator, tex
 	var errorLines = new Array();
 	for (var i = 0; i < lines.length; i++) {
 		//try {
-			feature = this.lineToFeature(lines[i], featureType, i);
+			feature = this.lineToFeature(lines[i], featureType);
 			features.push(feature);
 		//} catch (e) {
 			//errorLines.push(i);
@@ -69,7 +69,7 @@ CSVConverter.prototype.csvToLines = function(csv, simple, fieldSeparator, textDe
 	return lines;
 }
 
-CSVConverter.prototype.lineToFeature = function(fields, featureType, i){
+CSVConverter.prototype.lineToFeature = function(fields, featureType){
 	var propertyTypes = featureType.properties;
 	if (fields.length != propertyTypes.length) {
 		alert("Number of fields of " + fields.length + " in the csv does not match the number of properties of " + propertyTypes.length + " in the featuretype. ");
