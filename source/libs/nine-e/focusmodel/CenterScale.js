@@ -31,6 +31,14 @@ CenterScale.prototype.toEnvelope = function(width, height) {
     return new Envelope(minX, minY, maxX, maxY);
 }
 
+CenterScale.prototype.getNumWorldCoords = function(numPixs) {
+    return numPixs * this.coordPixFactor * this.scale;
+}
+
+CenterScale.prototype.getNumPixs = function(numWorldCoords) {
+    return numWorldCoords / this.coordPixFactor / this.scale;
+}
+
 CenterScale.prototype.getPixX = function(width, worldX) {
     var pixX = (worldX - this.centerX) / (this.coordPixFactor * this.scale);
     pixX = pixX + (width / 2);

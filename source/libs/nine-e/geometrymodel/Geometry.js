@@ -23,7 +23,7 @@ Geometry.prototype.setParent = function(parent){
 }
 
 Geometry.prototype.getParent = function(){
-	console.log("getParent");
+	//console.log("getParent");
 	return this.parent;
 }
 
@@ -32,13 +32,13 @@ Geometry.prototype.addChild = function(child){}
 Geometry.prototype.removeChild = function(child){}
 
 Geometry.prototype.getChildGeometries = function(){
-	console.log('Geometry.prototype.getChildGeometries');
+	//console.log('Geometry.prototype.getChildGeometries');
 	return null;
 }
 
 Geometry.prototype.isChild = function(child){
 	var _childGeometries = this.getChildGeometries();
-	console.log('Geometry.prototype.isChild='+_childGeometries);
+	//console.log('Geometry.prototype.isChild='+_childGeometries);
 	for(var i = 0; i < _childGeometries.length; ++i){
 		if(_childGeometries[i] == child){
 			return true;

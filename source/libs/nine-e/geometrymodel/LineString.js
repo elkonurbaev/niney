@@ -52,7 +52,7 @@ LineString.prototype.addChild = function(child) {
 }*/
 		
 LineString.prototype.getChildGeometries = function() {
-	console.log('LineString.prototype.getChildGeometries');
+	//console.log('LineString.prototype.getChildGeometries');
 	return this.getPoints();
 }
 		

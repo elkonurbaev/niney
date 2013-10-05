@@ -19,6 +19,9 @@ angular.module('test-app', ['nine-e']).
     factory('focusScope', ['$rootScope', function($rootScope) {
         var scope = $rootScope.$new();
         var model = new FocusModel();
+        model.minScale = 1692.7500637975315;
+        model.maxScale = 866688.0326643360;
+        model.scaleToZoomLevels = true;
         var timer = new Timer(50, 20);
         timer.scope = scope;
         model.timer = timer;
@@ -66,7 +69,7 @@ angular.module('test-app', ['nine-e']).
         
         boundsScope.timer.tick();
         boundsScope.timer.start();
-        focusScope.model.centerScale = new CenterScale(700000, 7000000, 4000000);
+        focusScope.model.setCenterScale(new CenterScale(745000, 6856000, 433344.01633216810));
     }]).
     controller('MapCtrl', ['$scope', '$http', 'boundsScope', 'focusScope', 'tileScope', 'layerScope', 'serviceScope', function ($scope, $http, boundsScope, focusScope, tileScope, layerScope, serviceScope) {
         $scope.boundsModel = boundsScope.model;
@@ -81,24 +84,29 @@ angular.module('test-app', ['nine-e']).
     		serviceConnector.load($scope, didFinishLoadingFeatureModels);
     	}
     }]).
-    controller('FocusButtonBarCtrl', ['$scope', 'focusScope', function ($scope, focusScope) {
+    controller('FocusButtonBarCtrl', ['$scope', 'boundsScope', 'focusScope', function ($scope, boundsScope, focusScope) {
+        var boundsModel = boundsScope.model;
         var focusModel = focusScope.model;
         
         $scope.panNorth = function() {
+            var bounds = boundsModel.bounds;
             var cs = focusModel.centerScale;
-            focusModel.setAnimationCenterScale(new CenterScale(cs.centerX, cs.centerY + 3000000, cs.scale));
+            focusModel.setAnimationCenterScale(new CenterScale(cs.centerX, cs.centerY + cs.getNumWorldCoords(bounds.height / 2), cs.scale));
         }
         $scope.panSouth = function() {
+            var bounds = boundsModel.bounds;
             var cs = focusModel.centerScale;
-            focusModel.setAnimationCenterScale(new CenterScale(cs.centerX, cs.centerY - 3000000, cs.scale));
+            focusModel.setAnimationCenterScale(new CenterScale(cs.centerX, cs.centerY - cs.getNumWorldCoords(bounds.height / 2), cs.scale));
         }
         $scope.panWest = function() {
+            var bounds = boundsModel.bounds;
             var cs = focusModel.centerScale;
-            focusModel.setAnimationCenterScale(new CenterScale(cs.centerX - 3000000, cs.centerY, cs.scale));
+            focusModel.setAnimationCenterScale(new CenterScale(cs.centerX - cs.getNumWorldCoords(bounds.width / 2), cs.centerY, cs.scale));
         }
         $scope.panEast = function() {
+            var bounds = boundsModel.bounds;
             var cs = focusModel.centerScale;
-            focusModel.setAnimationCenterScale(new CenterScale(cs.centerX + 3000000, cs.centerY, cs.scale));
+            focusModel.setAnimationCenterScale(new CenterScale(cs.centerX + cs.getNumWorldCoords(bounds.width / 2), cs.centerY, cs.scale));
         }
         $scope.zoomIn = function() {
             var cs = focusModel.centerScale;

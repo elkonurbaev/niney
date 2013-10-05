@@ -47,6 +47,10 @@ Timer.prototype.reset = function() {
     this.currentCount = 0;
 };
 
+Timer.prototype.isRunning = function() {
+    return (this.interval != -1);
+};
+
 Timer.prototype.tick = function() {
     if (this.scope != null) {
         this.scope.$apply(this.timerHandler);

@@ -3,7 +3,7 @@ function TileModel() {
     this.centerScale = null;
     this.tileWidth = 256;
     this.tileHeight = 256;
-    this.urlBase = "http://www.waterfootprintassessmenttool.org/tiles/example/";
+    this.urlBase = "http://b.tile.openstreetmap.org/";
     this.urlExtension = "$Z/$X/$Y.png";
     this.maxX = 20037508.3427892;
     this.maxY = 20037508.3427892;
