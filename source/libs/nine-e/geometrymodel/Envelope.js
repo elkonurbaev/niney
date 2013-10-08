@@ -10,6 +10,7 @@ function Envelope(minX, minY, maxX, maxY) {
 }
 
 Envelope.prototype = new Geometry();
+Envelope.prototype.constructor = Envelope;
 
 Envelope.prototype.childGeometries = function() {
 	return new Array(this.point0, this.point1);

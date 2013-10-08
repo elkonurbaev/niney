@@ -20,7 +20,7 @@ Geometry.prototype.setParent = function(parent){
 		parent.addChild(this);
 	}
 	this.parent = parent;
-}
+}	
 
 Geometry.prototype.getParent = function(){
 	//console.log("getParent");
@@ -41,6 +41,7 @@ Geometry.prototype.isChild = function(child){
 	//console.log('Geometry.prototype.isChild='+_childGeometries);
 	for(var i = 0; i < _childGeometries.length; ++i){
 		if(_childGeometries[i] == child){
+			//console.log('Geometry.prototype.isChild='+child.constructor+ ' '+_childGeometries[i].constructor);
 			return true;
 		}
 	}

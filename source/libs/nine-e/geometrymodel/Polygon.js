@@ -4,4 +4,4 @@ function Polygon(points){
 }
 
 Polygon.prototype = new Geometry();
-//Geometry.prototype.parent = null;
+Polygon.prototype.constructor = Polygon;

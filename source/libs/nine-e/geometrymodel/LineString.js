@@ -4,14 +4,18 @@ function LineString(points){
     	return;
     }
     this.points = points;
-    for(var i = 0; i < this.points.length; ++i){
+    var _points = this.getPoints();
+    for(var i = 0; i < _points.length; ++i){
+    	//console.log('this.points='+this.points[i]+' this='+this.constructor);
     	points[i].setParent(this);
     }
 }
 
 LineString.prototype = new Geometry();
+LineString.prototype.constructor = LineString;
 
 LineString.prototype.addChild = function(child) {
+	//console.log('LineString.prototype.addChild');
 	if (this.isChild(child)) {
 		return;
 	}
@@ -24,32 +28,33 @@ LineString.prototype.addChild = function(child) {
 	//console.log('LineString.js:addChild '+this.points.length);
 }
 		
-/*LineString.prototype.removeChild = function(child) {
+LineString.prototype.removeChild = function(child) {
 	if ((!this.isChild(child))) {
 		return;
 	}
-	if (points.length == 2) {
+	var _points = this.getPoints();
+	if (_points.length == 2) {
 		var otherPoint = null;
 		var pointIndex = -1;
 		if (child == this.points[0]) {
-			otherPoint = (Point)this.points[1];
+			otherPoint = this.points[1];
 			pointIndex = 0;
-		} else if (child == points[1]) {
-			otherPoint = (Point)this.points[0];
+		} else if (child == _points[1]) {
+			otherPoint = this.points[0];
 			pointIndex = 1;
 		}
-		points[pointIndex] = otherPoint.clone();
-		points[pointIndex].parent = this;
+		_points[pointIndex] = otherPoint.clone();
+		_points[pointIndex].parent = this;
 	} else {
-		for (var i = 0; i < points.length; i++) {
-			if (points[i] == child) {
-				points.splice(i, 1);
+		for (var i = 0; i < _points.length; i++) {
+			if (_points[i] == child) {
+				_points.splice(i, 1);
 				break;
 			}
 		}
 	}
 	child.setParent(null);
-}*/
+}
 		
 LineString.prototype.getChildGeometries = function() {
 	//console.log('LineString.prototype.getChildGeometries');

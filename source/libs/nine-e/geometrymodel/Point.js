@@ -5,6 +5,7 @@ function Point(x, y){
 }
 
 Point.prototype = new Geometry();
+Point.prototype.constructor = Point;
 
 Point.prototype.getChildGeometries = function(){
 	return new Array();

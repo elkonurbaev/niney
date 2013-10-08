@@ -10,6 +10,7 @@ function CSVServiceConnector(http, id, fieldSeparator, simple, featureType, url)
 
 CSVServiceConnector.prototype.load = function(scope, callback){
 	var obj = this;
+	
 	var csvConverter = new CSVConverter();
 	var features = new Array();
 	this.http({method: 'GET', url: this.url}).
@@ -17,10 +18,11 @@ CSVServiceConnector.prototype.load = function(scope, callback){
   		features = csvConverter.csvToFeatures(data, obj.simple, obj.fieldSeparator, obj.textDelimiter, obj.featureType);
   		var featureModel = new FeatureModel(features, obj.featureType);
   		scope.featureModels[obj.id] = featureModel;
-  		//console.log(features);
+  		console.log(features);
         //callback(featureModel);
   	}).
   	error(function(data, status, headers, config) {
     	alert('error'+status);
   	});	
+  	
 } 
