@@ -83,6 +83,10 @@ angular.module('test-app', ['nine-e']).
     		var serviceConnector = new CSVServiceConnector($http, services[i].id, services[i].fieldSeparator, services[i].simple, services[i].featureType, services[i].url);
     		serviceConnector.load($scope, didFinishLoadingFeatureModels);
     	}
+    	$scope.parsePoints = function(points) { 
+    		console.log('points='+points);
+    		return '';
+    	}
     }]).
     controller('FocusButtonBarCtrl', ['$scope', 'boundsScope', 'focusScope', function ($scope, boundsScope, focusScope) {
         var boundsModel = boundsScope.model;
