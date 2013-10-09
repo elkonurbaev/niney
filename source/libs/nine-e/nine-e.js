@@ -1,26 +1,28 @@
 angular.module('nine-e', ['monospaced.mousewheel']).
-    directive('map', function factory() {
+    directive('map', function factory($document) {
         var directiveDefinitionObject = {
-            template: '<div class="mapviewer" msd-wheel="zoomm($event, $delta); $event.preventDefault();" ng-mousedown="mouseDownHandler($event); $event.preventDefault();" ng-mousemove="mouseMoveHandler1($event);" ng-mouseup="mouseUpHandler($event);" ng-transclude/>',
+            template: '<div class="mapviewer" ng-mousedown="mouseDownHandler($event)" msd-wheel="mouseWheelHandler($event, $delta)" ng-transclude/>',
             replace: true,
             restrict: 'E',
             scope: {
                 focusModel: '=focusmodel'
             },
-            controller: ['$scope', function($scope) {
+            controller: ["$scope", function($scope) {
                 $scope.mouseDownX = -1;
                 $scope.mouseDownY = -1;
                 $scope.panning = false;
                 
                 $scope.mouseDownHandler = function(mouseEvent) {
-                    $scope.mouseDownX = mouseEvent.pageX;
-                    $scope.mouseDownY = mouseEvent.pageY;
-                    $scope.panning = true;
+                    $scope.mouseDownX = mouseEvent.pageX; // (mouseEvent.pageX - mouseEvent.currentTarget.offsetLeft)
+                    $scope.mouseDownY = mouseEvent.pageY; // (mouseEvent.pageY - mouseEvent.currentTarget.offsetTop)
+                    
+                    $document.on("mousemove", mouseMoveHandler1);
+                    $document.on("mouseup", mouseUpHandler);
+                    
+                    mouseEvent.preventDefault();
                 }
                 
-                $scope.mouseMoveHandler1 = function(mouseEvent) {
-                    if ($scope.panning != true) return;
-                    
+                function mouseMoveHandler1(mouseEvent) {
                     var centerScale = $scope.focusModel.centerScale;
                     var dx = centerScale.getNumWorldCoords(mouseEvent.pageX - $scope.mouseDownX);
                     var dy = centerScale.getNumWorldCoords(mouseEvent.pageY - $scope.mouseDownY);
@@ -31,19 +33,20 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     $scope.mouseDownY = mouseEvent.pageY;
                 }
                 
-                $scope.mouseUpHandler = function(mouseEvent) {
-                    $scope.panning = false;
+                function mouseUpHandler(mouseEvent) {
+                    $document.off("mousemove", mouseMoveHandler1);
+                    $document.off("mouseup", mouseUpHandler);
+
                     $scope.mouseDownX = -1;
                     $scope.mouseDownY = -1;
                 }
                 
-                $scope.zoomm = function(event, delta) {
+                $scope.mouseWheelHandler = function(mouseEvent, delta) {
                     var cs = $scope.focusModel.centerScale;
                     $scope.focusModel.setAnimationCenterScale(new CenterScale(cs.centerX, cs.centerY, cs.scale / Math.pow(2, delta)));
+                    
+                    mouseEvent.preventDefault();
                 };
-                $scope.blaaa = function(mouseEvent) {
-                    //console.log((mouseEvent.pageX - mouseEvent.currentTarget.offsetLeft) + " " + (mouseEvent.pageY - mouseEvent.currentTarget.offsetTop));
-                }
             }],
             transclude: true
         };

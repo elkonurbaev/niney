@@ -3,7 +3,7 @@ angular.module('test-app', ['nine-e']).
     factory('boundsScope', ['$rootScope', function($rootScope) {
         var scope = $rootScope.$new();
         var model = new BoundsModel();
-        var timer = new Timer(2000, -1);
+        var timer = new Timer(50, -1);
         timer.scope = scope;
         timer.timerHandler = function() {
             var map = document.getElementById("map");
@@ -93,7 +93,7 @@ angular.module('test-app', ['nine-e']).
                 var y = cs.getPixY(bounds.height, points[i].y);
                 ret += x + "," + y + " ";
             }
-            console.log('points='+points + " RET " + ret);
+            //console.log('points='+points + " RET " + ret);
             return ret;
         }
     }]).
