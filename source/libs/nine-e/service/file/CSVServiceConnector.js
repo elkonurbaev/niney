@@ -18,7 +18,7 @@ CSVServiceConnector.prototype.load = function(scope, callback){
   		features = csvConverter.csvToFeatures(data, obj.simple, obj.fieldSeparator, obj.textDelimiter, obj.featureType);
   		var featureModel = new FeatureModel(features, obj.featureType);
   		scope.featureModels[obj.id] = featureModel;
-  		console.log(features);
+  		//console.log(features);
         //callback(featureModel);
   	}).
   	error(function(data, status, headers, config) {

@@ -52,13 +52,10 @@
         	<div class="symbolizer" ng-repeat="feature in featureModel"  ng-init="propertyIndex=2; asset=''">
         		<img src="twentemobiel/images/symt{{feature.propertyValues[0]}}_18.png" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
         	</div>
-        	<div class="symbolizer" ng-repeat="feature in featureModel"  ng-init="propertyIndex=3; asset=''" ng-switch on="!!feature.propertyValues[propertyIndex].geometries">
-				<div ng-switch-when="true">
-					<svg ng-init="points=parsePoints(feature.propertyValues[propertyIndex].geometries[0].points);"  xmlns="http://www.w3.org/2000/svg" version="1.1">
-  						<polyline points=""
-  style="fill:none;stroke:red;stroke-width:5" />
+        	<div class="symbolizer" ng-repeat="feature in featureModel"  ng-init="propertyIndex=3; asset=''">
+					<svg class="mapgeometry" xmlns="http://www.w3.org/2000/svg" version="1.1">
+  						<polyline points="{{parsePoints(feature.propertyValues[propertyIndex].geometries[0].points)}}" style="fill:none;stroke:red;stroke-width:5"></polyline>
 					</svg>
-         		</div>
         	</div>
         </div>
         <div class="mapFeatureLayer" ng-if="layers[1].visible" ng-init="featureModel=featureModels[2].features">

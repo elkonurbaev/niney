@@ -83,10 +83,20 @@ angular.module('test-app', ['nine-e']).
     		var serviceConnector = new CSVServiceConnector($http, services[i].id, services[i].fieldSeparator, services[i].simple, services[i].featureType, services[i].url);
     		serviceConnector.load($scope, didFinishLoadingFeatureModels);
     	}
-    	$scope.parsePoints = function(points) { 
-    		console.log('points='+points);
-    		return '';
-    	}
+        $scope.parsePoints = function(points) {
+            if (points == null) return;
+            var ret = "";
+            var cs = focusScope.model.centerScale;
+            var bounds = boundsScope.model.bounds;
+            for (var i = 0; i < points.length; i++) {
+                var x = cs.getPixX(bounds.width, points[i].x);
+                var y = cs.getPixY(bounds.height, points[i].y);
+                ret += x + "," + y + " ";
+            }
+            console.log('points='+points + " RET " + ret);
+            return ret;
+        }
+>>>>>>> 415b85ced4e24f8d6a79cb268c5a0c50162e8c04
     }]).
     controller('FocusButtonBarCtrl', ['$scope', 'boundsScope', 'focusScope', function ($scope, boundsScope, focusScope) {
         var boundsModel = boundsScope.model;
