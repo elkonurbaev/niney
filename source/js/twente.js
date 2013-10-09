@@ -96,7 +96,6 @@ angular.module('test-app', ['nine-e']).
             console.log('points='+points + " RET " + ret);
             return ret;
         }
->>>>>>> 415b85ced4e24f8d6a79cb268c5a0c50162e8c04
     }]).
     controller('FocusButtonBarCtrl', ['$scope', 'boundsScope', 'focusScope', function ($scope, boundsScope, focusScope) {
         var boundsModel = boundsScope.model;
