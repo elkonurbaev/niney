@@ -64,8 +64,10 @@ angular.module('test-app', ['nine-e']).
     run(['$rootScope', 'boundsScope', 'focusScope', 'tileScope', function($rootScope, boundsScope, focusScope, tileScope) {
         var tileModel = tileScope.model;
         
-        boundsScope.$watch('model.bounds', function(newValue, oldValue) { tileModel.setBounds(boundsScope.model.bounds); });
+        boundsScope.$watch('model.bounds', function(newValue, oldValue) { tileModel.setBounds(boundsScope.model.bounds); 
+        });
         focusScope.$watch('model.centerScale', function(newValue, oldValue) { tileModel.setCenterScale(focusScope.model.centerScale); });
+        
         
         boundsScope.timer.tick();
         boundsScope.timer.start();
@@ -95,6 +97,15 @@ angular.module('test-app', ['nine-e']).
             }
             //console.log('points='+points + " RET " + ret);
             return ret;
+        }
+        $scope.isInsideBoundaries = function(x, y) {
+            if (x == null || y == null) return;
+            var bounds = boundsScope.model.bounds;
+            //console.log('x='+x+' y='+y);
+            if (x => 0 && x <= bounds.width && y >= 0 && y <= bounds.height){
+            	return true;
+            }
+            return false;
         }
     }]).
     controller('FocusButtonBarCtrl', ['$scope', 'boundsScope', 'focusScope', function ($scope, boundsScope, focusScope) {
