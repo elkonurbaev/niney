@@ -2,13 +2,13 @@
 {
 	position:relative;
 }
-#legend
+.legendslayer
 {
 	float: left;
 	border: 1px solid #000000;
 	margin-right: 15px;
 }
-#legend ul
+.legendslayer ul
 {
 	list-style-type: none;
 	margin-left: -2em;

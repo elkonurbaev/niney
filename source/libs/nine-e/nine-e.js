@@ -62,5 +62,24 @@ angular.module('nine-e', ['monospaced.mousewheel']).
             }
         };
         return directiveDefinitionObject;
-    }
+    }).
+    directive('legendslayer', function factory() {
+        var directiveDefinitionObject = {
+            template: '\
+            <div class="legendslayer">\
+  			<ul>\
+  				<li ng-repeat="layer in layers">\
+          			<input id="layer_{{layer.id}}" type="checkbox" ng-model="layer.visible">\
+         			<label for="layer_{{layer.id}}" class="visible-{{layer.visible}}">{{layer.title}}</label>\
+        		</li>\
+  			</ul>\
+  			</div>',
+            replace: true,
+            restrict: 'E',
+            scope: {
+                layers: '=layers'
+            }
+        };
+        return directiveDefinitionObject;
+    }	
 );

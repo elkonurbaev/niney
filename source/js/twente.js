@@ -146,9 +146,7 @@ angular.module('test-app', ['nine-e']).
     }]).
     controller('LegendCtrl', ['$scope', 'layerScope', function ($scope, layerScope) {
         $scope.layers = layerScope.layers;
-    }]).
-    controller('ServiceCtrl',  function ($scope, $http, serviceScope) {
-    });
+    }]);
 
 function setMapSize(width, height) {
     var mapStyle = document.getElementById("map").style;

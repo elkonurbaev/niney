@@ -33,18 +33,10 @@
   </head>
   <body>
   <div id="twentie_app">
-  <!--incomplete-->
-  <div ng-controller="ServiceCtrl"></div>
-  <!--/incomplete-->
-  	<div id="legend" ng-controller="LegendCtrl">
-  		<ul>
-  			<li ng-repeat="layer in layers">
-          		<input id="{{'layer_'+layer.id}}" type="checkbox" ng-model="layer.visible">
-         		<label for="{{'layer_'+layer.id}}" class="visible-{{layer.visible}}">{{layer.title}}</label>
-        	</li>
-  		</ul>
-  	</div>
+  	
+  	
     <div ng-controller="MapCtrl">
+      <legendslayer layers="layers"></legendslayer>
       <map id="map" focusmodel="focusModel">
         <tileslayer tilemodel="tileModel"></tileslayer>
        
