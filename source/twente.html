@@ -33,28 +33,29 @@
   </head>
   <body>
   <div id="twentie_app">
-  <!--incomplete-->
-  <div ng-controller="ServiceCtrl"></div>
-  <!--/incomplete-->
-  	<div id="legend" ng-controller="LegendCtrl">
-  		<ul>
-  			<li ng-repeat="layer in layers">
-          		<input id="{{'layer_'+layer.id}}" type="checkbox" ng-model="layer.visible">
-         		<label for="{{'layer_'+layer.id}}" class="visible-{{layer.visible}}">{{layer.title}}</label>
-        	</li>
-  		</ul>
-  	</div>
+  	
+  	
     <div ng-controller="MapCtrl">
+      <legendslayer layers="layers"></legendslayer>
       <map id="map" focusmodel="focusModel">
         <tileslayer tilemodel="tileModel"></tileslayer>
+       
+       <mapfeatureslayer featuremodelindex="">
+        	<div symbolizer propertyindex='' asset=''></div>
+        </mapfeatureslayer>
        
         <div class="mapFeatureLayer" ng-if="layers[0].visible" ng-init="featureModel=featureModels[1].features">
         	<div class="symbolizer" ng-repeat="feature in featureModel"  ng-init="propertyIndex=2; asset=''">
         		<img src="twentemobiel/images/symt{{feature.propertyValues[0]}}_18.png" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
         	</div>
-        	<div class="symbolizer" ng-repeat="feature in featureModel"  ng-init="propertyIndex=3; asset=''">
-					<svg class="mapgeometry" xmlns="http://www.w3.org/2000/svg" version="1.1">
-  						<polyline points="{{parsePoints(feature.propertyValues[propertyIndex].geometries[0].points)}}" style="fill:none;stroke:red;stroke-width:5"></polyline>
+        	<div class="symbolizer" ng-repeat="feature in featureModel"  ng-init="propertyIndex=3; asset='';maxScale=108336.00408304202">
+					<svg ng-if="maxScale > focusModel.centerScale.scale" class="mapgeometry" xmlns="http://www.w3.org/2000/svg" version="1.1">
+  						<polyline points="{{parsePoints(feature.propertyValues[propertyIndex].geometries[0].points)}}" style="fill:none;stroke:#FF0000;stroke-width:5"></polyline>
+					</svg>
+        	</div>
+        	<div class="symbolizer" ng-repeat="feature in featureModel"  ng-init="propertyIndex=4; asset='';maxScale=108336.00408304202">
+					<svg ng-if="maxScale > focusModel.centerScale.scale" class="mapgeometry" xmlns="http://www.w3.org/2000/svg" version="1.1">
+  						<polyline points="{{parsePoints(feature.propertyValues[propertyIndex].geometries[0].points)}}" style="fill:none;stroke:#0000FF;stroke-width:5"></polyline>
 					</svg>
         	</div>
         </div>
@@ -80,7 +81,9 @@
         </div>
         <div class="mapFeatureLayer" ng-if="layers[5].visible" ng-init="featureModel=featureModels[6].features">
         	<div class="symbolizer" ng-init="propertyIndex=3; asset='twentemobiel/images/carparks.png'">
-        		<img src="{{asset}}" ng-repeat="feature in featureModel" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
+        		<span ng-repeat="feature in featureModel">
+        		<img ng-if="isInsideBoundaries(focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x), focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y))" src="{{asset}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
+        		</span>
         	</div>
         </div>
         <div class="mapFeatureLayer" ng-if="layers[6].visible" ng-init="featureModel=featureModels[7].features">
@@ -95,9 +98,6 @@
       			</div>
         	</div>
         </div>
-        
-        
-        
         <h1 style="position:relative; margin:30%;">features.length: {{featureModels[1].features.length}}</h1>
       </map>
     </div>
@@ -129,4 +129,3 @@
   
   </body>
 </html>
-

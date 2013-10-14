@@ -64,8 +64,10 @@ angular.module('test-app', ['nine-e']).
     run(['$rootScope', 'boundsScope', 'focusScope', 'tileScope', function($rootScope, boundsScope, focusScope, tileScope) {
         var tileModel = tileScope.model;
         
-        boundsScope.$watch('model.bounds', function(newValue, oldValue) { tileModel.setBounds(boundsScope.model.bounds); });
+        boundsScope.$watch('model.bounds', function(newValue, oldValue) { tileModel.setBounds(boundsScope.model.bounds); 
+        });
         focusScope.$watch('model.centerScale', function(newValue, oldValue) { tileModel.setCenterScale(focusScope.model.centerScale); });
+        
         
         boundsScope.timer.tick();
         boundsScope.timer.start();
@@ -76,12 +78,13 @@ angular.module('test-app', ['nine-e']).
         $scope.focusModel = focusScope.model;
         $scope.tileModel = tileScope.model;
         $scope.layers = layerScope.layers;
-        $scope.featureModels = new Array();
-
-    	var services = serviceScope.services;
+    	$scope.services = serviceScope.services;
+    	var services = $scope.services;
+    	var servicesLoadComplete = false;
+    	$scope.featureModels = new Array(services.length);
     	for(var i = 0; i < services.length; ++i){
     		var serviceConnector = new CSVServiceConnector($http, services[i].id, services[i].fieldSeparator, services[i].simple, services[i].featureType, services[i].url);
-    		serviceConnector.load($scope, didFinishLoadingFeatureModels);
+    		serviceConnector.load($scope, didFinishLoadingFeatureModel);
     	}
         $scope.parsePoints = function(points) {
             if (points == null) return;
@@ -96,6 +99,21 @@ angular.module('test-app', ['nine-e']).
             //console.log('points='+points + " RET " + ret);
             return ret;
         }
+        $scope.isInsideBoundaries = function(x, y) {
+            if (x == null || y == null) return;
+            var bounds = boundsScope.model.bounds;
+            if (x => 0 && x <= bounds.width && y >= 0 && y <= bounds.height){
+            	return true;
+            }
+            return false;
+        }
+        $scope.servicesLoadComplete = function(data) { 
+       		$scope.featureModels = data;
+       		servicesLoadComplete = true;
+       	}
+       	$scope.isServicesLoadComplete = function() { 
+       		return servicesLoadComplete;
+       	}
     }]).
     controller('FocusButtonBarCtrl', ['$scope', 'boundsScope', 'focusScope', function ($scope, boundsScope, focusScope) {
         var boundsModel = boundsScope.model;
@@ -132,12 +150,7 @@ angular.module('test-app', ['nine-e']).
     }]).
     controller('FocusPanelCtrl', ['$scope', 'focusScope', function ($scope, focusScope) {
         $scope.focusModel = focusScope.model;
-    }]).
-    controller('LegendCtrl', ['$scope', 'layerScope', function ($scope, layerScope) {
-        $scope.layers = layerScope.layers;
-    }]).
-    controller('ServiceCtrl',  function ($scope, $http, serviceScope) {
-    });
+    }]);
 
 function setMapSize(width, height) {
     var mapStyle = document.getElementById("map").style;
@@ -145,6 +158,9 @@ function setMapSize(width, height) {
     mapStyle.height = height + "px";
 }
 
-function didFinishLoadingFeatureModels(featureModel){
-    
+function didFinishLoadingFeatureModel(scope, id, featureModel){
+    scope.featureModels[id] = featureModel;
+    if(scope.featureModels.length > scope.services.length){
+    	scope.servicesLoadComplete(scope.featureModels);
+    }
 }
