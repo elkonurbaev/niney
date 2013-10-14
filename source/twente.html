@@ -40,6 +40,10 @@
       <map id="map" focusmodel="focusModel">
         <tileslayer tilemodel="tileModel"></tileslayer>
        
+       <mapfeatureslayer featuremodelindex="">
+        	<div symbolizer></div>
+        </mapfeatureslayer>
+       
         <div class="mapFeatureLayer" ng-if="layers[0].visible" ng-init="featureModel=featureModels[1].features">
         	<div class="symbolizer" ng-repeat="feature in featureModel"  ng-init="propertyIndex=2; asset=''">
         		<img src="twentemobiel/images/symt{{feature.propertyValues[0]}}_18.png" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
@@ -125,4 +129,3 @@
   
   </body>
 </html>
-

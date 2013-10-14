@@ -77,9 +77,61 @@ angular.module('nine-e', ['monospaced.mousewheel']).
             replace: true,
             restrict: 'E',
             scope: {
-                layers: '=layers'
+                layers: '='
             }
         };
         return directiveDefinitionObject;
-    }	
+    }).	
+    directive('mapfeatureslayer', function factory() {
+        var directiveDefinitionObject = {
+            template: '\
+        <div class="mapFeatureLayer" ng-if="layers[featuremodelindex].visible"  ng-init="featureModel=featureModels[featuremodelindex].features">\
+        </div>',
+            replace: true,
+            restrict: 'E',
+            scope: {
+                featuremodelindex: '='
+            },
+            link: function (scope, elem, attrs) {
+			},
+			controller: ['$scope', '$http', 'boundsScope', 'focusScope', 'tileScope', 'layerScope', 'serviceScope', function ($scope, $http, boundsScope, focusScope, tileScope, layerScope, serviceScope) {
+                console.log($scope.featuremodelindex);
+                //cannot access featureModels array because, it is not ready
+                
+            }]
+        };
+        return directiveDefinitionObject;
+    }).
+    directive('symbolizer', function factory() {
+        var directiveDefinitionObject = {
+            template: '\
+        <div class="symbolizer"\
+        		<span ng-repeat="feature in featureModel">\
+        		<img src="{{asset}}" style="position: absolute; top: {{getY()}}px; left: {{getX()}}px" />\
+        		</span>\
+        </div>',
+            replace: true,
+            restrict: 'A',
+            scope: {
+                propertyindex: '=',
+                asset: '='
+            },
+            link: function (scope, elem, attrs) {
+			},
+			controller: ['$scope', '$http', 'boundsScope', 'focusScope', 'tileScope', 'layerScope', 'serviceScope', function ($scope, $http, boundsScope, focusScope, tileScope, layerScope, serviceScope) {
+                console.log($scope.asset);
+                $scope.getY = function(mouseEvent) {
+                	var x = boundsModel.bounds.height;
+                	var y  = feature.propertyValues[propertyIndex].y;
+					return focusModel.centerScale.getPixY(x, y);
+                }
+                $scope.getX = function() {
+                	var x = boundsModel.bounds.width;
+                	var y  = feature.propertyValues[propertyIndex].x;
+					return focusModel.centerScale.getPixX(x, y);
+                }
+            }]
+        };
+        return directiveDefinitionObject;
+    }		
 );
