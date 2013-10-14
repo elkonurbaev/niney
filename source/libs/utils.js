@@ -54,6 +54,8 @@ Timer.prototype.isRunning = function() {
 Timer.prototype.tick = function() {
     if (this.scope != null) {
         this.scope.$apply(this.timerHandler);
+    } else {
+        this.timerHandler.apply();
     }
 };
 

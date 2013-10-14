@@ -23,7 +23,7 @@ angular.module('test-app', ['nine-e']).
         model.maxScale = 866688.0326643360;
         model.scaleToZoomLevels = true;
         var timer = new Timer(50, 20);
-        timer.scope = scope;
+        //timer.scope = scope;
         model.timer = timer;
         scope.model = model;
         return scope;
