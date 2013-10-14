@@ -97,6 +97,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
 			controller: ['$scope', '$http', 'boundsScope', 'focusScope', 'tileScope', 'layerScope', 'serviceScope', function ($scope, $http, boundsScope, focusScope, tileScope, layerScope, serviceScope) {
                 console.log($scope.featuremodelindex);
                 //cannot access featureModels array because, it is not ready
+                //$scope.featureModels 
+                //featureModels[featuremodelindex].features
                 
             }]
         };
