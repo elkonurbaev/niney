@@ -94,7 +94,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
             },
             link: function (scope, elem, attrs) {
 			},
-			controller: ['$scope', '$http', 'boundsScope', 'focusScope', 'tileScope', 'layerScope', 'serviceScope', function ($scope, $http, boundsScope, focusScope, tileScope, layerScope, serviceScope) {
+			controller: ['$scope', '$http', 'boundsScope', 'focusScope', 'tileScope', 'layerScope', 'featureScope', function ($scope, $http, boundsScope, focusScope, tileScope, layerScope, featureScope) {
                 console.log($scope.featuremodelindex);
                 //cannot access featureModels array because, it is not ready
                 //$scope.featureModels 
@@ -120,7 +120,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
             },
             link: function (scope, elem, attrs) {
 			},
-			controller: ['$scope', '$http', 'boundsScope', 'focusScope', 'tileScope', 'layerScope', 'serviceScope', function ($scope, $http, boundsScope, focusScope, tileScope, layerScope, serviceScope) {
+			controller: ['$scope', '$http', 'boundsScope', 'focusScope', 'tileScope', 'layerScope', 'featureScope', function ($scope, $http, boundsScope, focusScope, tileScope, layerScope, featureScope) {
                 console.log($scope.asset);
                 $scope.getY = function(mouseEvent) {
                 	var x = boundsModel.bounds.height;
