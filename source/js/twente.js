@@ -57,7 +57,10 @@ angular.module('test-app', ['nine-e']).
         
         for (var i = 0; i < services.length; ++i) {
             var serviceConnector = new CSVServiceConnector($http, services[i].id, services[i].fieldSeparator, services[i].simple, services[i].featureType, services[i].url);
-            serviceConnector.load(scope, function(scope, id, featureModel) { scope.models[id] = featureModel; });
+            serviceConnector.load(scope, function(scope, id, featureModel) { 
+            	scope.models[id] = featureModel; 
+            	//console.log(featureModel);
+            });
         }
         return scope;
     }]).
@@ -72,7 +75,6 @@ angular.module('test-app', ['nine-e']).
         boundsScope.$watch('model.bounds', function(newValue, oldValue) { tileModel.setBounds(boundsScope.model.bounds); 
         });
         focusScope.$watch('model.centerScale', function(newValue, oldValue) { tileModel.setCenterScale(focusScope.model.centerScale); });
-        
         
         boundsScope.timer.tick();
         boundsScope.timer.start();

@@ -85,7 +85,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     directive('mapfeatureslayer', function factory() {
         var directiveDefinitionObject = {
             template: '\
-        <div class="mapFeatureLayer" ng-if="layers[featuremodelindex].visible"  ng-init="featureModel=featureModels[featuremodelindex].features">\
+        <div class="mapFeatureLayer" ng-if="layers[6].visible"  ng-init="featureModel=featureModels[6].features">\
+        <div class="symbolizer" ng-repeat="feature in featureModel"></div>\
         </div>',
             replace: true,
             restrict: 'E',
@@ -95,7 +96,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
             link: function (scope, elem, attrs) {
 			},
 			controller: ['$scope', '$http', 'boundsScope', 'focusScope', 'tileScope', 'layerScope', 'featureScope', function ($scope, $http, boundsScope, focusScope, tileScope, layerScope, featureScope) {
-                console.log($scope.featuremodelindex);
+                console.log(featureScope.models);
                 //cannot access featureModels array because, it is not ready
                 //$scope.featureModels 
                 //featureModels[featuremodelindex].features
