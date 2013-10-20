@@ -7,6 +7,7 @@ function WKTConverter() {
 }
 
 WKTConverter.prototype.wktToGeometry = function(wkt){
+	//console.log(wkt);
 	var sridString = null;
 	if (wkt.search(this.sridRegExp) == 0) {
 		sridString = wkt.replace(this.sridRegExp, "$1");

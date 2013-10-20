@@ -39,7 +39,7 @@ GeometryTools.prototype.transform = function(geometry, srid){
 	}
 	if (!(geometry instanceof Point)) {
 		alert("The given geometry is not a point. Only point geometries are currently supported.");
-	}
+	}	
 	var point = geometry;
 			
 	if ((point.srid == 4326) && (srid == 900913)) {
