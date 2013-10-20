@@ -129,13 +129,14 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive('geometrysymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="symbolizer" ng-repeat="feature in featureModel.features"><polyline points="{{parsePoints(feature.propertyValues[propertyIndex].geometries[0].points)}}" style="fill:none;stroke:#FF0000;stroke-width:5"></polyline></svg></div>',
+            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="symbolizer" ng-repeat="feature in featureModel.features"><polyline ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries" points="{{parsePoints(geometry.points)}}" style="{{style}}"></polyline></svg></div>',
             restrict: 'E',
             require: '^mapfeaturelayer',
             replace: true,
             scope: {
                 maxScale: '@maxscale',
-                propertyIndex: '@propertyindex'
+                propertyIndex: '@propertyindex',
+                style: '@style'
             },
             controller: ['$scope', function ($scope) {
                 $scope.parsePoints = function(points) {
