@@ -5,6 +5,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
             replace: true,
             restrict: 'E',
             scope: {
+                boundsModel: '=boundsmodel',
                 focusModel: '=focusmodel'
             },
             controller: ["$scope", function($scope) {
@@ -47,6 +48,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     
                     mouseEvent.preventDefault();
                 };
+
+                this.scope = $scope;
             }],
             transclude: true
         };
@@ -81,59 +84,103 @@ angular.module('nine-e', ['monospaced.mousewheel']).
             }
         };
         return directiveDefinitionObject;
-    }).	
-    directive('mapfeatureslayer', function factory() {
+    }).
+    directive('mapfeaturelayer', function factory() {
         var directiveDefinitionObject = {
-            template: '\
-        <div class="mapfeaturelayer" ng-if="layers[featuremodelindex].visible"  ng-init="featureModel=featureModels[featuremodelindex].features">\
-        </div>',
-            replace: true,
+            template: '<div class="mapfeaturelayer"/>',
             restrict: 'E',
+            require: '^map',
+            replace: true,
+            transclude: true,
             scope: {
-                featuremodelindex: '='
+                layer: '=layer',
+                featureModel: '=featuremodel'
             },
-            link: function (scope, elem, attrs) {
-			},
-			controller: ['$scope', '$http', 'boundsScope', 'focusScope', 'tileScope', 'layerScope', 'featureScope', function ($scope, $http, boundsScope, focusScope, tileScope, layerScope, featureScope) {
-                console.log($scope.featuremodelindex);
-                //cannot access featureModels array because, it is not ready
-                //$scope.featureModels 
-                //featureModels[featuremodelindex].features
-                
-            }]
+            controller: ['$scope', function ($scope) {
+                this.scope = $scope;
+            }],
+            compile: function (element, attr, transclude) {
+                return function ($scope, $element, $attr, $parentCtrl) {
+                    $parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
+                    $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
+                    
+                    var childElement, childScope;
+                    $scope.$watch('layer.visible', function(val) {
+                        if (childElement) {
+                            $element.contents().remove();
+                            childElement = undefined;
+                        }
+                        if (childScope) {
+                            childScope.$destroy();
+                            childScope = undefined;
+                        }
+                        if (val) {
+                            childScope = $scope.$new();
+                            transclude(childScope, function (clone) {
+                                childElement = clone;
+                                $element.append(clone);
+                            });
+                        }
+                    });
+                }
+            }
         };
         return directiveDefinitionObject;
     }).
-    directive('symbolizer', function factory() {
+    directive('geometrysymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '\
-        <div class="symbolizer"\
-        		<span ng-repeat="feature in featureModel">\
-        		<img src="{{asset}}" style="position: absolute; top: {{getY()}}px; left: {{getX()}}px" />\
-        		</span>\
-        </div>',
+            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="symbolizer" ng-repeat="feature in featureModel.features"><polyline points="{{parsePoints(feature.propertyValues[propertyIndex].geometries[0].points)}}" style="fill:none;stroke:#FF0000;stroke-width:5"></polyline></svg></div>',
+            restrict: 'E',
+            require: '^mapfeaturelayer',
             replace: true,
-            restrict: 'A',
             scope: {
-                propertyindex: '=',
-                asset: '='
+                maxScale: '@maxscale',
+                propertyIndex: '@propertyindex'
             },
-            link: function (scope, elem, attrs) {
-			},
-			controller: ['$scope', '$http', 'boundsScope', 'focusScope', 'tileScope', 'layerScope', 'featureScope', function ($scope, $http, boundsScope, focusScope, tileScope, layerScope, featureScope) {
-                console.log($scope.asset);
-                $scope.getY = function(mouseEvent) {
-                	var x = boundsModel.bounds.height;
-                	var y  = feature.propertyValues[propertyIndex].y;
-					return focusModel.centerScale.getPixY(x, y);
+            controller: ['$scope', function ($scope) {
+                $scope.parsePoints = function(points) {
+                    if (points == null) return;
+                    var ret = "";
+                    var cs = $scope.focusModel.centerScale;
+                    var bounds = $scope.boundsModel.bounds;
+                    for (var i = 0; i < points.length; i++) {
+                        var x = cs.getPixX(bounds.width, points[i].x);
+                        var y = cs.getPixY(bounds.height, points[i].y);
+                        ret += x + "," + y + " ";
+                    }
+                    return ret;
                 }
-                $scope.getX = function() {
-                	var x = boundsModel.bounds.width;
-                	var y  = feature.propertyValues[propertyIndex].x;
-					return focusModel.centerScale.getPixX(x, y);
-                }
-            }]
+            }],
+            link: function($scope, $element, $attr, $parentCtrl) {
+                $parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
+                $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
+                $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
+                
+                $attr.$observe('maxscale', function(val) { $scope.maxScale = angular.isDefined(val) ? val : Number.MAX_VALUE; });
+            }
         };
         return directiveDefinitionObject;
-    }		
-);
+    }).
+    directive('imagesymbolizer', function factory() {
+        var directiveDefinitionObject = {
+            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><img ng-repeat="feature in featureModel.features" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px"/></div>',
+            restrict: 'E',
+            require: '^mapfeaturelayer',
+            replace: true,
+            scope: {
+                maxScale: '@maxscale',
+                propertyIndex: '@propertyindex',
+                assetPropertyIndex: '@assetpropertyindex',
+                asset: '@asset'
+            },
+            link: function($scope, $element, $attr, $parentCtrl) {
+                $parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
+                $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
+                $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
+                
+                $attr.$observe('maxscale', function(val) { $scope.maxScale = angular.isDefined(val) ? val : Number.MAX_VALUE; });
+            }
+        };
+        return directiveDefinitionObject;
+    });
+

@@ -85,19 +85,6 @@ angular.module('test-app', ['nine-e']).
         $scope.layers = layerScope.layers;
         $scope.featureModels = featureScope.models;
         
-        $scope.parsePoints = function(points) {
-            if (points == null) return;
-            var ret = "";
-            var cs = focusScope.model.centerScale;
-            var bounds = boundsScope.model.bounds;
-            for (var i = 0; i < points.length; i++) {
-                var x = cs.getPixX(bounds.width, points[i].x);
-                var y = cs.getPixY(bounds.height, points[i].y);
-                ret += x + "," + y + " ";
-            }
-            //console.log('points='+points + " RET " + ret);
-            return ret;
-        }
         $scope.isInsideBoundaries = function(x, y) {
             if (x == null || y == null) return;
             var bounds = boundsScope.model.bounds;
