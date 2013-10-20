@@ -63,10 +63,10 @@ angular.module('nine-e', ['monospaced.mousewheel']).
         };
         return directiveDefinitionObject;
     }).
-    directive('legendslayer', function factory() {
+    directive('legend', function factory() {
         var directiveDefinitionObject = {
             template: '\
-            <div class="legendslayer">\
+            <div>\
   			<ul>\
   				<li ng-repeat="layer in layers">\
           			<input id="layer_{{layer.id}}" type="checkbox" ng-model="layer.visible">\
@@ -85,8 +85,12 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     directive('mapfeatureslayer', function factory() {
         var directiveDefinitionObject = {
             template: '\
+<<<<<<< HEAD
         <div class="mapFeatureLayer" ng-if="layers[6].visible"  ng-init="featureModel=featureModels[6].features">\
         <div class="symbolizer" ng-repeat="feature in featureModel"></div>\
+=======
+        <div class="mapfeaturelayer" ng-if="layers[featuremodelindex].visible"  ng-init="featureModel=featureModels[featuremodelindex].features">\
+>>>>>>> 606d68a7eadc322e1393b0b8ffc94bfdc7299b1f
         </div>',
             replace: true,
             restrict: 'E',
