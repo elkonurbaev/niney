@@ -164,7 +164,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive('imagesymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><img ng-repeat="feature in featureModel.features" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px"/></div>',
+            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><div ng-repeat="feature in featureModel.features" ng-switch on="!!feature.propertyValues[propertyIndex].geometries"><div ng-switch-when="false"><img src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" /></div><div ng-switch-when="true"><img ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries track by $index" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, geometry.y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, geometry.x)}}px" /></div></div></div>',
             restrict: 'E',
             require: '^mapfeaturelayer',
             replace: true,

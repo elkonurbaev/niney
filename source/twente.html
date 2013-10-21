@@ -36,52 +36,29 @@
       <legend id="legend" layers="layers"></legend>
       <map id="map" boundsmodel="boundsModel" focusmodel="focusModel">
         <tileslayer tilemodel="tileModel"></tileslayer>
-        
         <mapfeaturelayer layer="layers[0]" featuremodel="featureModels[1]">
           <geometrysymbolizer maxscale="108336.00408304202" propertyindex="3" style="fill:none;stroke:#FF0000;stroke-width:5"></geometrysymbolizer>
           <geometrysymbolizer maxscale="108336.00408304202" propertyindex="4" style="fill:none;stroke:#0000FF;stroke-width:5"></geometrysymbolizer>
           <imagesymbolizer propertyindex="2" assetpropertyindex="0" asset="twentemobiel/images/symt$_18.png"></imagesymbolizer>
         </mapfeaturelayer>
-        
-        <div class="mapfeaturelayer" ng-if="layers[1].visible" ng-init="featureModel=featureModels[2]">
-          <div class="symbolizer" ng-init="propertyIndex=3; asset='twentemobiel/images/trains.png'">
-            <img src="{{asset}}" ng-repeat="feature in featureModel.features" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
-          </div>
-        </div>
-        <div class="mapfeaturelayer" ng-if="layers[2].visible" ng-init="featureModel=featureModels[3]">
-          <div class="symbolizer" ng-init="propertyIndex=2; asset='twentemobiel/images/bikes.png'">
-            <img src="{{asset}}" ng-repeat="feature in featureModel.features" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
-          </div>
-        </div>
-        <div class="mapfeaturelayer" ng-if="layers[3].visible" ng-init="featureModel=featureModels[4]">
-          <div class="symbolizer" ng-init="propertyIndex=3; asset='twentemobiel/images/parkrides.png'">
-            <img src="{{asset}}" ng-repeat="feature in featureModel.features" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
-          </div>
-        </div>
-        <div class="mapfeaturelayer" ng-if="layers[4].visible" ng-init="featureModel=featureModels[5]">
-          <div class="symbolizer" ng-init="propertyIndex=3; asset='twentemobiel/images/carpools.png'">
-            <img src="{{asset}}" ng-repeat="feature in featureModel.features" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
-          </div>
-        </div>
-        <div class="mapfeaturelayer" ng-if="layers[5].visible" ng-init="featureModel=featureModels[6]">
-          <div class="symbolizer" ng-init="propertyIndex=3; asset='twentemobiel/images/carparks.png'">
-            <span ng-repeat="feature in featureModel.features">
-            <img ng-if="isInsideBoundaries(focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x), focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y))" src="{{asset}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
-            </span>
-          </div>
-        </div>
-        <div class="mapfeaturelayer" ng-if="layers[6].visible" ng-init="featureModel=featureModels[7]">
-          <div class="symbolizer" ng-init="propertyIndex=3; asset='twentemobiel/images/webcams.png'">
-            <div ng-repeat="feature in featureModel.features" ng-switch on="!!feature.propertyValues[feature.propertyValues.length-1].geometries">
-               <div ng-switch-when="false">
-                 <img src="{{asset}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" />
-               </div>
-               <div ng-switch-when="true">
-                 <img ng-repeat="geometry in feature.propertyValues[feature.propertyValues.length-1].geometries track by $index" src="{{asset}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, geometry.y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, geometry.x)}}px" />
-               </div>
-            </div>
-          </div>
-        </div>
+        <mapfeaturelayer layer="layers[1]" featuremodel="featureModels[2]">
+         <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/trains.png"></imagesymbolizer>
+        </mapfeaturelayer>
+        <mapfeaturelayer layer="layers[2]" featuremodel="featureModels[3]">
+         <imagesymbolizer propertyindex="2" assetpropertyindex="" asset="twentemobiel/images/bikes.png"></imagesymbolizer>
+        </mapfeaturelayer>
+        <mapfeaturelayer layer="layers[3]" featuremodel="featureModels[4]">
+         <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/parkrides.png"></imagesymbolizer>
+        </mapfeaturelayer>
+        <mapfeaturelayer layer="layers[4]" featuremodel="featureModels[5]">
+         <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/carpools.png"></imagesymbolizer>
+        </mapfeaturelayer>
+        <mapfeaturelayer layer="layers[5]" featuremodel="featureModels[6]">
+         <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/carparks.png"></imagesymbolizer>
+        </mapfeaturelayer>
+        <mapfeaturelayer layer="layers[6]" featuremodel="featureModels[7]">
+         <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/webcams.png"></imagesymbolizer>
+        </mapfeaturelayer>
         <h1 style="position:relative; margin:30%;">features.length: {{featureModels[1].features.length}}</h1>
       </map>
     </div>
