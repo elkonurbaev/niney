@@ -2,6 +2,14 @@ function BoundsModel() {
     this.bounds = null;
 }
 
+BoundsModel.prototype.setBounds = function(bounds) {
+    if (bounds.equals(this.bounds)) {
+        return;
+    }
+    
+    this.bounds = bounds;
+}
+
 function Bounds(width, height) {
     this.width = width;
     this.height = height;

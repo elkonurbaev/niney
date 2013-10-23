@@ -179,8 +179,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
             controller: ['$scope', function ($scope) {
                 $scope.isInsideBoundaries = function(item){
                 	var itemEnvelope = item.propertyValues[$scope.propertyIndex].getEnvelope();
-               	console.log('item:'+itemEnvelope.intersects($scope.focusModel.centerScale));
-                	return true;
+               	//console.log('item:'+itemEnvelope.intersects($scope.envelopeModel.getEnvelope()));
+                	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
                 }
             }],
             link: function($scope, $element, $attr, $parentCtrl) {

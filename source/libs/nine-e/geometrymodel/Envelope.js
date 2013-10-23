@@ -113,3 +113,8 @@ Envelope.prototype.grow = function(factor) {
 	this.point0.move(-dx, -dy);
 	this.point1.move(dx, dy);
 }
+
+Envelope.prototype.toString = function() {
+    return "Envelope(" + this.getMinX() + ", " + this.getMinY() + ", " + this.getMaxX() + ", " + this.getMaxY() + ")";
+}
+

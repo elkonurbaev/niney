@@ -26,6 +26,7 @@ EnvelopeCenterScale.prototype.setCenterScale = function(centerScale) {
     this.centerX = centerScale.centerX;
     this.centerY = centerScale.centerY;
     this.scale = centerScale.scale;
+    this.envelope = this.toEnvelope(this.width, this.height);
 }
 
 EnvelopeCenterScale.prototype.getEnvelope = function(){
