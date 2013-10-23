@@ -6,7 +6,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
             restrict: 'E',
             scope: {
                 boundsModel: '=boundsmodel',
-                focusModel: '=focusmodel'
+                focusModel: '=focusmodel',
+                envelopeModel: '=envelopemodel'
             },
             controller: ["$scope", function($scope) {
                 $scope.mouseDownX = -1;
@@ -103,6 +104,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 return function ($scope, $element, $attr, $parentCtrl) {
                     $parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
                     $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
+                    $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
                     
                     var childElement, childScope;
                     $scope.$watch('layer.visible', function(val) {
@@ -164,7 +166,37 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive('imagesymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><div ng-repeat="feature in featureModel.features" ng-switch on="!!feature.propertyValues[propertyIndex].geometries"><div ng-switch-when="false"><img src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px" /></div><div ng-switch-when="true"><img ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries track by $index" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, geometry.y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, geometry.x)}}px" /></div></div></div>',
+            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><img ng-repeat="feature in featureModel.features | filter:isInsideBoundaries" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px"/></div>',
+            restrict: 'E',
+            require: '^mapfeaturelayer',
+            replace: true,
+            scope: {
+                maxScale: '@maxscale',
+                propertyIndex: '@propertyindex',
+                assetPropertyIndex: '@assetpropertyindex',
+                asset: '@asset'
+            },
+            controller: ['$scope', function ($scope) {
+                $scope.isInsideBoundaries = function(item){
+                	var itemEnvelope = item.propertyValues[$scope.propertyIndex].getEnvelope();
+               	console.log('item:'+itemEnvelope.intersects($scope.focusModel.centerScale));
+                	return true;
+                }
+            }],
+            link: function($scope, $element, $attr, $parentCtrl) {
+            
+                $parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
+                $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
+                $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
+                $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
+                $attr.$observe('maxscale', function(val) { $scope.maxScale = angular.isDefined(val) ? val : Number.MAX_VALUE; });
+            }
+        };
+        return directiveDefinitionObject;
+    }).
+    directive('geometryimagesymbolizer', function factory() {
+        var directiveDefinitionObject = {
+            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><div ng-repeat="feature in featureModel.features | filter:isInsideBoundaries"><img ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries track by $index" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, geometry.y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, geometry.x)}}px" /></div></div>',
             restrict: 'E',
             require: '^mapfeaturelayer',
             replace: true,

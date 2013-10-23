@@ -22,6 +22,7 @@
     <script src="libs/nine-e/featuremodel/converters/CSVConverter.js"></script>
     <script src="libs/nine-e/focusmodel/CenterScale.js"></script>
     <script src="libs/nine-e/focusmodel/FocusModel.js"></script>
+    <script src="libs/nine-e/focusmodel/EnvelopeCenterScale.js"></script>
     <script src="libs/nine-e/focusmodel/ZoomLevel.js"></script>
     <script src="libs/nine-e/layermodel/Tile.js"></script>
     <script src="libs/nine-e/layermodel/TileModel.js"></script>
@@ -34,7 +35,7 @@
   <body>
     <div ng-controller="MapCtrl">
       <legend id="legend" layers="layers"></legend>
-      <map id="map" boundsmodel="boundsModel" focusmodel="focusModel">
+      <map id="map" boundsmodel="boundsModel" focusmodel="focusModel" envelopemodel="envelopeModel">
         <tileslayer tilemodel="tileModel"></tileslayer>
         <mapfeaturelayer layer="layers[0]" featuremodel="featureModels[1]">
           <geometrysymbolizer maxscale="108336.00408304202" propertyindex="3" style="fill:none;stroke:#FF0000;stroke-width:5"></geometrysymbolizer>
@@ -57,7 +58,7 @@
          <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/carparks.png"></imagesymbolizer>
         </mapfeaturelayer>
         <mapfeaturelayer layer="layers[6]" featuremodel="featureModels[7]">
-         <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/webcams.png"></imagesymbolizer>
+         <geometryimagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/webcams.png"></geometryimagesymbolizer>
         </mapfeaturelayer>
         <h1 style="position:relative; margin:30%;">features.length: {{featureModels[1].features.length}}</h1>
       </map>

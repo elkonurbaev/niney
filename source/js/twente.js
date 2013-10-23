@@ -28,6 +28,12 @@ angular.module('test-app', ['nine-e']).
         scope.model = model;
         return scope;
     }]).
+    factory('envelopeScope', ['$rootScope', function($rootScope) {
+        var scope = $rootScope.$new();
+        var model = new EnvelopeCenterScale();
+        scope.model = model;
+        return scope;
+    }]).
     factory('layerScope', ['$rootScope', function($rootScope) {
         var scope = $rootScope.$new();
         var layers = [
@@ -59,9 +65,9 @@ angular.module('test-app', ['nine-e']).
             var serviceConnector = new CSVServiceConnector($http, services[i].id, services[i].fieldSeparator, services[i].simple, services[i].featureType, services[i].url);
             serviceConnector.load(scope, function(scope, id, featureModel) { 
             	scope.models[id] = featureModel; 
-            	//console.log(featureModel);
             });
         }
+       
         return scope;
     }]).
     factory('tileScope', ['$rootScope', function($rootScope) {
@@ -69,24 +75,33 @@ angular.module('test-app', ['nine-e']).
         scope.model = new TileModel();
         return scope;
     }]).
-    run(['$rootScope', 'boundsScope', 'focusScope', 'tileScope', function($rootScope, boundsScope, focusScope, tileScope) {
+    run(['$rootScope', 'boundsScope', 'focusScope', 'tileScope', 'envelopeScope', function($rootScope, boundsScope, focusScope, tileScope, envelopeScope) {
         var tileModel = tileScope.model;
         
-        boundsScope.$watch('model.bounds', function(newValue, oldValue) { tileModel.setBounds(boundsScope.model.bounds); 
+        boundsScope.$watch('model.bounds', function(newValue, oldValue) { 			
+        	tileModel.setBounds(boundsScope.model.bounds); 
+        	envelopeScope.model.setBounds(boundsScope.model.bounds);
         });
-        focusScope.$watch('model.centerScale', function(newValue, oldValue) { tileModel.setCenterScale(focusScope.model.centerScale); });
+        focusScope.$watch('model.centerScale', function(newValue, oldValue) { 
+        	tileModel.setCenterScale(focusScope.model.centerScale); 
+        	envelopeScope.model.setCenterScale(focusScope.model.centerScale); 
+        });
         
         boundsScope.timer.tick();
         boundsScope.timer.start();
-        focusScope.model.setCenterScale(new CenterScale(745000, 6856000, 433344.01633216810));
+        var centerScale = new CenterScale(745000, 6856000, 433344.01633216810);
+        focusScope.model.setCenterScale(centerScale);
+        
+        envelopeScope.model.setBounds(boundsScope.model.bounds);
+        envelopeScope.model.setCenterScale(centerScale);
     }]).
-    controller('MapCtrl', ['$scope', 'boundsScope', 'focusScope', 'tileScope', 'layerScope', 'featureScope', function ($scope, boundsScope, focusScope, tileScope, layerScope, featureScope) {
+    controller('MapCtrl', ['$scope', 'boundsScope', 'focusScope', 'tileScope', 'layerScope', 'featureScope', 'envelopeScope', function ($scope, boundsScope, focusScope, tileScope, layerScope, featureScope, envelopeScope) {
         $scope.boundsModel = boundsScope.model;
         $scope.focusModel = focusScope.model;
         $scope.tileModel = tileScope.model;
         $scope.layers = layerScope.layers;
         $scope.featureModels = featureScope.models;
-        
+        $scope.envelopeModel = envelopeScope.model;
         $scope.isInsideBoundaries = function(x, y) {
             if (x == null || y == null) return;
             var bounds = boundsScope.model.bounds;

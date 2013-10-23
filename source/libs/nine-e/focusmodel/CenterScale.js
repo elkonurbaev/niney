@@ -17,6 +17,18 @@ CenterScale.prototype.equals = function(centerScale) {
     return false;
 }
 
+CenterScale.prototype.getCenterX = function(){
+	return this.centerX;
+}
+
+CenterScale.prototype.getCenterY = function(){
+	return this.centerY;
+}
+
+CenterScale.prototype.getScale = function(){
+	return this.scale;
+}
+
 CenterScale.prototype.clone = function() {
     return new CenterScale(this.centerX, this.centerY, this.scale);
 }
