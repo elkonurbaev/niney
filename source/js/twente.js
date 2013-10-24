@@ -23,7 +23,6 @@ angular.module('test-app', ['nine-e']).
         model.maxScale = 866688.0326643360;
         model.scaleToZoomLevels = true;
         var timer = new Timer(50, 20);
-        //timer.scope = scope;
         model.timer = timer;
         scope.model = model;
         return scope;
@@ -60,14 +59,12 @@ angular.module('test-app', ['nine-e']).
         {id:7, url:'twentemobiel/webcams.csv', fieldSeparator:';', simple:false, featureName:'webcamsFeatureModel', featureType:new FeatureType('webcamsFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))}
         ];
         scope.models = new Array(services.length);
-        
         for (var i = 0; i < services.length; ++i) {
             var serviceConnector = new CSVServiceConnector($http, services[i].id, services[i].fieldSeparator, services[i].simple, services[i].featureType, services[i].url);
             serviceConnector.load(scope, function(scope, id, featureModel) { 
                 scope.models[id] = featureModel; 
             });
         }
-       
         return scope;
     }]).
     factory('tileScope', ['$rootScope', function($rootScope) {

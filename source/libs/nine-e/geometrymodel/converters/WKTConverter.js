@@ -6,8 +6,7 @@ function WKTConverter() {
 	this.polygonRegExp = /^"?POLYGON\(\(([-\d\s\.,]*)\)\)"?$/;
 }
 
-WKTConverter.prototype.wktToGeometry = function(wkt){
-	//console.log(wkt);
+WKTConverter.prototype.wktToGeometry = function(wkt) {
 	var sridString = null;
 	if (wkt.search(this.sridRegExp) == 0) {
 		sridString = wkt.replace(this.sridRegExp, "$1");
@@ -16,22 +15,24 @@ WKTConverter.prototype.wktToGeometry = function(wkt){
 	var geometry = null;
 	if (wkt.search(this.geometryCollectionRegExp) == 0) {
 		geometry = this.wktToGeometryCollection(wkt);
-	} else if (wkt.search(this.pointRegExp) == 0) {
+	} 
+	else if (wkt.search(this.pointRegExp) == 0) {
 		geometry = this.wktToPoint(wkt);
-	} else if (wkt.search(this.lineStringRegExp) == 0) {
+	} 
+	else if (wkt.search(this.lineStringRegExp) == 0) {
 		geometry = this.wktToLineString(wkt);
-	} else if (wkt.search(this.polygonRegExp) == 0) {
+	} 
+	else if (wkt.search(this.polygonRegExp) == 0) {
 		geometry = this.wktToPolygon(wkt);
 	}
 	if ((geometry != null) && (sridString != null) && (sridString != "") && (sridString != "900913")) {
 		geometry.srid = parseInt(sridString);
 		geometry = GeometryTools.prototype.transform(geometry, 900913);
 	}
-	//console.log('here');
 	return geometry;
 }
 
-WKTConverter.prototype.wktToGeometryCollection = function(wkt){
+WKTConverter.prototype.wktToGeometryCollection = function(wkt) {
 	wkt = wkt.replace(this.geometryCollectionRegExp, "$1");
 	var endOfLine = false;
 	var i = -1;
@@ -41,7 +42,8 @@ WKTConverter.prototype.wktToGeometryCollection = function(wkt){
 		if (i > -1) {
 			geometries.push(this.wktToGeometry(wkt.substring(0, i)));
 			wkt = wkt.substring(i + 1);
-		} else {
+		} 
+		else {
 			geometries.push(this.wktToGeometry(wkt));
 			endOfLine = true;
 		}
@@ -49,13 +51,13 @@ WKTConverter.prototype.wktToGeometryCollection = function(wkt){
 	return new GeometryCollection(geometries);
 }
 	
-WKTConverter.prototype.wktToPoint = function(wkt){
+WKTConverter.prototype.wktToPoint = function(wkt) {
 	wkt = wkt.replace(this.pointRegExp, "$1");
 	var coords = wkt.split(" ");
 	return new Point(coords[0], coords[1]);
 }
 	
-WKTConverter.prototype.wktToLineString = function(wkt){		
+WKTConverter.prototype.wktToLineString = function(wkt) {		
 	wkt = wkt.replace(this.lineStringRegExp, "$1");
 	var pointStrings = wkt.split(",");
 	var coords = null;
@@ -64,11 +66,10 @@ WKTConverter.prototype.wktToLineString = function(wkt){
 		coords = pointStrings[i].split(" ");
 		points.push(new Point(coords[0], coords[1]));
 	}
-	//console.log('points.length='+points.length);
 	return new LineString(points);
 }
 
-WKTConverter.prototype.wktToPolygon = function(wkt){	
+WKTConverter.prototype.wktToPolygon = function(wkt) {	
 	wkt = wkt.replace(this.polygonRegExp, "$1");
 	var pointStrings = wkt.split(",");
 	var coords = null;
@@ -80,20 +81,21 @@ WKTConverter.prototype.wktToPolygon = function(wkt){
 	return new Polygon(new LineString(points));
 }
 		
-WKTConverter.prototype.geometryToWKT = function(geometry){		
+WKTConverter.prototype.geometryToWKT = function(geometry) {		
 	if (geometry instanceof Point) {
 		return pointToWKT(Point(geometry));
-	} else if (geometry instanceof Polygon) {
+	} 
+	else if (geometry instanceof Polygon) {
 		return this.polygonToWKT(Polygon(geometry));
 	}
 	return null;
 }
 	
-WKTConverter.prototype.pointToWKT = function(point){		
+WKTConverter.prototype.pointToWKT = function(point) {		
 	return "POINT(" + point.x + " " + point.y + ")";
 }
 
-WKTConverter.prototype.polygonToWKT = function(polygon){	
+WKTConverter.prototype.polygonToWKT = function(polygon) {	
 	var wkt = "POLYGON((";
 	var polyPoints = polygon.points;
 	for(var i = 0; i < polyPoints.length; ++i) {

@@ -1,5 +1,4 @@
 function Polygon(points){
-    //this._super(this);
     this.points = points;
 }
 

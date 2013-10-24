@@ -1,6 +1,4 @@
-
-function CSVConverter() {
-}
+function CSVConverter() {}
 
 CSVConverter.prototype.csvToFeatures = function(csv, simple, fieldSeparator, textDelimiter, featureType){
 	var features = new Array();
@@ -8,12 +6,12 @@ CSVConverter.prototype.csvToFeatures = function(csv, simple, fieldSeparator, tex
 	var feature = null;
 	var errorLines = new Array();
 	for (var i = 0; i < lines.length; i++) {
-		//try {
+		try {
 			feature = this.lineToFeature(lines[i], featureType);
 			features.push(feature);
-		//} catch (e) {
-			//errorLines.push(i);
-		//}
+		} catch (e) {
+			errorLines.push(i);
+		}
 	}
 	if (errorLines.length > 0) {
 		alert("Could not convert " + errorLines.length + " out of " + lines.length + " csv lines to features. Error lines: " + errorLines);
@@ -21,15 +19,15 @@ CSVConverter.prototype.csvToFeatures = function(csv, simple, fieldSeparator, tex
 	return features;
 }
 
-CSVConverter.prototype.csvToLines = function(csv, simple, fieldSeparator, textDelimiter){
+CSVConverter.prototype.csvToLines = function(csv, simple, fieldSeparator, textDelimiter) {
 	csv = csv.replace(new RegExp("^\\s+"), "").replace(new RegExp("\\s+$"), ""); 
 	if (simple) {
 		lines = csv.split("\n");
 		for (var h = 0; h < lines.length; h++) {
 			lines[h] = lines[h].split(fieldSeparator);
-			//console.log(lines[h]);
 		}
-	} else {
+	} 
+	else {
 		var endOfFile = false;
 		var endOfLine = false;
 		var i = -1;
@@ -47,10 +45,8 @@ CSVConverter.prototype.csvToLines = function(csv, simple, fieldSeparator, textDe
 					i = csv.search(new RegExp("($|\n|" + fieldSeparator + ")"));
 					j = i;
 				}
-				//console.log(csv.substring(0, i));
 				fields.push(csv.substring(0, i));
 				csv = csv.substring(j);
-			
 				if (csv.indexOf(fieldSeparator) == 0) {
 					csv = csv.substring(fieldSeparator.length);
 				} else if (csv.indexOf("\n") == 0) {
@@ -69,29 +65,23 @@ CSVConverter.prototype.csvToLines = function(csv, simple, fieldSeparator, textDe
 	return lines;
 }
 
-CSVConverter.prototype.lineToFeature = function(fields, featureType){
+CSVConverter.prototype.lineToFeature = function(fields, featureType) {
 	var propertyTypes = featureType.properties;
 	if (fields.length != propertyTypes.length) {
 		alert("Number of fields of " + fields.length + " in the csv does not match the number of properties of " + propertyTypes.length + " in the featuretype. ");
 	}
 	var propertyValues = new Array();
 	var wktConverter = new WKTConverter();
-	//var geometry = null;
 	for (var i = 0; i < propertyTypes.length; i++) {
-	
 		if (fields[i] == "") { 
 			propertyValues.push(null); 
-		} else 
-		if (propertyTypes[i].type == PropertyType.prototype.GEOMETRY) {
-			//console.log(propertyTypes[i].type);
-			//geometry = wktConverter.wktToGeometry(fields[i]);
+		} 
+		else if (propertyTypes[i].type == PropertyType.prototype.GEOMETRY) {
 			propertyValues.push(wktConverter.wktToGeometry(fields[i]));
-		} else {
+		} 
+		else {
 			propertyValues.push(fields[i]);
 		}
 	}
-	//if(geometry != null){
-		//propertyValues.push(geometry);
-	//}
 	return new Feature(featureType, propertyValues);
 }

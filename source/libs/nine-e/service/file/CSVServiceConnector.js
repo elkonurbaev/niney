@@ -8,9 +8,8 @@ function CSVServiceConnector(http, id, fieldSeparator, simple, featureType, url)
     this.simple = simple;
 }
 
-CSVServiceConnector.prototype.load = function(scope, callback){
+CSVServiceConnector.prototype.load = function(scope, callback) {
 	var obj = this;
-	
 	var csvConverter = new CSVConverter();
 	var features = new Array();
 	this.http({method: 'GET', url: this.url}).

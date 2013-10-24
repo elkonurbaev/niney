@@ -6,7 +6,6 @@ BoundsModel.prototype.setBounds = function(bounds) {
     if (bounds.equals(this.bounds)) {
         return;
     }
-    
     this.bounds = bounds;
 }
 
@@ -18,8 +17,6 @@ function Bounds(width, height) {
 Bounds.prototype.equals = function(o) {
     return ((o != null) && (this.width == o.width) && (this.height == o.height));
 };
-
-
 
 function Timer(delay, numRepeats) {
     this.delay = delay;
@@ -62,8 +59,8 @@ Timer.prototype.isRunning = function() {
 Timer.prototype.tick = function() {
     if (this.scope != null) {
         this.scope.$apply(this.timerHandler);
-    } else {
+    } 
+    else {
         this.timerHandler.apply();
     }
 };
-

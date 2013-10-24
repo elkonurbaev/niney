@@ -9,23 +9,20 @@ function FocusModel() {
 
 FocusModel.prototype.setCenterScale = function(centerScale) {
     centerScale = this.precond(centerScale);
-    
     this.centerScale = centerScale;
 }
 
 FocusModel.prototype.setAnimationCenterScale = function(animationCenterScale) {
     this.timer.reset();
-    
     var focusModel = this;
     this.timer.timerHandler = function() {
         focusModel.centerScale = focusModel.centerScales[focusModel.timer.currentCount];
     };
-    
     animationCenterScale = this.precond(animationCenterScale);
-    
     if ((this.centerScale == null) || (this.centerScale.equals(animationCenterScale))) {
         this.centerScale = animationCenterScale;
-    } else {
+    } 
+    else {
         var dCenterX = (animationCenterScale.centerX - this.centerScale.centerX) / this.timer.numRepeats;
         var dCenterY = (animationCenterScale.centerY - this.centerScale.centerY) / this.timer.numRepeats;
         var dScale = (animationCenterScale.scale - this.centerScale.scale) / this.timer.numRepeats;
@@ -38,8 +35,7 @@ FocusModel.prototype.setAnimationCenterScale = function(animationCenterScale) {
             ));
         }
         this.centerScales.push(animationCenterScale); // For this one: i == numRepeats
-        this.centerScale = this.centerScales[0];
-        
+        this.centerScale = this.centerScales[0];  
         this.timer.start();
     }
 }
@@ -49,7 +45,8 @@ FocusModel.prototype.pan = function(dx, dy) {
         for (var i = this.timer.currentCount; i <= this.timer.numRepeats; i++) {
             this.centerScales[i] = new CenterScale(this.centerScales[i].centerX + dx, this.centerScales[i].centerY + dy, this.centerScales[i].scale);
         }
-    } else {
+    } 
+    else {
         this.centerScale = new CenterScale(this.centerScale.centerX + dx, this.centerScale.centerY + dy, this.centerScale.scale);
     }
 }
@@ -71,7 +68,6 @@ FocusModel.prototype.precond = function(centerScale) {
             return new CenterScale(centerX, centerY, zoomLevelScale);
         }
     }
-    
     return new CenterScale(centerX, centerY, scale);
 }
 

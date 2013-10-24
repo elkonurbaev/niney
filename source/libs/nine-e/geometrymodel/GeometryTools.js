@@ -1,39 +1,26 @@
-function GeometryTools(){ }
+function GeometryTools() {}
 
 GeometryTools.prototype.getGeometryClass = function(geometryType) {
 	geometryType = geometryType.toUpperCase();
 	if (geometryType == "POINT") {
 		return Point;
-	} else if (geometryType == "ENVELOPE") {
+	} 
+	else if (geometryType == "ENVELOPE") {
 		return Envelope;
-	} else if (geometryType == "CIRCLE") {
+	} 
+	else if (geometryType == "CIRCLE") {
 		return Circle;
-	} else if (geometryType == "LINE_STRING") {
+	} 
+	else if (geometryType == "LINE_STRING") {
 		return LineString;
-	} else if (geometryType == "POLYGON") {
+	} 
+	else if (geometryType == "POLYGON") {
 		return Polygon;
 	}
 	return null;
 }
-
-//incomplete function
-GeometryTools.prototype.getGeometryFactory = function(geometryType) {
-	geometryType = geometryType.toUpperCase();
-	if (geometryType == "POINT") {
-		//return new PointFactory();
-	} else if (geometryType == "ENVELOPE") {
-		//return new EnvelopeFactory();
-	} else if (geometryType == "CIRCLE") {
-		//return new CircleFactory();
-	} else if (geometryType == "LINE_STRING") {
-		//return new LineStringFactory();
-	} else if (geometryType == "POLYGON") {
-		//return new PolygonFactory();
-	}
-	return null;
-}
 		
-GeometryTools.prototype.transform = function(geometry, srid){
+GeometryTools.prototype.transform = function(geometry, srid) {
 	if (geometry == null) {
 		alert("No geometry given.");
 	}

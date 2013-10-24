@@ -32,12 +32,12 @@ function getZoomLevel(scale, round) {
     var zoomLevel = null;
     for (var i = 0; i < zoomLevels.length - 1; i++) {
         zoomLevel = zoomLevels[i];
-        
         if (!round) {
             if (scale >= zoomLevel.scale) {
                 return zoomLevel;
             }
-        } else {
+        } 
+        else {
             if (scale >= (zoomLevel.scale + zoomLevels[i + 1].scale) / 2) {
                 return zoomLevel;
             }

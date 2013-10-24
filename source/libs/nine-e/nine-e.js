@@ -131,7 +131,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive('geometrysymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="symbolizer" ng-repeat="feature in featureModel.features"><polyline ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries" points="{{parsePoints(geometry.points)}}" style="{{style}}"></polyline></svg></div>',
+            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="symbolizer" ng-repeat="feature in featureModel.features"><polyline ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries" points="{{parsePoints(geometry.points)}}" style="{{style}}"></polyline></svg></div>',
             restrict: 'E',
             require: '^mapfeaturelayer',
             replace: true,
@@ -153,12 +153,16 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     }
                     return ret;
                 }
+                $scope.isInsideBoundaries = function(item){
+                	var itemEnvelope = item.getEnvelope();
+                	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
+                }
             }],
             link: function($scope, $element, $attr, $parentCtrl) {
                 $parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
                 $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
                 $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
-                
+                $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
                 $attr.$observe('maxscale', function(val) { $scope.maxScale = angular.isDefined(val) ? val : Number.MAX_VALUE; });
             }
         };
@@ -179,12 +183,10 @@ angular.module('nine-e', ['monospaced.mousewheel']).
             controller: ['$scope', function ($scope) {
                 $scope.isInsideBoundaries = function(item){
                 	var itemEnvelope = item.propertyValues[$scope.propertyIndex].getEnvelope();
-               	//console.log('item:'+itemEnvelope.intersects($scope.envelopeModel.getEnvelope()));
                 	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
                 }
             }],
             link: function($scope, $element, $attr, $parentCtrl) {
-            
                 $parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
                 $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
                 $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
@@ -196,7 +198,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive('geometryimagesymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><div ng-repeat="feature in featureModel.features | filter:isInsideBoundaries"><img ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries track by $index" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, geometry.y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, geometry.x)}}px" /></div></div>',
+            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><div ng-repeat="feature in featureModel.features"><img ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries track by $index" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, geometry.y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, geometry.x)}}px" /></div></div>',
             restrict: 'E',
             require: '^mapfeaturelayer',
             replace: true,
@@ -206,11 +208,17 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 assetPropertyIndex: '@assetpropertyindex',
                 asset: '@asset'
             },
+            controller: ['$scope', function ($scope) {
+                $scope.isInsideBoundaries = function(item){
+                	var itemEnvelope = item.getEnvelope();
+                	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
+                }
+            }],
             link: function($scope, $element, $attr, $parentCtrl) {
                 $parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
                 $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
                 $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
-                
+                $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
                 $attr.$observe('maxscale', function(val) { $scope.maxScale = angular.isDefined(val) ? val : Number.MAX_VALUE; });
             }
         };

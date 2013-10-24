@@ -29,20 +29,20 @@ EnvelopeCenterScale.prototype.setCenterScale = function(centerScale) {
     this.envelope = this.toEnvelope(this.width, this.height);
 }
 
-EnvelopeCenterScale.prototype.getEnvelope = function(){
+EnvelopeCenterScale.prototype.getEnvelope = function() {
 	return this.envelope;
 }
 
-EnvelopeCenterScale.prototype.getWidth = function(){
+EnvelopeCenterScale.prototype.getWidth = function() {
 	return this.width;
 }
 
-EnvelopeCenterScale.prototype.getHeight = function(){
+EnvelopeCenterScale.prototype.getHeight = function() {
 	return this.height;
 }
 
-EnvelopeCenterScale.prototype.equals = function(centerScale){
-	if(centerScale == null){
+EnvelopeCenterScale.prototype.equals = function(centerScale) {
+	if(centerScale == null) {
 		return false;
 	}
 	if(centerScale instanceof EnvelopeCenterScale){
@@ -51,7 +51,7 @@ EnvelopeCenterScale.prototype.equals = function(centerScale){
 			(this.scale == centerScale.getScale()) &&
 			(this.width == centerScale.getWidth()) &&
 			(this.height == centerScale.getHeight())
-		   ){
+		   ) {
 			return true;
 		}
 		else{
@@ -60,5 +60,3 @@ EnvelopeCenterScale.prototype.equals = function(centerScale){
 	}
 	return this.equals(centerScale);
 }
-			
-	

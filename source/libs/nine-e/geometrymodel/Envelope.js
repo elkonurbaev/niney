@@ -55,7 +55,7 @@ Envelope.prototype.equals = function(geometry) {
 		(minY == Envelope(geometry).minY) &&
 		(maxX == Envelope(geometry).maxX) &&
 		(maxY == Envelope(geometry).maxY)
-	){
+	) {
 		return true;
 	}
 	return false;
@@ -68,15 +68,17 @@ Envelope.prototype.clone = function() {
 Envelope.prototype.getMinX = function(){
 	if (this.point0.getX() <= this.point1.getX()) {
 		return this.point0.getX();
-	} else {
+	} 
+	else {
 		return this.point1.getX();
 	}
 }
 		
 Envelope.prototype.getMinY = function() {
-if (this.point0.getY() <= this.point1.getY()) {
+	if (this.point0.getY() <= this.point1.getY()) {
 		return this.point0.getY();
-	} else {
+	} 
+	else {
 		return this.point1.getY();
 	}
 }
@@ -84,15 +86,17 @@ if (this.point0.getY() <= this.point1.getY()) {
 Envelope.prototype.getMaxX = function(){
 	if (this.point0.getX() >= this.point1.getX()) {
 		return this.point0.getX();
-	} else {
+	} 
+	else {
 		return this.point1.getX();
 	}
 }		
 
 Envelope.prototype.getMaxY = function() {
-if (this.point0.getY() >= this.point1.getY()) {
+	if (this.point0.getY() >= this.point1.getY()) {
 		return this.point0.getY();
-	} else {
+	} 
+	else {
 		return this.point1.getY();
 	}
 }
@@ -109,7 +113,6 @@ Envelope.prototype.grow = function(factor) {
 	var displacementFactor = (factor - 1) / 2;
 	var dx = width * displacementFactor;
 	var dy = height * displacementFactor;
-			
 	this.point0.move(-dx, -dy);
 	this.point1.move(dx, dy);
 }

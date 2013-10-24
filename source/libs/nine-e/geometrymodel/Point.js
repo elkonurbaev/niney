@@ -1,45 +1,44 @@
-function Point(x, y){ 
+function Point(x, y) { 
 	this.x = x;
     this.y = y;
-    //this.getParent();
 }
 
 Point.prototype = new Geometry();
 Point.prototype.constructor = Point;
 
-Point.prototype.getChildGeometries = function(){
+Point.prototype.getChildGeometries = function() {
 	return new Array();
 }
 
-Point.prototype.getPoints = function(){
+Point.prototype.getPoints = function() {
 	return new Array(this);
 }
 
-Point.prototype.getEndPoint = function(){
+Point.prototype.getEndPoint = function() {
 	return this;
 }
 
-Point.prototype.getCenterPoint = function(){
+Point.prototype.getCenterPoint = function() {
 	return new Point(this.x, this.y);
 }
 
-Point.prototype.getEnvelope = function(){
+Point.prototype.getEnvelope = function() {
 	return new Envelope(this.x, this.y, this.x, this.y);
 }
 
-Point.prototype.intersects = function(intersectingEnvelope){
+Point.prototype.intersects = function(intersectingEnvelope) {
 	if (
-			(this.x >= intersectingEnvelope.minX) &&
-			(this.x <= intersectingEnvelope.maxX) &&
-			(this.y >= intersectingEnvelope.minY) &&
-			(this.y <= intersectingEnvelope.maxY)
+		(this.x >= intersectingEnvelope.minX) &&
+		(this.x <= intersectingEnvelope.maxX) &&
+		(this.y >= intersectingEnvelope.minY) &&
+		(this.y <= intersectingEnvelope.maxY)
 	) {
-			return true;
+		return true;
 	}
 	return false;
 }	
 
-Point.prototype.move = function(dx, dy){
+Point.prototype.move = function(dx, dy) {
 	this.x += dx;
 	this.y += dy;
 }
@@ -58,11 +57,11 @@ Point.prototype.clone = function() {
 	return new Point(this.x, this.y);
 }
 
-Point.prototype.getX = function(){
+Point.prototype.getX = function() {
 	return this.x;
 }
 
-Point.prototype.getY = function(){
+Point.prototype.getY = function() {
 	return this.y;
 }
 

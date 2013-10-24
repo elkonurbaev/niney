@@ -12,20 +12,20 @@ CenterScale.prototype.equals = function(centerScale) {
     if ((this.centerX == centerScale.centerX) &&
         (this.centerY == centerScale.centerY) &&
         (this.scale == centerScale.scale)) {
-            return true;
+        return true;
     }
     return false;
 }
 
-CenterScale.prototype.getCenterX = function(){
+CenterScale.prototype.getCenterX = function() {
 	return this.centerX;
 }
 
-CenterScale.prototype.getCenterY = function(){
+CenterScale.prototype.getCenterY = function() {
 	return this.centerY;
 }
 
-CenterScale.prototype.getScale = function(){
+CenterScale.prototype.getScale = function() {
 	return this.scale;
 }
 
