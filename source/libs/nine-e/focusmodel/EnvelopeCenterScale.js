@@ -53,8 +53,7 @@ EnvelopeCenterScale.prototype.equals = function(centerScale) {
 			(this.height == centerScale.getHeight())
 		   ) {
 			return true;
-		}
-		else{
+		} else{
 			return false;
 		}
 	}

@@ -36,8 +36,7 @@ function getZoomLevel(scale, round) {
             if (scale >= zoomLevel.scale) {
                 return zoomLevel;
             }
-        } 
-        else {
+        } else {
             if (scale >= (zoomLevel.scale + zoomLevels[i + 1].scale) / 2) {
                 return zoomLevel;
             }

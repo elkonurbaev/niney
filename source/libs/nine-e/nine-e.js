@@ -49,7 +49,6 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     
                     mouseEvent.preventDefault();
                 };
-
                 this.scope = $scope;
             }],
             transclude: true

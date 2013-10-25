@@ -74,7 +74,11 @@
       <button onclick="setMapSize(900, 600)">Small</button>
     </div>
     <div id="infoPanel">
-      <div class="temp"> Tiles:
+    	
+      
+    </div>
+    
+    <div class="temp"> Tiles:
         <ul>
           <li ng-repeat="tile in tileModel.tiles">{{tile.tileY +', '+ tile.tileX}}</li>
         </ul>
@@ -85,7 +89,6 @@
         Scale:<br><br>
         1: {{focusModel.centerScale.scale}}
       </div>
-    </div>
     </div>
   </body>
 </html>

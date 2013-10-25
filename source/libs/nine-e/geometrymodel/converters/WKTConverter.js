@@ -84,8 +84,7 @@ WKTConverter.prototype.wktToPolygon = function(wkt) {
 WKTConverter.prototype.geometryToWKT = function(geometry) {		
 	if (geometry instanceof Point) {
 		return pointToWKT(Point(geometry));
-	} 
-	else if (geometry instanceof Polygon) {
+	} else if (geometry instanceof Polygon) {
 		return this.polygonToWKT(Polygon(geometry));
 	}
 	return null;

@@ -68,8 +68,7 @@ Envelope.prototype.clone = function() {
 Envelope.prototype.getMinX = function(){
 	if (this.point0.getX() <= this.point1.getX()) {
 		return this.point0.getX();
-	} 
-	else {
+	} else {
 		return this.point1.getX();
 	}
 }
@@ -77,8 +76,7 @@ Envelope.prototype.getMinX = function(){
 Envelope.prototype.getMinY = function() {
 	if (this.point0.getY() <= this.point1.getY()) {
 		return this.point0.getY();
-	} 
-	else {
+	} else {
 		return this.point1.getY();
 	}
 }
@@ -86,8 +84,7 @@ Envelope.prototype.getMinY = function() {
 Envelope.prototype.getMaxX = function(){
 	if (this.point0.getX() >= this.point1.getX()) {
 		return this.point0.getX();
-	} 
-	else {
+	} else {
 		return this.point1.getX();
 	}
 }		
@@ -95,8 +92,7 @@ Envelope.prototype.getMaxX = function(){
 Envelope.prototype.getMaxY = function() {
 	if (this.point0.getY() >= this.point1.getY()) {
 		return this.point0.getY();
-	} 
-	else {
+	} else {
 		return this.point1.getY();
 	}
 }

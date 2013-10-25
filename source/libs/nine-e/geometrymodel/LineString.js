@@ -41,8 +41,7 @@ LineString.prototype.removeChild = function(child) {
 		}
 		_points[pointIndex] = otherPoint.clone();
 		_points[pointIndex].parent = this;
-	} 
-	else {
+	} else {
 		for (var i = 0; i < _points.length; i++) {
 			if (_points[i] == child) {
 				_points.splice(i, 1);

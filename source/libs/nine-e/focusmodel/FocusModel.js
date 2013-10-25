@@ -21,8 +21,7 @@ FocusModel.prototype.setAnimationCenterScale = function(animationCenterScale) {
     animationCenterScale = this.precond(animationCenterScale);
     if ((this.centerScale == null) || (this.centerScale.equals(animationCenterScale))) {
         this.centerScale = animationCenterScale;
-    } 
-    else {
+    } else {
         var dCenterX = (animationCenterScale.centerX - this.centerScale.centerX) / this.timer.numRepeats;
         var dCenterY = (animationCenterScale.centerY - this.centerScale.centerY) / this.timer.numRepeats;
         var dScale = (animationCenterScale.scale - this.centerScale.scale) / this.timer.numRepeats;
@@ -45,8 +44,7 @@ FocusModel.prototype.pan = function(dx, dy) {
         for (var i = this.timer.currentCount; i <= this.timer.numRepeats; i++) {
             this.centerScales[i] = new CenterScale(this.centerScales[i].centerX + dx, this.centerScales[i].centerY + dy, this.centerScales[i].scale);
         }
-    } 
-    else {
+    } else {
         this.centerScale = new CenterScale(this.centerScale.centerX + dx, this.centerScale.centerY + dy, this.centerScale.scale);
     }
 }

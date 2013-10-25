@@ -26,8 +26,7 @@ CSVConverter.prototype.csvToLines = function(csv, simple, fieldSeparator, textDe
 		for (var h = 0; h < lines.length; h++) {
 			lines[h] = lines[h].split(fieldSeparator);
 		}
-	} 
-	else {
+	} else {
 		var endOfFile = false;
 		var endOfLine = false;
 		var i = -1;
@@ -75,11 +74,9 @@ CSVConverter.prototype.lineToFeature = function(fields, featureType) {
 	for (var i = 0; i < propertyTypes.length; i++) {
 		if (fields[i] == "") { 
 			propertyValues.push(null); 
-		} 
-		else if (propertyTypes[i].type == PropertyType.prototype.GEOMETRY) {
+		} else if (propertyTypes[i].type == PropertyType.prototype.GEOMETRY) {
 			propertyValues.push(wktConverter.wktToGeometry(fields[i]));
-		} 
-		else {
+		} else {
 			propertyValues.push(fields[i]);
 		}
 	}

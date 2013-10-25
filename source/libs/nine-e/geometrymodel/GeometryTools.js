@@ -4,17 +4,13 @@ GeometryTools.prototype.getGeometryClass = function(geometryType) {
 	geometryType = geometryType.toUpperCase();
 	if (geometryType == "POINT") {
 		return Point;
-	} 
-	else if (geometryType == "ENVELOPE") {
+	} else if (geometryType == "ENVELOPE") {
 		return Envelope;
-	} 
-	else if (geometryType == "CIRCLE") {
+	} else if (geometryType == "CIRCLE") {
 		return Circle;
-	} 
-	else if (geometryType == "LINE_STRING") {
+	} else if (geometryType == "LINESTRING") {
 		return LineString;
-	} 
-	else if (geometryType == "POLYGON") {
+	} else if (geometryType == "POLYGON") {
 		return Polygon;
 	}
 	return null;
