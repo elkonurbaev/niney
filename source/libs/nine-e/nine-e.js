@@ -130,7 +130,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive('geometrysymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="symbolizer" ng-repeat="feature in featureModel.features"><polyline ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries" points="{{parsePoints(geometry.points)}}" style="{{style}}"></polyline></svg></div>',
+            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="symbolizer" ng-repeat="feature in featureModel.features"><polyline ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries" ng-click="showInfo(feature)" points="{{parsePoints(geometry.points)}}" style="{{style}}"></polyline></svg></div>',
             restrict: 'E',
             require: '^mapfeaturelayer',
             replace: true,
@@ -155,6 +155,15 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 $scope.isInsideBoundaries = function(item){
                 	var itemEnvelope = item.getEnvelope();
                 	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
+                };
+                $scope.showInfo = function(feature){
+                	/*console.log(feature.propertyValues[1]);
+                	console.log(feature.propertyValues[2]);
+                	console.log(feature.propertyValues[4]);
+                	console.log(feature.propertyValues[5]);
+                	console.log(feature.propertyValues[6]);*/
+                	//document.getElementById('infoPanel').append();
+                
                 }
             }],
             link: function($scope, $element, $attr, $parentCtrl) {
@@ -169,7 +178,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive('imagesymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><img ng-repeat="feature in featureModel.features | filter:isInsideBoundaries" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px"/></div>',
+            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><img ng-repeat="feature in featureModel.features | filter:isInsideBoundaries" ng-click="showInfo(feature)" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px"/></div>',
             restrict: 'E',
             require: '^mapfeaturelayer',
             replace: true,
@@ -183,6 +192,15 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 $scope.isInsideBoundaries = function(item){
                 	var itemEnvelope = item.propertyValues[$scope.propertyIndex].getEnvelope();
                 	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
+                };
+                $scope.showInfo = function(feature) {
+                	alert('showInfo');
+                	/*console.log(feature.propertyValues[1]);
+                	console.log(feature.propertyValues[2]);
+                	console.log(feature.propertyValues[4]);
+                	console.log(feature.propertyValues[5]);
+                	console.log(feature.propertyValues[6]);*/
+                	//document.getElementById('infoPanel').append();
                 }
             }],
             link: function($scope, $element, $attr, $parentCtrl) {
@@ -197,7 +215,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive('geometryimagesymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><div ng-repeat="feature in featureModel.features"><img ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries track by $index" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, geometry.y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, geometry.x)}}px" /></div></div>',
+            template: '<div class="symbolizer" ng-if="maxScale >= focusModel.centerScale.scale"><div ng-repeat="feature in featureModel.features"><img ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries track by $index" ng-click="showInfo(feature)" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, geometry.y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, geometry.x)}}px" /></div></div>',
             restrict: 'E',
             require: '^mapfeaturelayer',
             replace: true,
@@ -211,6 +229,9 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 $scope.isInsideBoundaries = function(item){
                 	var itemEnvelope = item.getEnvelope();
                 	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
+                };
+                $scope.showInfo = function(feature){
+                	//window.open(feature.propertyValues[2]);
                 }
             }],
             link: function($scope, $element, $attr, $parentCtrl) {
