@@ -7,7 +7,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
             scope: {
                 boundsModel: '=boundsmodel',
                 focusModel: '=focusmodel',
-                envelopeModel: '=envelopemodel'
+                envelopeModel: '=envelopemodel',
+                serviceModel: '=servicemodel'
             },
             controller: ["$scope", function($scope) {
                 $scope.mouseDownX = -1;
@@ -105,6 +106,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     $parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
                     $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
                     $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
+                    $parentCtrl.scope.$watch('serviceModel', function(val) { $scope.serviceModel = val; });
                     
                     var childElement, childScope;
                     $scope.$watch('layer.visible', function(val) {
@@ -168,10 +170,12 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 }
             }],
             link: function($scope, $element, $attr, $parentCtrl) {
+            
                 $parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
                 $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
                 $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
                 $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
+                $parentCtrl.scope.$watch('serviceModel', function(val) { $scope.serviceModel = val; });
                 $attr.$observe('maxscale', function(val) { $scope.maxScale = angular.isDefined(val) ? val : Number.MAX_VALUE; });
             }
         };
@@ -179,7 +183,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive('imagesymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.centerScale.scale"><img ng-repeat="feature in featureModel.features | filter:isInsideBoundaries" ng-click="showInfo(feature)" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px"/></div>',
+            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.centerScale.scale"><img ng-repeat="feature in featureModel.features | filter:isInsideBoundaries" ng-click="showInfo(feature, $event)" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px"/></div>',
             restrict: 'E',
             require: '^mapfeaturelayer',
             replace: true,
@@ -194,20 +198,52 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 	var itemEnvelope = item.propertyValues[$scope.propertyIndex].getEnvelope();
                 	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
                 };
-                $scope.showInfo = function(feature) {
+                $scope.showInfo = function(feature, event) {
+                	//console.log($scope.serviceModel[5].selectionCommand);
+                	var curServiceModel = this.getServiceByName(feature.featureType.name);
+                	if (curServiceModel != null) {
+                		var fields = curServiceModel.fieldsToInclude.split(',');
+                	
+                		if (curServiceModel.selectionCommand == '') {
+                	
+                		} else if (curServiceModel.selectionCommand == '') {
+                	
+                		} else if (curServiceModel.selectionCommand == 'url') {
+                			window.open(feature.propertyValues[fields[0]]);
+                		} else {
+                	
+                		}
+                	}
+                	//feature.getProperties();
                 	console.log('showInfo B ' + feature.propertyValues[1]);
-                	/*console.log(feature.propertyValues[2]);
-                	console.log(feature.propertyValues[4]);
-                	console.log(feature.propertyValues[5]);
-                	console.log(feature.propertyValues[6]);*/
-                	//document.getElementById('infoPanel').append();
+                	
+                	/*(var a_tag  = this.createLinkTag(feature.propertyValues[2], 'Voorzieningen op het station', true);
+                	document.getElementById('infoPanel').appendChild(a_tag);*/
+                };
+                /* temp */
+                $scope.getServiceByName = function(name) {
+                	for(var i = 0; i < $scope.serviceModel.length; ++i){
+                		if(name == $scope.serviceModel[i].featureName){
+                			return $scope.serviceModel[i];
+                		}
+                	}
+                	return nil;
+                }
+                $scope.createLinkTag = function(val, text, newLine=true) {
+                	var tag = document.createElement('a');
+                	tag.appendChild(document.createTextNode(text));
+                	tag.href = val;
+                	tag.target = "_blank";
+                	(newLine) ? tag.appendChild(document.createElement('br')) : null;
+                	return tag;
                 }
             }],
             link: function($scope, $element, $attr, $parentCtrl) {
-                $parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
+           		$parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
                 $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
                 $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
                 $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
+                $parentCtrl.scope.$watch('serviceModel', function(val) { $scope.serviceModel = val; });
                 $attr.$observe('maxscale', function(val) { $scope.maxScale = angular.isDefined(val) ? val : Number.MAX_VALUE; });
             }
         };
