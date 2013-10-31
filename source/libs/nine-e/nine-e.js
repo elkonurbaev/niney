@@ -194,41 +194,62 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 asset: '@asset'
             },
             controller: ['$scope', function ($scope) {
-                $scope.isInsideBoundaries = function(item){
+                $scope.isInsideBoundaries = function(item) {
                 	var itemEnvelope = item.propertyValues[$scope.propertyIndex].getEnvelope();
                 	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
                 };
                 $scope.showInfo = function(feature, event) {
-                	//console.log($scope.serviceModel[5].selectionCommand);
+                	var domInfoPanel = document.getElementById('infoPanel');
+               		domInfoPanel.innerHTML = '';
+                	//console.log('showInfo B ' + feature.propertyValues[1]);
                 	var curServiceModel = this.getServiceByName(feature.featureType.name);
                 	if (curServiceModel != null) {
-                		var fields = curServiceModel.fieldsToInclude.split(',');
-                	
-                		if (curServiceModel.selectionCommand == '') {
-                	
-                		} else if (curServiceModel.selectionCommand == '') {
-                	
+                		var fields = (curServiceModel.infoFieldsToInclude.replace(' ', '')).split(',');
+                		if (curServiceModel.selectionCommand == 'all') {
+                			var k = 0;
+                			for (var i = 0; i < fields.length; ++i) {
+                				var html = feature.propertyValues[fields[i]];
+                				if(html != null){
+                					//console.log('html fields[i]: '+ fields[i] + ' ' + html);
+                					if(this.isURL(html)) {
+                						var textLink = (curServiceModel.customLinkTitles != null) ? curServiceModel.customLinkTitles[k] : 'link';
+                						html = this.createLinkTag(html, textLink);
+                						++k;
+                					} else {
+                						html = this.createTag(html, 'span');
+                					}
+                					domInfoPanel.appendChild(html);
+                				}
+                			}
                 		} else if (curServiceModel.selectionCommand == 'url') {
                 			window.open(feature.propertyValues[fields[0]]);
-                		} else {
-                	
-                		}
+                		} 
                 	}
-                	//feature.getProperties();
-                	console.log('showInfo B ' + feature.propertyValues[1]);
-                	
-                	/*(var a_tag  = this.createLinkTag(feature.propertyValues[2], 'Voorzieningen op het station', true);
-                	document.getElementById('infoPanel').appendChild(a_tag);*/
                 };
-                /* temp */
+                /* option to put them inside root directive, instead of duplicating */
                 $scope.getServiceByName = function(name) {
-                	for(var i = 0; i < $scope.serviceModel.length; ++i){
-                		if(name == $scope.serviceModel[i].featureName){
+                	for(var i = 0; i < $scope.serviceModel.length; ++i) {
+                		if(name == $scope.serviceModel[i].featureName) {
                 			return $scope.serviceModel[i];
                 		}
                 	}
                 	return nil;
-                }
+                };
+                $scope.createTag = function(val, type='span', newLine=true) {
+                	var tag = document.createElement(type);
+                	//console.log('before: '+val);
+                	var textWithBreaks = val.split(/\[0A\]/);
+                	var indexOfLink = val.indexOf('[link]');
+                	var indexOfText = val.indexOf('[text]');
+                	var indexOfEnd = val.indexOf('[end]');
+                	//console.log('after: '+val.substring(indexOfLink+6, indexOfText));
+                	for(var i = 0; i < textWithBreaks.length; ++i) {
+                		tag.appendChild(document.createTextNode(textWithBreaks[i]));
+                		if((i+1) != textWithBreaks.length) tag.appendChild(document.createElement('br'));
+                	}
+                	(newLine) ? tag.appendChild(document.createElement('br')) : null;
+                	return tag;
+                };
                 $scope.createLinkTag = function(val, text, newLine=true) {
                 	var tag = document.createElement('a');
                 	tag.appendChild(document.createTextNode(text));
@@ -236,7 +257,11 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 	tag.target = "_blank";
                 	(newLine) ? tag.appendChild(document.createElement('br')) : null;
                 	return tag;
-                }
+                };
+                $scope.isURL = function(str) { 
+               		var regexp = new RegExp("^s?https?:\/\/[-_.!~*'()a-zA-Z0-9;\/?:\@&=+\$,%#]+$");
+               		return regexp.test(str);
+				}
             }],
             link: function($scope, $element, $attr, $parentCtrl) {
            		$parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
@@ -262,11 +287,11 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 asset: '@asset'
             },
             controller: ['$scope', function ($scope) {
-                $scope.isInsideBoundaries = function(item){
+                $scope.isInsideBoundaries = function(item) {
                 	var itemEnvelope = item.getEnvelope();
                 	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
                 };
-                $scope.showInfo = function(feature){
+                $scope.showInfo = function(feature) {
                 	console.log('showInfo C ' + feature.propertyValues[0]);
                 	/*console.log(feature.propertyValues[2]);
                 	console.log(feature.propertyValues[4]);

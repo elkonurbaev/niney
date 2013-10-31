@@ -60,7 +60,6 @@
         <mapfeaturelayer layer="layers[6]" featuremodel="featureModels[7]">
          <geometryimagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/webcams.png"></geometryimagesymbolizer>
         </mapfeaturelayer>
-        <h1 style="position:relative; margin:30%;">features.length: {{featureModels[1].features.length}}</h1>
       </map>
     </div>
     <div id="navigationControl" focusmodel="focusModel" ng-controller="FocusButtonBarCtrl">
@@ -73,22 +72,6 @@
       <button onclick="setMapSize(1200, 800)">Big</button>
       <button onclick="setMapSize(900, 600)">Small</button>
     </div>
-    <div id="infoPanel">
-    	
-      
-    </div>
-    
-    <div class="temp"> Tiles:
-        <ul>
-          <li ng-repeat="tile in tileModel.tiles">{{tile.tileY +', '+ tile.tileX}}</li>
-        </ul>
-      </div>
-      <div ng-controller="FocusPanelCtrl" class="temp">
-        Center X: {{focusModel.centerScale.centerX}}<br><br>
-        Center Y: {{focusModel.centerScale.centerY}}<br><br>
-        Scale:<br><br>
-        1: {{focusModel.centerScale.scale}}
-      </div>
-    </div>
+    <div id="infoPanel"></div>
   </body>
 </html>

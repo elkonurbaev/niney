@@ -20,11 +20,11 @@
 {
 	position: absolute; top: 15px; left: 260px;
 }
-.temp
+#infoPanel
 {
-	float: left; 
-	margin-left: 15px; 
-	border-style: solid; 
-	border-width: 1px; 
+	border: 1px solid #000000;
+	width: 200px;
 	padding: 10px;
+	margin-left: 15px;
+	float: left;
 }
