@@ -183,7 +183,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive('imagesymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.centerScale.scale"><img ng-repeat="feature in featureModel.features | filter:isInsideBoundaries" ng-click="showInfo(feature, $event)" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px"/></div>',
+            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.centerScale.scale"><img ng-repeat="feature in featureModel.features | filter:isInsideBoundaries" ng-mouseover="highlightSymbolizer($event)" ng-mouseout="unhighlightSymbolizer($event)" ng-click="showInfo(feature, $event)" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px"/></div>',
             restrict: 'E',
             require: '^mapfeaturelayer',
             replace: true,
@@ -194,14 +194,27 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 asset: '@asset'
             },
             controller: ['$scope', function ($scope) {
+            	$scope.prevElement = null;
+            	$scope.сurElement = null;
                 $scope.isInsideBoundaries = function(item) {
                 	var itemEnvelope = item.propertyValues[$scope.propertyIndex].getEnvelope();
                 	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
                 };
+                $scope.highlightSymbolizer = function(event) {
+                	event.target.className = event.target.className + ' highlightSymbolizer';
+                }
+                $scope.unhighlightSymbolizer = function(event) {
+                	if($scope.сurElement != event.target)  event.target.className = 'ng-scope'; 
+                }
                 $scope.showInfo = function(feature, event) {
+                	$scope.сurElement = event.target;
+                	if($scope.prevElement != null) $scope.prevElement.className = 'ng-scope';
+                	event.target.className = event.target.className + ' highlightSymbolizer';
+                	$scope.prevElement = event.target;
+                	
                 	var domInfoPanel = document.getElementById('infoPanel');
                		domInfoPanel.innerHTML = '';
-                	//console.log('showInfo B ' + feature.propertyValues[1]);
+               		//console.log('showInfo B ' + feature.propertyValues[1]);
                 	var curServiceModel = this.getServiceByName(feature.featureType.name);
                 	if (curServiceModel != null) {
                 		var fields = (curServiceModel.infoFieldsToInclude.replace(' ', '')).split(',');
@@ -237,12 +250,14 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 };
                 $scope.createTag = function(val, type='span', newLine=true) {
                 	var tag = document.createElement(type);
-                	//console.log('before: '+val);
                 	var textWithBreaks = val.split(/\[0A\]/);
-                	var indexOfLink = val.indexOf('[link]');
-                	var indexOfText = val.indexOf('[text]');
-                	var indexOfEnd = val.indexOf('[end]');
-                	//console.log('after: '+val.substring(indexOfLink+6, indexOfText));
+                	var a_link = val.substring(val.indexOf('[link]')+('[link]').length, val.indexOf('[text]'));
+                	var a_text = val.substring(val.indexOf('[text]')+('[text]').length, val.indexOf('[end]'));
+                	//var regex = new RegExp(/(\[link\])(.*?)(\[text\])/g);
+                	//var ss = val.match(regex);
+                	if(this.isURL(a_link) && a_text != '') {
+                		return this.createLinkTag(a_link, a_text);
+                	}
                 	for(var i = 0; i < textWithBreaks.length; ++i) {
                 		tag.appendChild(document.createTextNode(textWithBreaks[i]));
                 		if((i+1) != textWithBreaks.length) tag.appendChild(document.createElement('br'));
