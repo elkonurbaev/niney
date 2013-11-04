@@ -1,20 +1,18 @@
 #legend
 {
 	float: left;
-	border: 1px solid #000000;
 	margin-right: 15px;
 }
 #legend ul
 {
 	list-style-type: none;
-	margin-left: -2em;
+	margin-left: -3em;
 }
 #map
 {
 	width: 900px; 
 	height: 600px; 
 	float: left; 
-	border: 1px solid #000000;
 }
 #navigationControl
 {
@@ -22,15 +20,21 @@
 }
 #infoPanel
 {
-	border: 1px solid #000000;
 	width: 200px;
 	padding: 10px;
 	margin-left: 15px;
 	float: left;
+	line-height: 19px;
 }
 .highlightSymbolizer
 {
 	opacity: 0.4;
 	width: 26px;
 	margin: -4px 0 0 -4px;
+}
+#twentemobiel_map_container
+{
+    color: #757575;
+    font-family: Arial;
+    font-size: 12px;
 }

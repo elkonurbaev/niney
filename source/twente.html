@@ -33,6 +33,7 @@
     <link rel="stylesheet" href="css/twente.css">
   </head>
   <body>
+  	<div id="twentemobiel_map_container">
     <div ng-controller="MapCtrl">
       <legend id="legend" layers="layers"></legend>
       <map id="map" boundsmodel="boundsModel" focusmodel="focusModel" envelopemodel="envelopeModel" servicemodel="serviceModel">
@@ -69,9 +70,10 @@
       <button ng-click="panEast()">East</button>
       <button ng-click="zoomIn()">Zoom In</button>
       <button ng-click="zoomOut()">Zoom Out</button>
-      <button onclick="setMapSize(1200, 800)">Big</button>
-      <button onclick="setMapSize(900, 600)">Small</button>
     </div>
-    <div id="infoPanel"></div>
+    <div id="infoPanel">
+    	Er zijn op dit moment 1325 meldingen van hinder en afsluitingen. Wegwerkzaamheden en evenementen die over meer dan 4 weken aanvangen zijn nog niet zichtbaar.
+    </div>
+    </div>
   </body>
 </html>
