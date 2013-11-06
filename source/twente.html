@@ -1,9 +1,10 @@
 <!doctype html>
-<html ng-app="test-app">
+<html ng-app="twente-app">
   <head>
     <meta charset="UTF-8">
     <title>Twente</title>
     <script src="libs/angular.js"></script>
+    <script src="libs/angular-touch.js"></script>
     <script src="libs/mousewheel.js"></script>
     <script src="libs/utils.js"></script>
     <script src="libs/nine-e/geometrymodel/Geometry.js"></script>
@@ -33,11 +34,18 @@
     <link rel="stylesheet" href="css/twente.css">
   </head>
   <body>
-  	<div id="twentemobiel_map_container">
-    <div ng-controller="MapCtrl">
+    <div id="twente_map_container" ng-controller="MapCtrl">
       <legend id="legend" layers="layers"></legend>
       <map id="map" boundsmodel="boundsModel" focusmodel="focusModel" envelopemodel="envelopeModel" servicemodel="serviceModel">
         <tileslayer tilemodel="tileModel"></tileslayer>
+          <div id="navigationControl" focusmodel="focusModel" ng-controller="FocusButtonBarCtrl">
+          <button ng-click="panNorth()">North</button>
+          <button ng-click="panSouth()">South</button>
+          <button ng-click="panWest()">West</button>
+          <button ng-click="panEast()">East</button>
+          <button ng-click="zoomIn()">Zoom In</button>
+          <button ng-click="zoomOut()">Zoom Out</button>
+        </div>
         <mapfeaturelayer layer="layers[0]" featuremodel="featureModels[1]">
           <geometrysymbolizer maxscale="108336.00408304202" propertyindex="3" style="fill:none;stroke:#FF0000;stroke-width:5"></geometrysymbolizer>
           <geometrysymbolizer maxscale="108336.00408304202" propertyindex="4" style="fill:none;stroke:#0000FF;stroke-width:5"></geometrysymbolizer>
@@ -62,18 +70,9 @@
          <geometryimagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/webcams.png"></geometryimagesymbolizer>
         </mapfeaturelayer>
       </map>
-    </div>
-    <div id="navigationControl" focusmodel="focusModel" ng-controller="FocusButtonBarCtrl">
-      <button ng-click="panNorth()">North</button>
-      <button ng-click="panSouth()">South</button>
-      <button ng-click="panWest()">West</button>
-      <button ng-click="panEast()">East</button>
-      <button ng-click="zoomIn()">Zoom In</button>
-      <button ng-click="zoomOut()">Zoom Out</button>
-    </div>
-    <div id="infoPanel">
+      <div id="infoPanel">
     	Er zijn op dit moment 1325 meldingen van hinder en afsluitingen. Wegwerkzaamheden en evenementen die over meer dan 4 weken aanvangen zijn nog niet zichtbaar.
-    </div>
+      </div>
     </div>
   </body>
 </html>

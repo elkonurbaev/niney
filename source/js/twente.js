@@ -1,5 +1,5 @@
 /* angular */
-angular.module('test-app', ['nine-e']).
+angular.module('twente-app', ['nine-e', 'ngTouch']).
     factory('boundsScope', ['$rootScope', function($rootScope) {
         var scope = $rootScope.$new();
         var model = new BoundsModel();

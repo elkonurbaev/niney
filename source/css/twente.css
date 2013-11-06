@@ -1,30 +1,38 @@
+#twente_map_container
+{
+    color: #757575;
+    font: 12px Arial;
+    max-width: 1200px;
+    margin: 0 auto;
+}
 #legend
 {
 	float: left;
-	margin-right: 15px;
+	width: 14%;
 }
 #legend ul
 {
 	list-style-type: none;
 	margin-left: -3em;
 }
+#infoPanel
+{
+	width: 16%; 
+	padding: 1%;
+	float: left;
+	line-height: 19px;
+}
 #map
 {
-	width: 900px; 
+	width: 68%; 
+	min-width: 310px;
 	height: 600px; 
 	float: left; 
 }
 #navigationControl
 {
-	position: absolute; top: 15px; left: 260px;
-}
-#infoPanel
-{
-	width: 200px;
-	padding: 10px;
-	margin-left: 15px;
-	float: left;
-	line-height: 19px;
+	position: absolute; 
+	margin: 2% 0 0 2%;
 }
 .highlightSymbolizer
 {
@@ -32,9 +40,17 @@
 	width: 26px;
 	margin: -4px 0 0 -4px;
 }
-#twentemobiel_map_container
+@media only screen and (max-width : 700px) 
 {
-    color: #757575;
-    font-family: Arial;
-    font-size: 12px;
+	#legend, #infoPanel
+	{
+		width: 180px;
+	}
+}
+@media only screen and (max-width : 320px) 
+{
+	#legend, #infoPanel
+	{
+		width: 310px;
+	}
 }
