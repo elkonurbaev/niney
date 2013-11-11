@@ -96,7 +96,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
             transclude: true,
             scope: {
                 layer: '=layer',
-                featureModel: '=featuremodel'
+                featureModel: '=featuremodel',
+                featureCommand: '=featurecommand'
             },
             controller: ['$scope', function ($scope) {
                 this.scope = $scope;
@@ -167,6 +168,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
                 };
                 $scope.showInfo = function(feature){
+                    $scope.featureCommand.perform(feature);
                 	console.log('showInfo A ' + feature.propertyValues[1]);
                 }
             }],
@@ -176,6 +178,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
                 $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
                 $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
+                $parentCtrl.scope.$watch('featureCommand', function(val) { $scope.featureCommand = val; });
                 $parentCtrl.scope.$watch('serviceModel', function(val) { $scope.serviceModel = val; });
                 $attr.$observe('maxscale', function(val) { $scope.maxScale = angular.isDefined(val) ? val : Number.MAX_VALUE; });
             }
@@ -209,6 +212,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 	if($scope.сurElement != event.target)  event.target.className = 'ng-scope'; 
                 }
                 $scope.showInfo = function(feature, event) {
+                    $scope.featureCommand.perform(feature);
+
                	 	$scope.сurElement = event.target;
                 	if($scope.prevElement != null) $scope.prevElement.className = 'ng-scope';
                 	event.target.className = event.target.className + ' highlightSymbolizer';
@@ -283,6 +288,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
                 $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
                 $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
+                $parentCtrl.scope.$watch('featureCommand', function(val) { $scope.featureCommand = val; });
                 $parentCtrl.scope.$watch('serviceModel', function(val) { $scope.serviceModel = val; });
                 $scope.$watch('prevElement', function(val) { 
                 	if($scope.curServiceModel != null) {
@@ -324,6 +330,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 	if($scope.сurElement != event.target)  event.target.className = 'ng-scope'; 
                 }
                 $scope.showInfo = function(feature, event) {
+                    $scope.featureCommand.perform(feature);
+
                	 	$scope.сurElement = event.target;
                 	if($scope.prevElement != null) $scope.prevElement.className = 'ng-scope';
                 	event.target.className = event.target.className + ' highlightSymbolizer';
@@ -397,6 +405,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
                 $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
                 $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
+                $parentCtrl.scope.$watch('featureCommand', function(val) { $scope.featureCommand = val; });
                 $parentCtrl.scope.$watch('serviceModel', function(val) { $scope.serviceModel = val; });
                 $scope.$watch('prevElement', function(val) { 
                 	if($scope.curServiceModel != null) {

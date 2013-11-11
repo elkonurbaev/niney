@@ -68,6 +68,11 @@ angular.module('twente-app', ['nine-e', 'ngTouch']).
         }
         return scope;
     }]).
+    factory('selectionScope', ['$rootScope', function($rootScope) {
+        var scope = $rootScope.$new();
+        scope.model = new SelectionModel();
+        return scope;
+    }]).
     factory('tileScope', ['$rootScope', function($rootScope) {
         var scope = $rootScope.$new();
         scope.model = new TileModel();
@@ -89,14 +94,17 @@ angular.module('twente-app', ['nine-e', 'ngTouch']).
         boundsScope.timer.start();
         focusScope.model.setCenterScale(new CenterScale(745000, 6856000, 433344.01633216810));
     }]).
-    controller('MapCtrl', ['$scope', 'boundsScope', 'focusScope', 'envelopeScope', 'tileScope', 'layerScope', 'featureScope', function ($scope, boundsScope, focusScope, envelopeScope, tileScope, layerScope, featureScope) {
+    controller('MapCtrl', ['$scope', 'boundsScope', 'focusScope', 'envelopeScope', 'selectionScope', 'tileScope', 'layerScope', 'featureScope', function ($scope, boundsScope, focusScope, envelopeScope, selectionScope, tileScope, layerScope, featureScope) {
         $scope.boundsModel = boundsScope.model;
         $scope.focusModel = focusScope.model;
         $scope.envelopeModel = envelopeScope.model;
+        $scope.selectionModel = selectionScope.model;
         $scope.tileModel = tileScope.model;
         $scope.layers = layerScope.layers;
         $scope.featureModels = featureScope.models;
        	$scope.serviceModel = featureScope.services;
+        
+        $scope.toggleSelectFeatureCommand = new ToggleSelectFeatureCommand($scope.selectionModel);
     }]).
     controller('FocusButtonBarCtrl', ['$scope', 'boundsScope', 'focusScope', function ($scope, boundsScope, focusScope) {
         var boundsModel = boundsScope.model;
@@ -133,6 +141,11 @@ angular.module('twente-app', ['nine-e', 'ngTouch']).
     }]).
     controller('FocusPanelCtrl', ['$scope', 'focusScope', function ($scope, focusScope) {
         $scope.focusModel = focusScope.model;
+    }]).
+    controller('InfoCtrl', ['$scope', 'layerScope', 'featureScope', 'selectionScope', function ($scope, layerScope, featureScope, selectionScope) {
+        $scope.layers = layerScope.layers;
+        $scope.featureModels = featureScope.models;
+        $scope.selectionModel = selectionScope.model;
     }]);
 
 function setMapSize(width, height) {

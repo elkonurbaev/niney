@@ -20,6 +20,7 @@
     <script src="libs/nine-e/featuremodel/FeatureType.js"></script>
     <script src="libs/nine-e/featuremodel/Property.js"></script>
     <script src="libs/nine-e/featuremodel/PropertyType.js"></script>
+    <script src="libs/nine-e/featuremodel/commands/ToggleSelectFeatureCommand.js"></script>
     <script src="libs/nine-e/featuremodel/converters/CSVConverter.js"></script>
     <script src="libs/nine-e/focusmodel/CenterScale.js"></script>
     <script src="libs/nine-e/focusmodel/FocusModel.js"></script>
@@ -27,6 +28,7 @@
     <script src="libs/nine-e/focusmodel/ZoomLevel.js"></script>
     <script src="libs/nine-e/layermodel/Tile.js"></script>
     <script src="libs/nine-e/layermodel/TileModel.js"></script>
+    <script src="libs/nine-e/selectionmodel/SelectionModel.js"></script>
     <script src="libs/nine-e/service/file/CSVServiceConnector.js"></script>
     <script src="libs/nine-e/nine-e.js"></script>
     <script src="js/twente.js"></script>
@@ -46,15 +48,15 @@
           <button ng-click="zoomIn()">Zoom In</button>
           <button ng-click="zoomOut()">Zoom Out</button>
         </div>
-        <mapfeaturelayer layer="layers[0]" featuremodel="featureModels[1]">
+        <mapfeaturelayer layer="layers[0]" featuremodel="featureModels[1]" featurecommand="toggleSelectFeatureCommand">
           <geometrysymbolizer maxscale="108336.00408304202" propertyindex="3" style="fill:none;stroke:#FF0000;stroke-width:5"></geometrysymbolizer>
           <geometrysymbolizer maxscale="108336.00408304202" propertyindex="4" style="fill:none;stroke:#0000FF;stroke-width:5"></geometrysymbolizer>
           <imagesymbolizer propertyindex="2" assetpropertyindex="0" asset="twentemobiel/images/symt$_18.png"></imagesymbolizer>
         </mapfeaturelayer>
-        <mapfeaturelayer layer="layers[1]" featuremodel="featureModels[2]">
+        <mapfeaturelayer layer="layers[1]" featuremodel="featureModels[2]" featurecommand="toggleSelectFeatureCommand">
          <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/trains.png"></imagesymbolizer>
         </mapfeaturelayer>
-        <mapfeaturelayer layer="layers[2]" featuremodel="featureModels[3]">
+        <mapfeaturelayer layer="layers[2]" featuremodel="featureModels[3]" featurecommand="toggleSelectFeatureCommand">
          <imagesymbolizer propertyindex="2" assetpropertyindex="" asset="twentemobiel/images/bikes.png"></imagesymbolizer>
         </mapfeaturelayer>
         <mapfeaturelayer layer="layers[3]" featuremodel="featureModels[4]">
@@ -73,6 +75,10 @@
       <div id="infoPanel">
     	Er zijn op dit moment 1325 meldingen van hinder en afsluitingen. Wegwerkzaamheden en evenementen die over meer dan 4 weken aanvangen zijn nog niet zichtbaar.
       </div>
+    </div>
+    <div id="newInfoPanel" ng-controller="InfoCtrl">
+      <div ng-if="selectionModel.selectedFeature == null">Er zijn op dit moment {{featureModels[1].features.length}} meldingen van hinder en afsluitingen. Wegwerkzaamheden en evenementen die over meer dan 4 weken aanvangen zijn nog niet zichtbaar.</div>
+      <div ng-if="selectionModel.selectedFeature.featureType == featureModels[1].featureType">The current selection is: {{selectionModel.selectedFeature.propertyValues[1]}}</div>
     </div>
   </body>
 </html>
