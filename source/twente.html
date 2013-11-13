@@ -21,6 +21,7 @@
     <script src="libs/nine-e/featuremodel/Property.js"></script>
     <script src="libs/nine-e/featuremodel/PropertyType.js"></script>
     <script src="libs/nine-e/featuremodel/commands/ToggleSelectFeatureCommand.js"></script>
+    <script src="libs/nine-e/featuremodel/commands/ToURLFeatureCommand.js"></script>
     <script src="libs/nine-e/featuremodel/converters/CSVConverter.js"></script>
     <script src="libs/nine-e/focusmodel/CenterScale.js"></script>
     <script src="libs/nine-e/focusmodel/FocusModel.js"></script>
@@ -59,16 +60,16 @@
         <mapfeaturelayer layer="layers[2]" featuremodel="featureModels[3]" featurecommand="toggleSelectFeatureCommand">
          <imagesymbolizer propertyindex="2" assetpropertyindex="" asset="twentemobiel/images/bikes.png"></imagesymbolizer>
         </mapfeaturelayer>
-        <mapfeaturelayer layer="layers[3]" featuremodel="featureModels[4]">
+        <mapfeaturelayer layer="layers[3]" feature2model="featureModels[4]" featurecommand="ToURLFeatureCommand">
          <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/parkrides.png"></imagesymbolizer>
         </mapfeaturelayer>
-        <mapfeaturelayer layer="layers[4]" featuremodel="featureModels[5]">
+        <mapfeaturelayer layer="layers[4]" featuremodel="featureModels[5]" featurecommand="ToURLFeatureCommand">
          <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/carpools.png"></imagesymbolizer>
         </mapfeaturelayer>
-        <mapfeaturelayer layer="layers[5]" featuremodel="featureModels[6]">
+        <mapfeaturelayer layer="layers[5]" featuremodel="featureModels[6]" featurecommand="ToURLFeatureCommand">
          <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/carparks.png"></imagesymbolizer>
         </mapfeaturelayer>
-        <mapfeaturelayer layer="layers[6]" featuremodel="featureModels[7]">
+        <mapfeaturelayer layer="layers[6]" featuremodel="featureModels[7]" featurecommand="ToURLFeatureCommand">
          <geometryimagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/webcams.png"></geometryimagesymbolizer>
         </mapfeaturelayer>
       </map>
@@ -79,6 +80,17 @@
     <div id="newInfoPanel" ng-controller="InfoCtrl">
       <div ng-if="selectionModel.selectedFeature == null">Er zijn op dit moment {{featureModels[1].features.length}} meldingen van hinder en afsluitingen. Wegwerkzaamheden en evenementen die over meer dan 4 weken aanvangen zijn nog niet zichtbaar.</div>
       <div ng-if="selectionModel.selectedFeature.featureType == featureModels[1].featureType">The current selection is: {{selectionModel.selectedFeature.propertyValues[1]}}</div>
+      <div ng-if="selectionModel.selectedFeature.featureType.name == 'bikesFeatureModel'">
+      	<div ng-show="selectionModel.selectedFeature.propertyValues[3]">{{selectionModel.selectedFeature.propertyValues[3]}}</div>
+      	<div ng-show="selectionModel.selectedFeature.propertyValues[4]">{{selectionModel.selectedFeature.propertyValues[4]}}</div>
+      	<div ng-show="selectionModel.selectedFeature.propertyValues[5]">{{selectionModel.selectedFeature.propertyValues[5]}}</div>
+      	<div ng-show="selectionModel.selectedFeature.propertyValues[6]">{{selectionModel.selectedFeature.propertyValues[6]}}</div>
+      	<div ng-show="selectionModel.selectedFeature.propertyValues[5]">{{selectionModel.selectedFeature.propertyValues[7]}}</div>
+      	<div ng-show="selectionModel.selectedFeature.propertyValues[5]">{{selectionModel.selectedFeature.propertyValues[8]}}</div>
+      	<div ng-show="selectionModel.selectedFeature.propertyValues[5]">{{selectionModel.selectedFeature.propertyValues[9]}}</div>
+      	<a target="_blank" href="{{selectionModel.selectedFeature.propertyValues[10]}}">Plan een fietsroute vanaf hier</a><br />
+      	<a target="_blank" href="{{selectionModel.selectedFeature.propertyValues[1]}}">Meer informatie</a>
+      </div>
     </div>
   </body>
 </html>

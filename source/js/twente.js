@@ -105,6 +105,7 @@ angular.module('twente-app', ['nine-e', 'ngTouch']).
        	$scope.serviceModel = featureScope.services;
         
         $scope.toggleSelectFeatureCommand = new ToggleSelectFeatureCommand($scope.selectionModel);
+        $scope.ToURLFeatureCommand = new ToURLFeatureCommand($scope.selectionModel);
     }]).
     controller('FocusButtonBarCtrl', ['$scope', 'boundsScope', 'focusScope', function ($scope, boundsScope, focusScope) {
         var boundsModel = boundsScope.model;

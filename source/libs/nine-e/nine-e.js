@@ -141,7 +141,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive('geometrysymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.centerScale.scale"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="mapfeaturelayer" style="width: {{boundsModel.bounds.width}}px; height: {{boundsModel.bounds.height}}px; pointer-events: none" ng-click="showInfo(feature)" ng-repeat="feature in featureModel.features"><polyline style="pointer-events: visible" ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries" points="{{parsePoints(geometry.points)}}" style="{{style}}"></polyline></svg></div>',
+            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.centerScale.scale"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="mapfeaturelayer" style="width: {{boundsModel.bounds.width}}px; height: {{boundsModel.bounds.height}}px; pointer-events: none" ng-repeat="feature in featureModel.features"><polyline style="pointer-events: visible" ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries" points="{{parsePoints(geometry.points)}}" ng-mouseover="highlightGeometry($event)" ng-mouseout="unhighlightGeometry($event)" ng-click="showInfo(feature, $event)" style="{{style}}"></polyline></svg></div>',
             restrict: 'E',
             require: '^mapfeaturelayer',
             replace: true,
@@ -151,6 +151,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 style: '@style'
             },
             controller: ['$scope', function ($scope) {
+           	 	$scope.prevElement = null;
+            	$scope.сurElement = null;
                 $scope.parsePoints = function(points) {
                     if (points == null) return;
                     var ret = "";
@@ -167,7 +169,19 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 	var itemEnvelope = item.getEnvelope();
                 	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
                 };
-                $scope.showInfo = function(feature){
+                 $scope.highlightGeometry = function(event) {
+                	event.target.setAttribute('class',  event.target.getAttribute('class') + ' highlightGeometry');
+                }
+                $scope.unhighlightGeometry = function(event) {
+                	if($scope.сurElement != event.target)  event.target.setAttribute('class',  'ng-scope');
+                }
+                $scope.showInfo = function(feature, event) {
+                 //console.log('showInfo:'+event.target);
+                	$scope.сurElement = event.target;
+                	if($scope.prevElement != null) $scope.prevElement.className = 'ng-scope';
+                	event.target.className = event.target.className + ' highlightGeometry';
+                	$scope.prevElement = event.target;
+                	
                     $scope.featureCommand.perform(feature);
                 	console.log('showInfo A ' + feature.propertyValues[1]);
                 }
@@ -212,9 +226,14 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 	if($scope.сurElement != event.target)  event.target.className = 'ng-scope'; 
                 }
                 $scope.showInfo = function(feature, event) {
+                	$scope.сurElement = event.target;
+                	if($scope.prevElement != null) $scope.prevElement.className = 'ng-scope';
+                	event.target.className = event.target.className + ' highlightSymbolizer';
+                	$scope.prevElement = event.target;
+                	
                     $scope.featureCommand.perform(feature);
 
-               	 	$scope.сurElement = event.target;
+               	 	/*$scope.сurElement = event.target;
                 	if($scope.prevElement != null) $scope.prevElement.className = 'ng-scope';
                 	event.target.className = event.target.className + ' highlightSymbolizer';
                 	$scope.prevElement = event.target;
@@ -240,9 +259,9 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 				}
                 			}
                 		} else if ($scope.curServiceModel.selectionCommand == 'url') {
-                			window.open(feature.propertyValues[fields[0]]);
+window.open(feature.propertyValues[fields[0]]);
                 		} 
-                	}
+                	}*/
                 };
                 /* option to put them inside root directive, instead of duplicating */
                 $scope.getServiceByName = function(name) {
@@ -330,9 +349,14 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 	if($scope.сurElement != event.target)  event.target.className = 'ng-scope'; 
                 }
                 $scope.showInfo = function(feature, event) {
+               		$scope.сurElement = event.target;
+                	if($scope.prevElement != null) $scope.prevElement.className = 'ng-scope';
+                	event.target.className = event.target.className + ' highlightSymbolizer';
+                	$scope.prevElement = event.target;
+                	
                     $scope.featureCommand.perform(feature);
 
-               	 	$scope.сurElement = event.target;
+               	 	/*$scope.сurElement = event.target;
                 	if($scope.prevElement != null) $scope.prevElement.className = 'ng-scope';
                 	event.target.className = event.target.className + ' highlightSymbolizer';
                 	$scope.prevElement = event.target;
@@ -359,7 +383,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 		} else if ($scope.curServiceModel.selectionCommand == 'url') {
                 			window.open(feature.propertyValues[fields[0]]);
                 		} 
-                	}
+                	}*/
                 };
                 /* option to put them inside root directive, instead of duplicating */
                 $scope.getServiceByName = function(name) {
