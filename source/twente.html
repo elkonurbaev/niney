@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8">
     <title>Twente</title>
-    <script src="libs/angular.js"></script>
+    <script src="libs/angular.min.js"></script>
+    <script src="libs/angular-sanitize.min.js"></script>
     <script src="libs/angular-touch.js"></script>
     <script src="libs/mousewheel.js"></script>
     <script src="libs/utils.js"></script>
@@ -39,7 +40,7 @@
   <body>
     <div id="twente_map_container" ng-controller="MapCtrl">
       <legend id="legend" layers="layers"></legend>
-      <map id="map" boundsmodel="boundsModel" focusmodel="focusModel" envelopemodel="envelopeModel" servicemodel="serviceModel">
+      <map id="map" boundsmodel="boundsModel" focusmodel="focusModel" envelopemodel="envelopeModel">
         <tileslayer tilemodel="tileModel"></tileslayer>
           <div id="navigationControl" focusmodel="focusModel" ng-controller="FocusButtonBarCtrl">
           <button ng-click="panNorth()">North</button>
@@ -60,7 +61,7 @@
         <mapfeaturelayer layer="layers[2]" featuremodel="featureModels[3]" featurecommand="toggleSelectFeatureCommand">
          <imagesymbolizer propertyindex="2" assetpropertyindex="" asset="twentemobiel/images/bikes.png"></imagesymbolizer>
         </mapfeaturelayer>
-        <mapfeaturelayer layer="layers[3]" feature2model="featureModels[4]" featurecommand="ToURLFeatureCommand">
+        <mapfeaturelayer layer="layers[3]" featuremodel="featureModels[4]" featurecommand="ToURLFeatureCommand">
          <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/parkrides.png"></imagesymbolizer>
         </mapfeaturelayer>
         <mapfeaturelayer layer="layers[4]" featuremodel="featureModels[5]" featurecommand="ToURLFeatureCommand">
@@ -73,24 +74,15 @@
          <geometryimagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/webcams.png"></geometryimagesymbolizer>
         </mapfeaturelayer>
       </map>
-      <div id="infoPanel">
-    	Er zijn op dit moment 1325 meldingen van hinder en afsluitingen. Wegwerkzaamheden en evenementen die over meer dan 4 weken aanvangen zijn nog niet zichtbaar.
-      </div>
-    </div>
-    <div id="newInfoPanel" ng-controller="InfoCtrl">
-      <div ng-if="selectionModel.selectedFeature == null">Er zijn op dit moment {{featureModels[1].features.length}} meldingen van hinder en afsluitingen. Wegwerkzaamheden en evenementen die over meer dan 4 weken aanvangen zijn nog niet zichtbaar.</div>
-      <div ng-if="selectionModel.selectedFeature.featureType == featureModels[1].featureType">The current selection is: {{selectionModel.selectedFeature.propertyValues[1]}}</div>
-      <div ng-if="selectionModel.selectedFeature.featureType.name == 'bikesFeatureModel'">
-      	<div ng-show="selectionModel.selectedFeature.propertyValues[3]">{{selectionModel.selectedFeature.propertyValues[3]}}</div>
-      	<div ng-show="selectionModel.selectedFeature.propertyValues[4]">{{selectionModel.selectedFeature.propertyValues[4]}}</div>
-      	<div ng-show="selectionModel.selectedFeature.propertyValues[5]">{{selectionModel.selectedFeature.propertyValues[5]}}</div>
-      	<div ng-show="selectionModel.selectedFeature.propertyValues[6]">{{selectionModel.selectedFeature.propertyValues[6]}}</div>
-      	<div ng-show="selectionModel.selectedFeature.propertyValues[5]">{{selectionModel.selectedFeature.propertyValues[7]}}</div>
-      	<div ng-show="selectionModel.selectedFeature.propertyValues[5]">{{selectionModel.selectedFeature.propertyValues[8]}}</div>
-      	<div ng-show="selectionModel.selectedFeature.propertyValues[5]">{{selectionModel.selectedFeature.propertyValues[9]}}</div>
-      	<a target="_blank" href="{{selectionModel.selectedFeature.propertyValues[10]}}">Plan een fietsroute vanaf hier</a><br />
-      	<a target="_blank" href="{{selectionModel.selectedFeature.propertyValues[1]}}">Meer informatie</a>
-      </div>
+      <div id="infoPanel" ng-controller="InfoCtrl">
+      	<div ng-if="selectionModel.selectedFeature == null">Er zijn op dit moment {{featureModels[1].features.length}} meldingen van hinder en afsluitingen. Wegwerkzaamheden en evenementen die over meer dan 4 weken aanvangen zijn nog niet zichtbaar.</div>
+      	<div ng-if="selectionModel.selectedFeature.featureType.name == 'hinderFeatureModel'" ng-bind-html="setWegobjectText(selectionModel.selectedFeature.propertyValues)">
+     	</div>
+      	<div ng-if="selectionModel.selectedFeature.featureType.name == 'trainFeatureModel'" ng-bind-html="setTrainText(selectionModel.selectedFeature.propertyValues)">
+      	</div>
+      	<div ng-if="selectionModel.selectedFeature.featureType.name == 'bikesFeatureModel'" ng-bind-html="setBikeText(selectionModel.selectedFeature.propertyValues)">
+      	</div>
+    	</div>
     </div>
   </body>
 </html>

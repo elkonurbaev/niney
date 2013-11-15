@@ -20,7 +20,11 @@
 	width: 16%; 
 	padding: 1%;
 	float: left;
-	line-height: 19px;
+}
+#infoPanel .heading
+{
+	color:#222222;
+	font-weight:bold;
 }
 #map
 {

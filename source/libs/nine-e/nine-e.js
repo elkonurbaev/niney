@@ -7,8 +7,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
             scope: {
                 boundsModel: '=boundsmodel',
                 focusModel: '=focusmodel',
-                envelopeModel: '=envelopemodel',
-                serviceModel: '=servicemodel'
+                envelopeModel: '=envelopemodel'
             },
             controller: ["$scope", function($scope) {
                 $scope.mouseDownX = -1;
@@ -108,18 +107,10 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     $parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
                     $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
                     $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
-                    $parentCtrl.scope.$watch('serviceModel', function(val) { $scope.serviceModel = val; });
-                    
                     var childElement, childScope;
-                    var defaultInfoText = document.getElementById('infoPanel').innerHTML;
                     $scope.$watch('layer.visible', function(val) {
                         if (childElement) {
-                        	if($scope.curServiceModel != null) {
-                        		if($scope.curServiceModel.id == $scope.layer.id) {
-                        			document.getElementById('infoPanel').innerHTML = defaultInfoText;
-                        		}
-                        	}
-                            $element.contents().remove();
+                        	$element.contents().remove();
                             childElement = undefined;
                         }
                         if (childScope) {
@@ -169,31 +160,28 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 	var itemEnvelope = item.getEnvelope();
                 	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
                 };
-                 $scope.highlightGeometry = function(event) {
+                $scope.highlightGeometry = function(event) {
                 	event.target.setAttribute('class',  event.target.getAttribute('class') + ' highlightGeometry');
                 }
                 $scope.unhighlightGeometry = function(event) {
                 	if($scope.сurElement != event.target)  event.target.setAttribute('class',  'ng-scope');
                 }
                 $scope.showInfo = function(feature, event) {
-                 //console.log('showInfo:'+event.target);
-                	$scope.сurElement = event.target;
-                	if($scope.prevElement != null) $scope.prevElement.className = 'ng-scope';
-                	event.target.className = event.target.className + ' highlightGeometry';
-                	$scope.prevElement = event.target;
-                	
-                    $scope.featureCommand.perform(feature);
-                	console.log('showInfo A ' + feature.propertyValues[1]);
+                	if($scope.сurElement != event.target) {
+                		$scope.сurElement = event.target;
+                		if($scope.prevElement != null) $scope.prevElement.setAttribute('class',  'ng-scope');
+                		event.target.setAttribute('class',  event.target.getAttribute('class') + ' highlightGeometry');
+                		$scope.prevElement = event.target;
+                		$scope.featureCommand.perform(feature);
+                    }
                 }
             }],
             link: function($scope, $element, $attr, $parentCtrl) {
-            
                 $parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
                 $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
                 $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
                 $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
                 $parentCtrl.scope.$watch('featureCommand', function(val) { $scope.featureCommand = val; });
-                $parentCtrl.scope.$watch('serviceModel', function(val) { $scope.serviceModel = val; });
                 $attr.$observe('maxscale', function(val) { $scope.maxScale = angular.isDefined(val) ? val : Number.MAX_VALUE; });
             }
         };
@@ -226,81 +214,14 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 	if($scope.сurElement != event.target)  event.target.className = 'ng-scope'; 
                 }
                 $scope.showInfo = function(feature, event) {
-                	$scope.сurElement = event.target;
-                	if($scope.prevElement != null) $scope.prevElement.className = 'ng-scope';
-                	event.target.className = event.target.className + ' highlightSymbolizer';
-                	$scope.prevElement = event.target;
-                	
-                    $scope.featureCommand.perform(feature);
-
-               	 	/*$scope.сurElement = event.target;
-                	if($scope.prevElement != null) $scope.prevElement.className = 'ng-scope';
-                	event.target.className = event.target.className + ' highlightSymbolizer';
-                	$scope.prevElement = event.target;
-                	var domInfoPanel = document.getElementById('infoPanel');
-               		domInfoPanel.innerHTML = '';
-                	$scope.curServiceModel = this.getServiceByName(feature.featureType.name);
-                	if ($scope.curServiceModel != null) {
-                		var fields = ($scope.curServiceModel.infoFieldsToInclude.replace(' ', '')).split(',');
-                		if ($scope.curServiceModel.selectionCommand == 'all') {
-                			var k = 0;
-                			for (var i = 0; i < fields.length; ++i) {
-                				var html = feature.propertyValues[fields[i]];
-                				if(html != null){
-      
-                					if(this.isURL(html)) {
-                						var textLink = ($scope.curServiceModel.customLinkTitles != null) ? $scope.curServiceModel.customLinkTitles[k] : 'link';
-                						html = this.createLinkTag(html, textLink);
-                						++k;
-                					} else {
-                						html = this.createTag(html, 'span');
-                					}
-                					domInfoPanel.appendChild(html);
-                				}
-                			}
-                		} else if ($scope.curServiceModel.selectionCommand == 'url') {
-window.open(feature.propertyValues[fields[0]]);
-                		} 
-                	}*/
+                	if($scope.сurElement != event.target) {
+                		$scope.сurElement = event.target;
+                		if($scope.prevElement != null) $scope.prevElement.className = 'ng-scope';
+                		event.target.className = event.target.className + ' highlightSymbolizer';
+                		$scope.prevElement = event.target;
+                    	$scope.featureCommand.perform(feature);
+                    }
                 };
-                /* option to put them inside root directive, instead of duplicating */
-                $scope.getServiceByName = function(name) {
-                	for(var i = 0; i < $scope.serviceModel.length; ++i) {
-                		if(name == $scope.serviceModel[i].featureName) {
-                			return $scope.serviceModel[i];
-                		}
-                	}
-                	return nil;
-                };
-                $scope.createTag = function(val, type='span', newLine=true) {
-                	var tag = document.createElement(type);
-                	var textWithBreaks = val.split(/\[0A\]/);
-                	var a_link = val.substring(val.indexOf('[link]')+('[link]').length, val.indexOf('[text]'));
-                	var a_text = val.substring(val.indexOf('[text]')+('[text]').length, val.indexOf('[end]'));
-                	//var regex = new RegExp(/(\[link\])(.*?)(\[text\])/g);
-                	//var ss = val.match(regex);
-                	if(this.isURL(a_link) && a_text != '') {
-                		return this.createLinkTag(a_link, a_text);
-                	}
-                	for(var i = 0; i < textWithBreaks.length; ++i) {
-                		tag.appendChild(document.createTextNode(textWithBreaks[i]));
-                		if((i+1) != textWithBreaks.length) tag.appendChild(document.createElement('br'));
-                	}
-                	(newLine) ? tag.appendChild(document.createElement('br')) : null;
-                	return tag;
-                };
-                $scope.createLinkTag = function(val, text, newLine=true) {
-                	var tag = document.createElement('a');
-                	tag.appendChild(document.createTextNode(text));
-                	tag.href = val;
-                	tag.target = "_blank";
-                	(newLine) ? tag.appendChild(document.createElement('br')) : null;
-                	return tag;
-                };
-                $scope.isURL = function(str) { 
-               		var regexp = new RegExp("^s?https?:\/\/[-_.!~*'()a-zA-Z0-9;\/?:\@&=+\$,%#]+$");
-               		return regexp.test(str);
-				}
             }],
             link: function($scope, $element, $attr, $parentCtrl) {
            		$parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
@@ -308,7 +229,6 @@ window.open(feature.propertyValues[fields[0]]);
                 $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
                 $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
                 $parentCtrl.scope.$watch('featureCommand', function(val) { $scope.featureCommand = val; });
-                $parentCtrl.scope.$watch('serviceModel', function(val) { $scope.serviceModel = val; });
                 $scope.$watch('prevElement', function(val) { 
                 	if($scope.curServiceModel != null) {
                 		$parentCtrl.scope.curServiceModel = $scope.curServiceModel;
@@ -349,80 +269,14 @@ window.open(feature.propertyValues[fields[0]]);
                 	if($scope.сurElement != event.target)  event.target.className = 'ng-scope'; 
                 }
                 $scope.showInfo = function(feature, event) {
-               		$scope.сurElement = event.target;
-                	if($scope.prevElement != null) $scope.prevElement.className = 'ng-scope';
-                	event.target.className = event.target.className + ' highlightSymbolizer';
-                	$scope.prevElement = event.target;
-                	
-                    $scope.featureCommand.perform(feature);
-
-               	 	/*$scope.сurElement = event.target;
-                	if($scope.prevElement != null) $scope.prevElement.className = 'ng-scope';
-                	event.target.className = event.target.className + ' highlightSymbolizer';
-                	$scope.prevElement = event.target;
-                	var domInfoPanel = document.getElementById('infoPanel');
-               		domInfoPanel.innerHTML = '';
-                	$scope.curServiceModel = this.getServiceByName(feature.featureType.name);
-                	if ($scope.curServiceModel != null) {
-                		var fields = ($scope.curServiceModel.infoFieldsToInclude.replace(' ', '')).split(',');
-                		if ($scope.curServiceModel.selectionCommand == 'all') {
-                			var k = 0;
-                			for (var i = 0; i < fields.length; ++i) {
-                				var html = feature.propertyValues[fields[i]];
-                				if(html != null){
-                					if(this.isURL(html)) {
-                						var textLink = ($scope.curServiceModel.customLinkTitles != null) ? $scope.curServiceModel.customLinkTitles[k] : 'link';
-                						html = this.createLinkTag(html, textLink);
-                						++k;
-                					} else {
-                						html = this.createTag(html, 'span');
-                					}
-                					domInfoPanel.appendChild(html);
-                				}
-                			}
-                		} else if ($scope.curServiceModel.selectionCommand == 'url') {
-                			window.open(feature.propertyValues[fields[0]]);
-                		} 
-                	}*/
+                	if($scope.сurElement != event.target) {
+                		$scope.сurElement = event.target;
+                		if($scope.prevElement != null) $scope.prevElement.className = 'ng-scope';
+                		event.target.className = event.target.className + ' highlightSymbolizer';
+                		$scope.prevElement = event.target;
+                		$scope.featureCommand.perform(feature);
+                    }
                 };
-                /* option to put them inside root directive, instead of duplicating */
-                $scope.getServiceByName = function(name) {
-                	for(var i = 0; i < $scope.serviceModel.length; ++i) {
-                		if(name == $scope.serviceModel[i].featureName) {
-                			return $scope.serviceModel[i];
-                		}
-                	}
-                	return nil;
-                };
-                $scope.createTag = function(val, type='span', newLine=true) {
-                	var tag = document.createElement(type);
-                	var textWithBreaks = val.split(/\[0A\]/);
-                	var a_link = val.substring(val.indexOf('[link]')+('[link]').length, val.indexOf('[text]'));
-                	var a_text = val.substring(val.indexOf('[text]')+('[text]').length, val.indexOf('[end]'));
-                	//var regex = new RegExp(/(\[link\])(.*?)(\[text\])/g);
-                	//var ss = val.match(regex);
-                	if(this.isURL(a_link) && a_text != '') {
-                		return this.createLinkTag(a_link, a_text);
-                	}
-                	for(var i = 0; i < textWithBreaks.length; ++i) {
-                		tag.appendChild(document.createTextNode(textWithBreaks[i]));
-                		if((i+1) != textWithBreaks.length) tag.appendChild(document.createElement('br'));
-                	}
-                	(newLine) ? tag.appendChild(document.createElement('br')) : null;
-                	return tag;
-                };
-                $scope.createLinkTag = function(val, text, newLine=true) {
-                	var tag = document.createElement('a');
-                	tag.appendChild(document.createTextNode(text));
-                	tag.href = val;
-                	tag.target = "_blank";
-                	(newLine) ? tag.appendChild(document.createElement('br')) : null;
-                	return tag;
-                };
-                $scope.isURL = function(str) { 
-               		var regexp = new RegExp("^s?https?:\/\/[-_.!~*'()a-zA-Z0-9;\/?:\@&=+\$,%#]+$");
-               		return regexp.test(str);
-				}
             }],
             link: function($scope, $element, $attr, $parentCtrl) {
                 $parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
@@ -430,7 +284,6 @@ window.open(feature.propertyValues[fields[0]]);
                 $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
                 $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
                 $parentCtrl.scope.$watch('featureCommand', function(val) { $scope.featureCommand = val; });
-                $parentCtrl.scope.$watch('serviceModel', function(val) { $scope.serviceModel = val; });
                 $scope.$watch('prevElement', function(val) { 
                 	if($scope.curServiceModel != null) {
                 		$parentCtrl.scope.curServiceModel = $scope.curServiceModel;

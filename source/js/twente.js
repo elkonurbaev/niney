@@ -1,5 +1,5 @@
 /* angular */
-angular.module('twente-app', ['nine-e', 'ngTouch']).
+angular.module('twente-app', ['nine-e', 'ngTouch', 'ngSanitize']).
     factory('boundsScope', ['$rootScope', function($rootScope) {
         var scope = $rootScope.$new();
         var model = new BoundsModel();
@@ -50,16 +50,15 @@ angular.module('twente-app', ['nine-e', 'ngTouch']).
     factory('featureScope', ['$rootScope', '$http', function($rootScope, $http) {
         var scope = $rootScope.$new();
         var services = [
-        {id:1, url:'twentemobiel/objects.csv', fieldSeparator:'|', simple:true, featureName:'hinderFeatureModel', featureType:new FeatureType('hinderFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.GEOMETRY), new Property('d', PropertyType.prototype.GEOMETRY), new Property('e', PropertyType.prototype.GEOMETRY), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING), new Property('h', PropertyType.prototype.STRING), new Property('j', PropertyType.prototype.STRING), new Property('k', PropertyType.prototype.STRING), new Property('l', PropertyType.prototype.STRING))), selectionCommand: 'all', infoFieldsToInclude: '1,6,7,8,9', customLinkTitles: null},
-        {id:2, url:'twentemobiel/trains.csv', fieldSeparator:';', simple:false, featureName:'trainFeatureModel', featureType:new FeatureType('trainFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY), new Property('e', PropertyType.prototype.STRING), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING))), selectionCommand: 'all', infoFieldsToInclude: '1,2,4,5,6', customLinkTitles: new Array('Voorzieningen op het station', 'Plan een reis vanaf dit station', 'Plan een reis naar dit station', 'Actuele vertrektijden')},
-        {id:3, url:'twentemobiel/bikes.csv', fieldSeparator:';', simple:false, featureName:'bikesFeatureModel', featureType:new FeatureType('bikesFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.GEOMETRY), new Property('d', PropertyType.prototype.STRING), new Property('e', PropertyType.prototype.STRING), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING), new Property('h', PropertyType.prototype.STRING), new Property('e', PropertyType.prototype.STRING), new Property('k', PropertyType.prototype.STRING), new Property('l', PropertyType.prototype.STRING))), selectionCommand: 'all', infoFieldsToInclude: '3,4,5,6,7,8,9,10, 1', customLinkTitles: new Array('Plan een fietsroute vanaf hier', 'Meer informatie')},
-        {id:4, url:'twentemobiel/parkrides.csv', fieldSeparator:';', simple:false, featureName:'parkridesFeatureModel', featureType:new FeatureType('parkridesFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY))), selectionCommand: 'url', infoFieldsToInclude: '2', customLinkTitles: null},
-        {id:5, url:'twentemobiel/carpools.csv', fieldSeparator:';', simple:false, featureName:'carpoolsFeatureModel', featureType:new FeatureType('carpoolsFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY))), selectionCommand: 'url', infoFieldsToInclude: '2', customLinkTitles: null},
-        {id:6, url:'twentemobiel/carparks.csv', fieldSeparator:';', simple:false, featureName:'carparksFeatureModel', featureType:new FeatureType('carparksFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY))), selectionCommand: 'url', infoFieldsToInclude: '2', customLinkTitles: null},
-        {id:7, url:'twentemobiel/webcams.csv', fieldSeparator:';', simple:false, featureName:'webcamsFeatureModel', featureType:new FeatureType('webcamsFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY))), selectionCommand: 'url', infoFieldsToInclude: '2', customLinkTitles: null}
+        {id:1, url:'twentemobiel/objects.csv', fieldSeparator:'|', simple:true, featureName:'hinderFeatureModel', featureType:new FeatureType('hinderFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.GEOMETRY), new Property('d', PropertyType.prototype.GEOMETRY), new Property('e', PropertyType.prototype.GEOMETRY), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING), new Property('h', PropertyType.prototype.STRING), new Property('j', PropertyType.prototype.STRING), new Property('k', PropertyType.prototype.STRING), new Property('l', PropertyType.prototype.STRING)))},
+        {id:2, url:'twentemobiel/trains.csv', fieldSeparator:';', simple:false, featureName:'trainFeatureModel', featureType:new FeatureType('trainFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY), new Property('e', PropertyType.prototype.STRING), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING)))},
+        {id:3, url:'twentemobiel/bikes.csv', fieldSeparator:';', simple:false, featureName:'bikesFeatureModel', featureType:new FeatureType('bikesFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.GEOMETRY), new Property('d', PropertyType.prototype.STRING), new Property('e', PropertyType.prototype.STRING), new Property('f', PropertyType.prototype.STRING), new Property('g', PropertyType.prototype.STRING), new Property('h', PropertyType.prototype.STRING), new Property('e', PropertyType.prototype.STRING), new Property('k', PropertyType.prototype.STRING), new Property('l', PropertyType.prototype.STRING)))},
+        {id:4, url:'twentemobiel/parkrides.csv', fieldSeparator:';', simple:false, featureName:'parkridesFeatureModel', featureType:new FeatureType('parkridesFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))},
+        {id:5, url:'twentemobiel/carpools.csv', fieldSeparator:';', simple:false, featureName:'carpoolsFeatureModel', featureType:new FeatureType('carpoolsFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))},
+        {id:6, url:'twentemobiel/carparks.csv', fieldSeparator:';', simple:false, featureName:'carparksFeatureModel', featureType:new FeatureType('carparksFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))},
+        {id:7, url:'twentemobiel/webcams.csv', fieldSeparator:';', simple:false, featureName:'webcamsFeatureModel', featureType:new FeatureType('webcamsFeatureModel', new Array(new Property('a', PropertyType.prototype.STRING), new Property('b', PropertyType.prototype.STRING), new Property('c', PropertyType.prototype.STRING), new Property('d', PropertyType.prototype.GEOMETRY)))}
         ];
         scope.models = new Array(services.length);
-        scope.services = services;
         for (var i = 0; i < services.length; ++i) {
             var serviceConnector = new CSVServiceConnector($http, services[i].id, services[i].fieldSeparator, services[i].simple, services[i].featureType, services[i].url);
             serviceConnector.load(scope, function(scope, id, featureModel) { 
@@ -102,8 +101,6 @@ angular.module('twente-app', ['nine-e', 'ngTouch']).
         $scope.tileModel = tileScope.model;
         $scope.layers = layerScope.layers;
         $scope.featureModels = featureScope.models;
-       	$scope.serviceModel = featureScope.services;
-        
         $scope.toggleSelectFeatureCommand = new ToggleSelectFeatureCommand($scope.selectionModel);
         $scope.ToURLFeatureCommand = new ToURLFeatureCommand($scope.selectionModel);
     }]).
@@ -147,6 +144,70 @@ angular.module('twente-app', ['nine-e', 'ngTouch']).
         $scope.layers = layerScope.layers;
         $scope.featureModels = featureScope.models;
         $scope.selectionModel = selectionScope.model;
+        $scope.setWegobjectText = function(propertyValues) {
+        	var typeText = "";
+			switch(propertyValues[0]) {
+				case '1': typeText = "Hinder door wegwerkzaamheden"; break;
+				case '2': typeText = "Afsluiting vanwege wegwerkzaamheden"; break;
+				case '3': typeText = "Hinder door evenement"; break;
+				case '4': typeText = "Afsluiting vanwege evenement"; break;
+				case '5': typeText = "Hinder door calamiteit"; break;
+				case '6': typeText = "Afsluiting vanwege calamiteit"; break;
+				default: return;
+			}
+			var text = "";
+			text += "<p class='heading'>" + typeText + "</p>";
+			text += "<p class='heading'>" + propertyValues[7] + "</p>";
+			text += "<p>" + propertyValues[6] + "</p>";
+			text += "<p>Waar</p>";
+			text += "<p>" + propertyValues[9] + "</p>";
+			text += "<p>Wanneer</p>";
+			text += "<p>" + propertyValues[1] + "</p>";
+			text += "<p>Meer informatie</p>";
+			if(propertyValues[8] != null) {
+				text += "<p>" + propertyValues[8] + "</p>";
+			}
+			text += "<p><a href='http://www.twentebereikbaar.nl/pdf/maakpdf.php?Objectnummer=" + propertyValues[5] + "&regio=1'>Download als pdf</a></p>";
+			
+			text = text.replace(/null/g, "");
+			text = text.replace(/\[link\](.*?)\n*?\[text\](.*?)\[end\]/g, "<a href='$1'>$2</a>");
+			text = text.replace(/\[7C\]/g, "|");
+			text = text.replace(/\[0A\]/g, "<br/>");
+			return text;
+        }
+        $scope.setTrainText = function(propertyValues) {
+        	var text = "";
+			text += "<p class='heading'>Treinstation</p>";
+			text += "<p class='heading'>" + propertyValues[1] + "</p>";
+			text += "<p><a href='" + propertyValues[2] + "'>Voorzieningen op het station</a></p>";
+			text += "<p><a href='" + propertyValues[4] + "'>Plan een reis vanaf dit station</a></p>";
+			text += "<p><a href='" + propertyValues[5] + "'>Plan een reis naar dit station</a></p>";
+			text += "<p><a href='" + propertyValues[6] + "'>Actuele vertrektijden</a></p>";
+			return text;
+        }
+        $scope.setBikeText = function(propertyValues) {
+        	var text = "";
+			text += "<p class='heading'>OV-fietslocatie</p>";
+			text += "<p class='heading'>" + propertyValues[3] + "</p>";
+			if (propertyValues[4] != null) {
+				text += "<p>" + propertyValues[4] + "</p>";
+			}
+			if (propertyValues[5] != null) {
+				text += "<p>" + propertyValues[5] + "</p>";
+			}
+			if (propertyValues[6] != null) {
+				text += "<p>" + propertyValues[6] + " " + propertyValues[7] + "</p>";
+			}
+			text += "<p>Openingstijden</p>";
+			text += "<p>" + propertyValues[8] + "</p>";
+			if (propertyValues[9] != null) {
+				text += "<p>Bijzonderheden</p>";
+				text += "<p>" + propertyValues[9] + "</p>";
+			}
+			text += "<p><a href='" + propertyValues[10] + "'>Plan een fietsroute vanaf hier</a></p>";
+			text += "<p><a href='" + propertyValues[1] + "'>Meer informatie</a></p>";
+			return text;
+        }
     }]);
 
 function setMapSize(width, height) {
