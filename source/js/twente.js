@@ -1,5 +1,5 @@
 /* angular */
-angular.module('twente-app', ['nine-e', 'ngTouch', 'ngSanitize']).
+angular.module('twente-app', ['nine-e', 'ngSanitize']).
     factory('boundsScope', ['$rootScope', function($rootScope) {
         var scope = $rootScope.$new();
         var model = new BoundsModel();
