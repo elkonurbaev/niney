@@ -1,5 +1,6 @@
-function ToggleSelectFeatureCommand(selectionModel) {
+function ToggleSelectFeatureCommand(selectionModel, index) {
     this.selectionModel = selectionModel;
+    this.index = index;
 }
 
 ToggleSelectFeatureCommand.prototype.perform = function(feature) {
@@ -8,11 +9,11 @@ ToggleSelectFeatureCommand.prototype.perform = function(feature) {
     }
     
     if (feature == null) {
-        this.selectionModel.selectedFeature = null;
-    } else if (this.selectionModel.selectedFeature != feature) {
-        this.selectionModel.selectedFeature = feature;
+        this.selectionModel.selectedFeatures[this.index] = null;
+    } else if (this.selectionModel.selectedFeatures[this.index] != feature) {
+        this.selectionModel.selectedFeatures[this.index] = feature;
     } else {
-        this.selectionModel.selectedFeature = null;
+        this.selectionModel.selectedFeatures[this.index] = null;
     }
 }
 

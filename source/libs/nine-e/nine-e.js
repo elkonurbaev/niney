@@ -98,7 +98,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 layer: '=layer',
                 featureModel: '=featuremodel',
                 selectionModel: '=selectionmodel',
-                featureCommand: '=featurecommand'
+                featureCommands: '=featurecommands'
             },
             controller: ["$scope", function ($scope) {
                 this.scope = $scope;
@@ -135,7 +135,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive("geometrysymbolizer", function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.centerScale.scale"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="mapfeaturelayer" style="width: {{boundsModel.bounds.width}}px; height: {{boundsModel.bounds.height}}px; pointer-events: none" ng-repeat="feature in featureModel.features"><polyline style="pointer-events: visible" ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries" points="{{parsePoints(geometry.points)}}" ng-mouseover="mouseOverHandler($event)" ng-mouseout="mouseOutHandler($event)" ng-click="clickHandler(feature, $event)" ng-style="getStyle(feature)"></polyline></svg></div>',
+            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.centerScale.scale"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="mapfeaturelayer" style="width: {{boundsModel.bounds.width}}px; height: {{boundsModel.bounds.height}}px; pointer-events: none" ng-repeat="feature in featureModel.features"><polyline style="pointer-events: visible" ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries" points="{{parsePoints(geometry.points)}}" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-style="getStyle(feature)"></polyline></svg></div>',
             restrict: 'E',
             require: '^mapfeaturelayer',
             replace: true,
@@ -150,8 +150,10 @@ angular.module('nine-e', ['monospaced.mousewheel']).
 
                 var scope = $scope;
                 $scope.getStyle = function(feature) {
-                    if (feature == scope.selectionModel.selectedFeature) {
-                        return scope.highStyle;
+                    for (var i = 0; i < scope.selectionModel.selectedFeatures.length; i++) {
+                        if (scope.selectionModel.selectedFeatures[i] == feature) {
+                            return scope.highStyle;
+                        }
                     }
                     return scope.lowStyle;
                 }
@@ -172,16 +174,14 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 	var itemEnvelope = item.getEnvelope();
                 	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
                 };
-                $scope.mouseOverHandler = function(event) {
-                        //TODO
-                	//event.target.setAttribute('class',  event.target.getAttribute('class') + ' highlightGeometry');
+                $scope.mouseOverHandler = function(feature, event) {
+                    $scope.featureCommands[0].perform(feature);
                 }
-                $scope.mouseOutHandler = function(event) {
-                        //TODO
-                	//if($scope.сurElement != event.target)  event.target.setAttribute('class',  'ng-scope');
+                $scope.mouseOutHandler = function(feature, event) {
+                    $scope.featureCommands[1].perform(feature);
                 }
                 $scope.clickHandler = function(feature, event) {
-                    $scope.featureCommand.perform(feature);
+                    $scope.featureCommands[2].perform(feature);
                 }
             }],
             link: function($scope, $element, $attr, $parentCtrl) {
@@ -190,10 +190,10 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
                 $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
                 $parentCtrl.scope.$watch('selectionModel', function(val) { $scope.selectionModel = val; });
-                $parentCtrl.scope.$watch('featureCommand', function(val) { $scope.featureCommand = val; });
+                $parentCtrl.scope.$watch('featureCommands', function(val) { $scope.featureCommands = val; });
                 
                 $attr.$observe('maxscale', function(val) { $scope.maxScale = angular.isDefined(val) ? val : Number.MAX_VALUE; });
-                $attr.$observe('style', function(val) { $scope.highStyle = {}; $scope.lowStyle = {}; angular.extend($scope.highStyle, val); $scope.highStyle.strokeWidth = 7; angular.extend($scope.lowStyle, val); });
+                $attr.$observe('style', function(val) { $scope.lowStyle = angular.extend({}, val); $scope.highStyle = angular.extend({}, val); $scope.highStyle.strokeWidth = 7; });
             }
         };
         return directiveDefinitionObject;
@@ -230,7 +230,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 		if($scope.prevElement != null) $scope.prevElement.className = 'ng-scope';
                 		event.target.className = event.target.className + ' highlightSymbolizer';
                 		$scope.prevElement = event.target;
-                    	$scope.featureCommand.perform(feature);
+                    	$scope.featureCommands[2].perform(feature);
                     }
                 };
             }],
@@ -239,7 +239,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
                 $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
                 $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
-                $parentCtrl.scope.$watch('featureCommand', function(val) { $scope.featureCommand = val; });
+                $parentCtrl.scope.$watch('featureCommands', function(val) { $scope.featureCommands = val; });
                 $scope.$watch('prevElement', function(val) { 
                 	if($scope.curServiceModel != null) {
                 		$parentCtrl.scope.curServiceModel = $scope.curServiceModel;
@@ -285,7 +285,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 		if($scope.prevElement != null) $scope.prevElement.className = 'ng-scope';
                 		event.target.className = event.target.className + ' highlightSymbolizer';
                 		$scope.prevElement = event.target;
-                		$scope.featureCommand.perform(feature);
+                		$scope.featureCommands[2].perform(feature);
                     }
                 };
             }],
@@ -294,7 +294,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
                 $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
                 $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
-                $parentCtrl.scope.$watch('featureCommand', function(val) { $scope.featureCommand = val; });
+                $parentCtrl.scope.$watch('featureCommands', function(val) { $scope.featureCommands = val; });
                 $scope.$watch('prevElement', function(val) { 
                 	if($scope.curServiceModel != null) {
                 		$parentCtrl.scope.curServiceModel = $scope.curServiceModel;

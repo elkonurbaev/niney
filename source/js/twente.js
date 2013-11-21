@@ -70,6 +70,7 @@ angular.module('twente-app', ['nine-e', 'ngSanitize']).
     factory('selectionScope', ['$rootScope', function($rootScope) {
         var scope = $rootScope.$new();
         scope.model = new SelectionModel();
+        scope.model.selectedFeatures = [null, null]; // [0] is the mouseover feature, [1] is the selected feature. Each one causes a highlight in the map, but only [1] actives the info panel.
         return scope;
     }]).
     factory('tileScope', ['$rootScope', function($rootScope) {
@@ -101,8 +102,13 @@ angular.module('twente-app', ['nine-e', 'ngSanitize']).
         $scope.tileModel = tileScope.model;
         $scope.layers = layerScope.layers;
         $scope.featureModels = featureScope.models;
-        $scope.toggleSelectFeatureCommand = new ToggleSelectFeatureCommand($scope.selectionModel);
-        $scope.ToURLFeatureCommand = new ToURLFeatureCommand($scope.selectionModel);
+        
+        $scope.toggleSelect0FeatureCommand = new ToggleSelectFeatureCommand($scope.selectionModel, 0);
+        $scope.toggleSelect1FeatureCommand = new ToggleSelectFeatureCommand($scope.selectionModel, 1);
+        $scope.toURLFeatureCommand = new ToURLFeatureCommand($scope.selectionModel);
+        
+        $scope.selectCommands = [$scope.toggleSelect0FeatureCommand, $scope.toggleSelect0FeatureCommand, $scope.toggleSelect1FeatureCommand];
+        $scope.urlCommands = [$scope.toggleSelect0FeatureCommand, $scope.toggleSelect0FeatureCommand, $scope.toURLFeatureCommand];
     }]).
     controller('FocusButtonBarCtrl', ['$scope', 'boundsScope', 'focusScope', function ($scope, boundsScope, focusScope) {
         var boundsModel = boundsScope.model;

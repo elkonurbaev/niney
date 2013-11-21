@@ -1,3 +1,3 @@
 function SelectionModel() {
-    this.selectedFeature = null;
+    this.selectedFeatures = null;
 }
