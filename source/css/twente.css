@@ -44,9 +44,21 @@
 	width: 26px;
 	margin: -4px 0 0 -4px;
 }
-.highlightGeometry 
+.defaultSymbolizer
 {
+	opacity: 1.0;
+	width: 18px;
+	margin: 0;
+}
+.highlightGeometrySymbolizer
+{
+	fill: none;
 	stroke-width: 7;
+}
+.defaultGeometrySymbolizer
+{
+	fill: none;
+	stroke-width: 5;
 }
 @media only screen and (max-width : 700px) 
 {

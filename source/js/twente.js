@@ -105,7 +105,7 @@ angular.module('twente-app', ['nine-e', 'ngSanitize']).
         
         $scope.toggleSelect0FeatureCommand = new ToggleSelectFeatureCommand($scope.selectionModel, 0);
         $scope.toggleSelect1FeatureCommand = new ToggleSelectFeatureCommand($scope.selectionModel, 1);
-        $scope.toURLFeatureCommand = new ToURLFeatureCommand($scope.selectionModel);
+        $scope.toURLFeatureCommand = new ToURLFeatureCommand();
         
         $scope.selectCommands = [$scope.toggleSelect0FeatureCommand, $scope.toggleSelect0FeatureCommand, $scope.toggleSelect1FeatureCommand];
         $scope.urlCommands = [$scope.toggleSelect0FeatureCommand, $scope.toggleSelect0FeatureCommand, $scope.toURLFeatureCommand];

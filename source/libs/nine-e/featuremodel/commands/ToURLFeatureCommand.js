@@ -1,6 +1,4 @@
-function ToURLFeatureCommand(selectionModel) {
-    this.selectionModel = selectionModel;
-}
+function ToURLFeatureCommand() { }
 
 ToURLFeatureCommand.prototype.perform = function(feature) {
     if (feature == null) {
