@@ -245,7 +245,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 }
             }],
             link: function($scope, $element, $attr, $parentCtrl) {
-           		$parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });	
+           		$parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
                 $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
                 $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
                 $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
