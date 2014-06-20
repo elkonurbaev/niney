@@ -1,14 +1,18 @@
 .mapviewer {
     position: relative;
 }
-
 .tileslayer {
     position: absolute;
     width: 100%;
     height: 100%;
     overflow: hidden;
 }
-
+.wmslayer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
 .mapfeaturelayer {
     position: absolute;
 }

@@ -2,7 +2,7 @@
 <html ng-app="twente-app">
   <head>
     <meta charset="UTF-8">
-    <title>Twente</title>
+    <title>Twente Mobiel</title>
     <script src="libs/angular.js"></script>
     <script src="libs/angular-sanitize.min.js"></script>
     <!-- <script src="libs/angular-touch.js"></script> -->
@@ -30,6 +30,7 @@
     <script src="libs/nine-e/focusmodel/ZoomLevel.js"></script>
     <script src="libs/nine-e/layermodel/Tile.js"></script>
     <script src="libs/nine-e/layermodel/TileModel.js"></script>
+    <script src="libs/nine-e/layermodel/WMSModel.js"></script>
     <script src="libs/nine-e/selectionmodel/SelectionModel.js"></script>
     <script src="libs/nine-e/service/file/CSVServiceConnector.js"></script>
     <script src="libs/nine-e/nine-e.js"></script>
@@ -41,48 +42,46 @@
     <div id="twente_map_container" ng-controller="MapCtrl">
       <legend id="legend" layers="layers"></legend>
       <map id="map" boundsmodel="boundsModel" focusmodel="focusModel" envelopemodel="envelopeModel">
-        <tileslayer tilemodel="tileModel"></tileslayer>
-          <div id="navigationControl" focusmodel="focusModel" ng-controller="FocusButtonBarCtrl">
-          <button ng-click="panNorth()">North</button>
-          <button ng-click="panSouth()">South</button>
-          <button ng-click="panWest()">West</button>
-          <button ng-click="panEast()">East</button>
-          <button ng-click="zoomIn()">Zoom In</button>
-          <button ng-click="zoomOut()">Zoom Out</button>
-        </div>
+        <tileslayer></tileslayer>
+        <wmslayer></wmslayer>
         <mapfeaturelayer layer="layers[0]" featuremodel="featureModels[1]" selectionmodel="selectionModel" featurecommands="selectCommands">
           <geometrysymbolizer maxscale="108336.00408304202" style="fill:none;stroke:#FF0000;stroke-width:5" propertyindex="3"></geometrysymbolizer>
           <geometrysymbolizer maxscale="108336.00408304202" propertyindex="4" style="fill:none;stroke:#0000FF;stroke-width:5"></geometrysymbolizer>
           <imagesymbolizer propertyindex="2" assetpropertyindex="0" asset="twentemobiel/images/symt$_18.png"></imagesymbolizer>
         </mapfeaturelayer>
         <mapfeaturelayer layer="layers[1]" featuremodel="featureModels[2]" featurecommands="selectCommands" selectionmodel="selectionModel">
-         <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/trains.png"></imagesymbolizer>
+          <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/trains.png"></imagesymbolizer>
         </mapfeaturelayer>
         <mapfeaturelayer layer="layers[2]" featuremodel="featureModels[3]" featurecommands="selectCommands" selectionmodel="selectionModel">
-         <imagesymbolizer propertyindex="2" assetpropertyindex="" asset="twentemobiel/images/bikes.png"></imagesymbolizer>
+          <imagesymbolizer propertyindex="2" assetpropertyindex="" asset="twentemobiel/images/bikes.png"></imagesymbolizer>
         </mapfeaturelayer>
         <mapfeaturelayer layer="layers[3]" featuremodel="featureModels[4]" featurecommands="urlCommands" selectionmodel="selectionModel">
-         <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/parkrides.png"></imagesymbolizer>
+          <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/parkrides.png"></imagesymbolizer>
         </mapfeaturelayer>
         <mapfeaturelayer layer="layers[4]" featuremodel="featureModels[5]" featurecommands="urlCommands" selectionmodel="selectionModel">
-         <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/carpools.png"></imagesymbolizer>
+          <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/carpools.png"></imagesymbolizer>
         </mapfeaturelayer>
         <mapfeaturelayer layer="layers[5]" featuremodel="featureModels[6]" featurecommands="urlCommands" selectionmodel="selectionModel">
-         <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/carparks.png"></imagesymbolizer>
+          <imagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/carparks.png"></imagesymbolizer>
         </mapfeaturelayer>
         <mapfeaturelayer layer="layers[6]" featuremodel="featureModels[7]" featurecommands="urlCommands" selectionmodel="selectionModel">
-         <geometryimagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/webcams.png"></geometryimagesymbolizer>
+          <geometryimagesymbolizer propertyindex="3" assetpropertyindex="" asset="twentemobiel/images/webcams.png"></geometryimagesymbolizer>
         </mapfeaturelayer>
       </map>
+      <div id="navigationControl" ng-controller="FocusButtonBarCtrl">
+        <button ng-click="panNorth()">North</button>
+        <button ng-click="panSouth()">South</button>
+        <button ng-click="panWest()">West</button>
+        <button ng-click="panEast()">East</button>
+        <button ng-click="zoomIn()">Zoom In</button>
+        <button ng-click="zoomOut()">Zoom Out</button>
+      </div>
       <div id="infoPanel" ng-controller="InfoCtrl">
-      	<div ng-if="selectionModel.selectedFeatures[1] == null">Er zijn op dit moment {{featureModels[1].features.length}} meldingen van hinder en afsluitingen. Wegwerkzaamheden en evenementen die over meer dan 4 weken aanvangen zijn nog niet zichtbaar.</div>
-      	<div ng-if="selectionModel.selectedFeatures[1].featureType.name == 'hinderFeatureModel'" ng-bind-html="setWegobjectText(selectionModel.selectedFeatures[1].propertyValues)">
-     	</div>
-      	<div ng-if="selectionModel.selectedFeatures[1].featureType.name == 'trainFeatureModel'" ng-bind-html="setTrainText(selectionModel.selectedFeatures[1].propertyValues)">
-      	</div>
-      	<div ng-if="selectionModel.selectedFeatures[1].featureType.name == 'bikesFeatureModel'" ng-bind-html="setBikeText(selectionModel.selectedFeatures[1].propertyValues)">
-      	</div>
-    	</div>
+        <div ng-if="selectionModel.selectedFeatures[1] == null">Er zijn op dit moment {{featureModels[1].features.length}} meldingen van hinder en afsluitingen. Wegwerkzaamheden en evenementen die over meer dan 4 weken aanvangen zijn nog niet zichtbaar.</div>
+        <div ng-if="selectionModel.selectedFeatures[1].featureType.name == 'hinderFeatureModel'" ng-bind-html="setWegobjectText(selectionModel.selectedFeatures[1].propertyValues)"></div>
+        <div ng-if="selectionModel.selectedFeatures[1].featureType.name == 'trainFeatureModel'" ng-bind-html="setTrainText(selectionModel.selectedFeatures[1].propertyValues)"></div>
+        <div ng-if="selectionModel.selectedFeatures[1].featureType.name == 'bikesFeatureModel'" ng-bind-html="setBikeText(selectionModel.selectedFeatures[1].propertyValues)"></div>
+      </div>
     </div>
   </body>
 </html>

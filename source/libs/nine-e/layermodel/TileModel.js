@@ -18,6 +18,7 @@ TileModel.prototype.setBounds = function(bounds) {
     if (bounds.equals(this.bounds)) {
         return;
     }
+    
     this.bounds = bounds;
     this.resetLoaders();
 }
@@ -54,8 +55,8 @@ TileModel.prototype.resetLoaders = function() {
     var minX = -1;
     var maxY = -1;
     var url = null;
-    var dX = -1;
-    var dY = -1;
+    var x = -1;
+    var y = -1;
     var scaling = 1;
     var tile = null;
     
@@ -70,11 +71,9 @@ TileModel.prototype.resetLoaders = function() {
             url = url.replace("$X", ((tileX % tileLimit) + tileLimit) % tileLimit);
             url = url.replace("$Y", tileY);
             
-            dX = this.centerScale.getPixX(this.bounds.width, minX);
-            dY = this.centerScale.getPixY(this.bounds.height, maxY);
+            x = this.centerScale.getPixX(this.bounds.width, minX);
+            y = this.centerScale.getPixY(this.bounds.height, maxY);
             scaling = tileScale / this.centerScale.scale;
-            var wi = this.tileWidth * scaling;
-            var he = this.tileHeight * scaling;
             
             while (
                     (i < this.tiles.length) &&
@@ -85,15 +84,14 @@ TileModel.prototype.resetLoaders = function() {
             
             tile = null;
             if (i >= this.tiles.length) {
-                this.tiles.push(new Tile(tileX, tileY, url, dX, dY, wi, he));
+                this.tiles.push(new Tile(tileX, tileY, this.tileWidth, this.tileHeight, url, x, y, scaling));
             } else if ((this.tiles[i].tileY == tileY) && (this.tiles[i].tileX == tileX)) {
                 tile = this.tiles[i];
-                tile.x = dX;
-                tile.y = dY;
-                tile.width = wi;
-                tile.height = he;
+                tile.x = x;
+                tile.y = y;
+                tile.scaling = scaling;
             } else {
-                this.tiles.splice(i, 0, new Tile(tileX, tileY, url, dX, dY, wi, he));
+                this.tiles.splice(i, 0, new Tile(tileX, tileY, this.tileWidth, this.tileHeight, url, x, y, scaling));
             }
             i++;
         }
@@ -101,16 +99,20 @@ TileModel.prototype.resetLoaders = function() {
     this.tiles.splice(i, this.tiles.length - i);
 }
 
-function Tile(tileX, tileY, url, x, y, width, height) {
+function Tile(tileX, tileY, tileWidth, tileHeight, url, x, y, scaling) {
     this.tileX = tileX;
     this.tileY = tileY;
+    this.tileWidth = tileWidth;
+    this.tileHeight = tileHeight;
     this.url = url;
     this.x = x;
     this.y = y;
-    this.width = width;
-    this.height = height;
+    this.scaling = scaling;
+    this.scale = -1;
+    this.completed = false;
 }
 
 Tile.prototype.toCSS = function() {
-    return {top: this.y + "px", left: this.x + "px", width: this.width + "px", height: this.height + "px"};
+    return {left: this.x + "px", top: this.y + "px", width: (this.tileWidth * this.scaling) + "px", height: (this.tileHeight * this.scaling) + "px"};
 }
+

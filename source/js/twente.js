@@ -22,8 +22,6 @@ angular.module('twente-app', ['nine-e', 'ngSanitize']).
         model.minScale = 1692.7500637975315;
         model.maxScale = 866688.0326643360;
         model.scaleToZoomLevels = true;
-        var timer = new Timer(50, 20);
-        model.timer = timer;
         scope.model = model;
         return scope;
     }]).
@@ -73,33 +71,23 @@ angular.module('twente-app', ['nine-e', 'ngSanitize']).
         scope.model.selectedFeatures = [null, null]; // [0] is the mouseover feature, [1] is the selected feature. Each one causes a highlight in the map, but only [1] actives the info panel.
         return scope;
     }]).
-    factory('tileScope', ['$rootScope', function($rootScope) {
-        var scope = $rootScope.$new();
-        scope.model = new TileModel();
-        return scope;
-    }]).
-    run(['$rootScope', 'boundsScope', 'focusScope', 'envelopeScope', 'tileScope', function($rootScope, boundsScope, focusScope, envelopeScope, tileScope) {
-        var tileModel = tileScope.model;
-        
+    run(['boundsScope', 'focusScope', 'envelopeScope', function(boundsScope, focusScope, envelopeScope) {
         boundsScope.$watch('model.bounds', function(val) {             
             envelopeScope.model.setBounds(val);
-            tileModel.setBounds(val); 
         });
-        focusScope.$watch('model.centerScale', function(val) { 
+        focusScope.$watch('model.animationCenterScale', function(val) { 
             envelopeScope.model.setCenterScale(val); 
-            tileModel.setCenterScale(val); 
         });
         
         boundsScope.timer.tick();
         boundsScope.timer.start();
-        focusScope.model.setCenterScale(new CenterScale(745000, 6856000, 433344.01633216810));
+        focusScope.model.setCenterScale(new CenterScale(745000, 6856000, 433344.01633216810), 0, 0);
     }]).
-    controller('MapCtrl', ['$scope', 'boundsScope', 'focusScope', 'envelopeScope', 'selectionScope', 'tileScope', 'layerScope', 'featureScope', function ($scope, boundsScope, focusScope, envelopeScope, selectionScope, tileScope, layerScope, featureScope) {
+    controller('MapCtrl', ['$scope', 'boundsScope', 'focusScope', 'envelopeScope', 'selectionScope', 'layerScope', 'featureScope', function ($scope, boundsScope, focusScope, envelopeScope, selectionScope, layerScope, featureScope) {
         $scope.boundsModel = boundsScope.model;
         $scope.focusModel = focusScope.model;
         $scope.envelopeModel = envelopeScope.model;
         $scope.selectionModel = selectionScope.model;
-        $scope.tileModel = tileScope.model;
         $scope.layers = layerScope.layers;
         $scope.featureModels = featureScope.models;
         
@@ -117,30 +105,30 @@ angular.module('twente-app', ['nine-e', 'ngSanitize']).
         $scope.panNorth = function() {
             var bounds = boundsModel.bounds;
             var cs = focusModel.centerScale;
-            focusModel.setAnimationCenterScale(new CenterScale(cs.centerX, cs.centerY + cs.getNumWorldCoords(bounds.height / 2), cs.scale));
+            focusModel.setCenterScale(new CenterScale(cs.centerX, cs.centerY + cs.getNumWorldCoords(bounds.height / 2), cs.scale), 0, 0);
         }
         $scope.panSouth = function() {
             var bounds = boundsModel.bounds;
             var cs = focusModel.centerScale;
-            focusModel.setAnimationCenterScale(new CenterScale(cs.centerX, cs.centerY - cs.getNumWorldCoords(bounds.height / 2), cs.scale));
+            focusModel.setCenterScale(new CenterScale(cs.centerX, cs.centerY - cs.getNumWorldCoords(bounds.height / 2), cs.scale), 0, 0);
         }
         $scope.panWest = function() {
             var bounds = boundsModel.bounds;
             var cs = focusModel.centerScale;
-            focusModel.setAnimationCenterScale(new CenterScale(cs.centerX - cs.getNumWorldCoords(bounds.width / 2), cs.centerY, cs.scale));
+            focusModel.setCenterScale(new CenterScale(cs.centerX - cs.getNumWorldCoords(bounds.width / 2), cs.centerY, cs.scale), 0, 0);
         }
         $scope.panEast = function() {
             var bounds = boundsModel.bounds;
             var cs = focusModel.centerScale;
-            focusModel.setAnimationCenterScale(new CenterScale(cs.centerX + cs.getNumWorldCoords(bounds.width / 2), cs.centerY, cs.scale));
+            focusModel.setCenterScale(new CenterScale(cs.centerX + cs.getNumWorldCoords(bounds.width / 2), cs.centerY, cs.scale), 0, 0);
         }
         $scope.zoomIn = function() {
             var cs = focusModel.centerScale;
-            focusModel.setAnimationCenterScale(new CenterScale(cs.centerX, cs.centerY, cs.scale / 2));
+            focusModel.setCenterScale(new CenterScale(cs.centerX, cs.centerY, cs.scale / 2), 0, 0);
         }
         $scope.zoomOut = function() {
             var cs = focusModel.centerScale;
-            focusModel.setAnimationCenterScale(new CenterScale(cs.centerX, cs.centerY, cs.scale * 2));
+            focusModel.setCenterScale(new CenterScale(cs.centerX, cs.centerY, cs.scale * 2), 0, 0);
         }
     }]).
     controller('FocusPanelCtrl', ['$scope', 'focusScope', function ($scope, focusScope) {

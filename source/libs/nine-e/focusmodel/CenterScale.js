@@ -17,18 +17,6 @@ CenterScale.prototype.equals = function(centerScale) {
     return false;
 }
 
-CenterScale.prototype.getCenterX = function() {
-	return this.centerX;
-}
-
-CenterScale.prototype.getCenterY = function() {
-	return this.centerY;
-}
-
-CenterScale.prototype.getScale = function() {
-	return this.scale;
-}
-
 CenterScale.prototype.clone = function() {
     return new CenterScale(this.centerX, this.centerY, this.scale);
 }
@@ -47,6 +35,18 @@ CenterScale.prototype.getNumWorldCoords = function(numPixs) {
     return numPixs * this.coordPixFactor * this.scale;
 }
 
+CenterScale.prototype.getWorldX = function(width, pixX) {
+    pixX = pixX - (width / 2);
+    var worldX = this.centerX + (pixX * this.coordPixFactor * this.scale);
+    return worldX;
+}
+
+CenterScale.prototype.getWorldY = function(height, pixY) {
+    pixY = pixY - (height / 2);
+    var worldY = this.centerY - (pixY * this.coordPixFactor * this.scale);
+    return worldY;
+}
+
 CenterScale.prototype.getNumPixs = function(numWorldCoords) {
     return numWorldCoords / this.coordPixFactor / this.scale;
 }
@@ -62,3 +62,8 @@ CenterScale.prototype.getPixY = function(height, worldY) {
     pixY = pixY + (height / 2);
     return pixY;
 }
+
+CenterScale.prototype.toString = function() {
+    return "CenterScale(" + this.centerX + ", " + this.centerY + ", " + this.scale + ")";
+}
+

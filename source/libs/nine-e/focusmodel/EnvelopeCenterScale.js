@@ -46,9 +46,9 @@ EnvelopeCenterScale.prototype.equals = function(centerScale) {
 		return false;
 	}
 	if(centerScale instanceof EnvelopeCenterScale){
-		if((this.centerX = centerScale.getCenterX()) &&
-			(this.centerY == centerScale.getCenterY()) &&
-			(this.scale == centerScale.getScale()) &&
+		if((this.centerX = centerScale.centerX) &&
+			(this.centerY == centerScale.centerY) &&
+			(this.scale == centerScale.scale) &&
 			(this.width == centerScale.getWidth()) &&
 			(this.height == centerScale.getHeight())
 		   ) {

@@ -1,38 +1,82 @@
 angular.module('nine-e', ['monospaced.mousewheel']).
-    directive("map", ["$document", function factory($document) {
+    directive('legend', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="mapviewer" ng-mousedown="mouseDownHandler($event)" msd-wheel="mouseWheelHandler($event, $delta)" ng-transclude/>',
+            template: '\
+            <div>\
+              <ul>\
+                  <li ng-repeat="layer in layers">\
+                      <input id="layer_{{layer.id}}" type="checkbox" ng-model="layer.visible">\
+                     <label for="layer_{{layer.id}}" class="visible-{{layer.visible}}">{{layer.title}}</label>\
+                </li>\
+              </ul>\
+              </div>',
             replace: true,
             restrict: 'E',
             scope: {
-                boundsModel: '=boundsmodel',
-                focusModel: '=focusmodel',
-                envelopeModel: '=envelopemodel'
+                layers: '='
+            }
+        };
+        return directiveDefinitionObject;
+    }).
+    directive("map", ["$document", function factory($document) {
+        return {
+            template: '<div class="mapviewer" ng-mousedown="mouseDownHandler($event)" msd-wheel="mouseWheelHandler($event, $delta)" ng-transclude/>',
+            restrict: "E",
+            replace: true,
+            transclude: true,
+            scope: {
+                boundsModel: "=boundsmodel",
+                focusModel: "=focusmodel",
+                envelopeModel: "=envelopemodel"
             },
             controller: ["$scope", function($scope) {
+                this.scope = $scope;
+            }],
+            link: function($scope, $element, $attr) {
+                $scope.mouseX = -1;
+                $scope.mouseY = -1;
                 $scope.mouseDownX = -1;
                 $scope.mouseDownY = -1;
-                $scope.panning = false;
+                
+                $document.on("mousemove", mouseMoveHandler);
+                
+                function mouseMoveHandler(mouseEvent) {
+                    $scope.mouseX = mouseEvent.pageX - $element[0].offsetLeft;
+                    $scope.mouseY = mouseEvent.pageY - $element[0].offsetTop;
+                }
                 
                 $scope.mouseDownHandler = function(mouseEvent) {
-                    $scope.mouseDownX = mouseEvent.pageX; // (mouseEvent.pageX - mouseEvent.currentTarget.offsetLeft)
-                    $scope.mouseDownY = mouseEvent.pageY; // (mouseEvent.pageY - mouseEvent.currentTarget.offsetTop)
+                    var bounds = $scope.boundsModel.bounds;
+                    var width = bounds.width;
+                    var height = bounds.height;
+                    
+                    var cs = $scope.focusModel.animationCenterScale;
+                    var worldX = cs.getWorldX(width, $scope.mouseX);
+                    var worldY = cs.getWorldY(height, $scope.mouseY);
+                    
+                    var pixXOffset = $scope.mouseX - (width / 2);
+                    var pixYOffset = $scope.mouseY - (height / 2);
+                    
+                    $scope.focusModel.bazoo(worldX, worldY, pixXOffset, pixYOffset);
+                    
+                    $scope.mouseDownX = $scope.mouseX;
+                    $scope.mouseDownY = $scope.mouseY;
                     
                     $document.on("mousemove", mouseMoveHandler1);
                     $document.on("mouseup", mouseUpHandler);
                     
                     mouseEvent.preventDefault();
-                }
+                };
                 
                 function mouseMoveHandler1(mouseEvent) {
-                    var centerScale = $scope.focusModel.centerScale;
-                    var dx = centerScale.getNumWorldCoords(mouseEvent.pageX - $scope.mouseDownX);
-                    var dy = centerScale.getNumWorldCoords(mouseEvent.pageY - $scope.mouseDownY);
+                    var cs = $scope.focusModel.animationCenterScale;
+                    var dx = cs.getNumWorldCoords($scope.mouseX - $scope.mouseDownX);
+                    var dy = cs.getNumWorldCoords($scope.mouseY - $scope.mouseDownY);
                     
                     $scope.focusModel.pan(-dx, dy);
                     
-                    $scope.mouseDownX = mouseEvent.pageX;
-                    $scope.mouseDownY = mouseEvent.pageY;
+                    $scope.mouseDownX = $scope.mouseX;
+                    $scope.mouseDownY = $scope.mouseY;
                 }
                 
                 function mouseUpHandler(mouseEvent) {
@@ -41,51 +85,76 @@ angular.module('nine-e', ['monospaced.mousewheel']).
 
                     $scope.mouseDownX = -1;
                     $scope.mouseDownY = -1;
-                    $scope.panning = false;
                 }
                 
                 $scope.mouseWheelHandler = function(mouseEvent, delta) {
-                    var cs = $scope.focusModel.centerScale;
-                    $scope.focusModel.setAnimationCenterScale(new CenterScale(cs.centerX, cs.centerY, cs.scale / Math.pow(2, delta)));
+                    var bounds = $scope.boundsModel.bounds;
+                    var width = bounds.width;
+                    var height = bounds.height;
+                    
+                    var cs = $scope.focusModel.animationCenterScale;
+                    var worldX = cs.getWorldX(width, $scope.mouseX);
+                    var worldY = cs.getWorldY(height, $scope.mouseY);
+                    var scale = cs.scale;
+                    
+                    if (delta > 0) {
+                        scale /= 2;
+                    } else {
+                        scale *= 2;
+                    }
+                    var pixXOffset = $scope.mouseX - (width / 2);
+                    var pixYOffset = $scope.mouseY - (height / 2);
+                    
+                    $scope.focusModel.setCenterScale(new CenterScale(worldX, worldY, scale), pixXOffset, pixYOffset);
                     
                     mouseEvent.preventDefault();
                 };
-                
-                this.scope = $scope;
-            }],
-            transclude: true
+            }
         };
-        return directiveDefinitionObject;
     }]).
-    directive('tileslayer', function factory() {
-        var directiveDefinitionObject = {
-            template: '<div class="tileslayer"><img ng-repeat="tile in tileModel.tiles" src="{{tileModel.urlBase + tile.url}}" style="position: absolute; opacity: 0.9;" ng-style="tile.toCSS()"/></div>',
+    directive("tileslayer", function factory() {
+        return {
+            template: '<div class="tileslayer"><img ng-repeat="tile in tileModel.tiles" ng-src="{{tileModel.urlBase + tile.url}}" style="position: absolute; opacity: 0.9;" ng-style="tile.toCSS()"/></div>',
+            restrict: "E",
+            require: "^map",
             replace: true,
-            restrict: 'E',
-            scope: {
-                tileModel: '=tilemodel'
+            link: function ($scope, $element, $attr, $parentCtrl) {
+                $scope.tileModel = new TileModel();
+                
+                $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
+                $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
+                
+                $scope.$watch("boundsModel.bounds", function(val) { $scope.tileModel.setBounds(val); });
+                $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.tileModel.setCenterScale(val); });
             }
         };
-        return directiveDefinitionObject;
     }).
-    directive('legend', function factory() {
-        var directiveDefinitionObject = {
-            template: '\
-            <div>\
-  			<ul>\
-  				<li ng-repeat="layer in layers">\
-          			<input id="layer_{{layer.id}}" type="checkbox" ng-model="layer.visible">\
-         			<label for="layer_{{layer.id}}" class="visible-{{layer.visible}}">{{layer.title}}</label>\
-        		</li>\
-  			</ul>\
-  			</div>',
+    directive("wmslayer", function factory() {
+        return {
+            template: '<div class="wmslayer"><img src="{{wmsModel.tile.url}}" style="position: absolute; opacity: 0.6;" ng-style="wmsModel.tile.toCSS()" ng-show="wmsModel.tile.completed" maploader/></div>',
+            restrict: "E",
+            require: "^map",
             replace: true,
-            restrict: 'E',
-            scope: {
-                layers: '='
+            link: function ($scope, $element, $attr, $parentCtrl) {
+                $scope.wmsModel = new WMSModel();
+                
+                $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
+                $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
+                
+                $scope.$watch("boundsModel.bounds", function(val) { $scope.wmsModel.setBounds(val); });
+                $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.wmsModel.setAnimationCenterScale(val); });
+                $scope.$watch("focusModel.incubationCenterScale", function(val) { $scope.wmsModel.setCenterScale(val); });
             }
         };
-        return directiveDefinitionObject;
+    }).
+    directive("maploader", function() {
+        return {
+            restrict: "A",
+            link: function($scope, $element, $attrs) {
+                $element.on("load", function() { $scope.wmsModel.tile.completed = true; });
+                $element.on("error", function() { $scope.wmsModel.tile.completed = true; });
+            }
+        };
     }).
     directive("mapfeaturelayer", function factory() {
         var directiveDefinitionObject = {
@@ -111,7 +180,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     var childElement, childScope;
                     $scope.$watch("layer.visible", function(val) {
                         if (childElement) {
-                        	$element.contents().remove();
+                            $element.contents().remove();
                             childElement = undefined;
                         }
                         if (childScope) {
@@ -121,7 +190,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                         if (val) {
                             childScope = $scope.$new();
                             transclude(childScope, function (clone) {
-                            	childElement = clone;
+                                childElement = clone;
                                 $element.append(clone);
                             });
                         }
@@ -133,7 +202,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive("geometrysymbolizer", function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.centerScale.scale"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="mapfeaturelayer" style="width: {{boundsModel.bounds.width}}px; height: {{boundsModel.bounds.height}}px; pointer-events: none" ng-repeat="feature in featureModel.features"><polyline style="pointer-events: visible" ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries" points="{{parsePoints(geometry.points)}}" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="getStyle(feature)"></polyline></svg></div>',
+            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.animationCenterScale.scale"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="mapfeaturelayer" style="width: {{boundsModel.bounds.width}}px; height: {{boundsModel.bounds.height}}px; pointer-events: none" ng-repeat="feature in featureModel.features"><polyline style="pointer-events: visible" ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries" points="{{parsePoints(geometry.points)}}" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="getStyle(feature)"></polyline></svg></div>',
             restrict: 'E',
             require: '^mapfeaturelayer',
             replace: true,
@@ -147,13 +216,13 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 $scope.getStyle = function(feature) {
                     for (var i = 0; i < scope.selectionModel.selectedFeatures.length; i++) {
                         if (scope.selectionModel.selectedFeatures[i] == feature) {
-                        	return "highlightGeometrySymbolizer";
+                            return "highlightGeometrySymbolizer";
                         }
                     }
                     return "defaultGeometrySymbolizer";
                 }
                 /*$scope.getStyle = function(feature) {
-                	for (var i = 0; i < scope.selectionModel.selectedFeatures.length; i++) {
+                    for (var i = 0; i < scope.selectionModel.selectedFeatures.length; i++) {
                         if (scope.selectionModel.selectedFeatures[i] == feature) {
                             return scope.highStyle;
                         }
@@ -163,7 +232,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 $scope.parsePoints = function(points) {
                     if (points == null) return;
                     var ret = "";
-                    var cs = $scope.focusModel.centerScale;
+                    var cs = $scope.focusModel.animationCenterScale;
                     var bounds = $scope.boundsModel.bounds;
                     for (var i = 0; i < points.length; i++) {
                         var x = cs.getPixX(bounds.width, points[i].x);
@@ -173,8 +242,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     return ret;
                 }
                 $scope.isInsideBoundaries = function(item){
-                	var itemEnvelope = item.getEnvelope();
-                	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
+                    var itemEnvelope = item.getEnvelope();
+                    return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
                 };
                 $scope.mouseOverHandler = function(feature, event) {
                     $scope.featureCommands[0].perform(feature);
@@ -201,7 +270,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive('imagesymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.centerScale.scale"><img ng-repeat="feature in featureModel.features | filter:isInsideBoundaries" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="getStyle(feature)" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px"/></div>',
+            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.animationCenterScale.scale"><img ng-repeat="feature in featureModel.features | filter:isInsideBoundaries" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="getStyle(feature)" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.animationCenterScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.animationCenterScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px"/></div>',
             restrict: 'E',
             require: '^mapfeaturelayer',
             replace: true,
@@ -213,17 +282,17 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 style: '@style'
             },
             controller: ['$scope', function($scope){
-            	var scope = $scope;
+                var scope = $scope;
                 $scope.getStyle = function(feature) {
-                	for (var i = 0; i < scope.selectionModel.selectedFeatures.length; i++) {
+                    for (var i = 0; i < scope.selectionModel.selectedFeatures.length; i++) {
                         if (scope.selectionModel.selectedFeatures[i] == feature) {
-                        	return "highlightSymbolizer";
+                            return "highlightSymbolizer";
                         }
                     }
                     return "defaultSymbolizer";
                 }
                 /*$scope.getStyle = function(feature) {
-                	for (var i = 0; i < scope.selectionModel.selectedFeatures.length; i++) {
+                    for (var i = 0; i < scope.selectionModel.selectedFeatures.length; i++) {
                         if (scope.selectionModel.selectedFeatures[i] == feature) {
                             return scope.highStyle;
                         }
@@ -231,8 +300,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     return scope.lowStyle;
                 }*/
                 $scope.isInsideBoundaries = function(item) {
-                	var itemEnvelope = item.propertyValues[$scope.propertyIndex].getEnvelope();
-                	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
+                    var itemEnvelope = item.propertyValues[$scope.propertyIndex].getEnvelope();
+                    return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
                 };
                 $scope.mouseOverHandler = function(feature, event) {
                     $scope.featureCommands[0].perform(feature);
@@ -245,7 +314,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 }
             }],
             link: function($scope, $element, $attr, $parentCtrl) {
-           		$parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
+                   $parentCtrl.scope.$watch('boundsModel', function(val) { $scope.boundsModel = val; });
                 $parentCtrl.scope.$watch('focusModel', function(val) { $scope.focusModel = val; });
                 $parentCtrl.scope.$watch('featureModel', function(val) { $scope.featureModel = val; });
                 $parentCtrl.scope.$watch('envelopeModel', function(val) { $scope.envelopeModel = val; });
@@ -259,7 +328,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive('geometryimagesymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.centerScale.scale"><div ng-repeat="feature in featureModel.features"><img ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries track by $index" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="getStyle(feature)" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.centerScale.getPixY(boundsModel.bounds.height, geometry.y)}}px; left: {{focusModel.centerScale.getPixX(boundsModel.bounds.width, geometry.x)}}px" /></div></div>',
+            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.animationCenterScale.scale"><div ng-repeat="feature in featureModel.features"><img ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries track by $index" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="getStyle(feature)" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.animationCenterScale.getPixY(boundsModel.bounds.height, geometry.y)}}px; left: {{focusModel.animationCenterScale.getPixX(boundsModel.bounds.width, geometry.x)}}px" /></div></div>',
             restrict: 'E',
             require: '^mapfeaturelayer',
             replace: true,
@@ -272,15 +341,15 @@ angular.module('nine-e', ['monospaced.mousewheel']).
             controller: ['$scope', function ($scope) {
                 var scope = $scope;
                 $scope.getStyle = function(feature) {
-                	for (var i = 0; i < scope.selectionModel.selectedFeatures.length; i++) {
+                    for (var i = 0; i < scope.selectionModel.selectedFeatures.length; i++) {
                         if (scope.selectionModel.selectedFeatures[i] == feature) {
-                        	return "highlightSymbolizer";
+                            return "highlightSymbolizer";
                         }
                     }
                     return "defaultSymbolizer";
                 }
                 /*$scope.getStyle = function(feature) {
-                	for (var i = 0; i < scope.selectionModel.selectedFeatures.length; i++) {
+                    for (var i = 0; i < scope.selectionModel.selectedFeatures.length; i++) {
                         if (scope.selectionModel.selectedFeatures[i] == feature) {
                             return scope.highStyle;
                         }
@@ -288,8 +357,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     return scope.lowStyle;
                 }*/
                 $scope.isInsideBoundaries = function(item) {
-                	var itemEnvelope = item.getEnvelope();
-                	return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
+                    var itemEnvelope = item.getEnvelope();
+                    return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
                 };
                 $scope.mouseOverHandler = function(feature, event) {
                     $scope.featureCommands[0].perform(feature);
