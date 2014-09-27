@@ -1,4 +1,4 @@
-nine-e
+Niney
 ======
 
-Web Toolkit for Interactive Maps
+Open source web toolkit for interactive maps.
