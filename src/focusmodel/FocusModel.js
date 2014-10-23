@@ -1,8 +1,9 @@
 function FocusModel() {
     this.animationTimer = new Timer(50, 20);
     this.incubationTimer = new Timer(1000, 1);
+    this.maxEnvelope = new Envelope(-20000000, -20000000, 20000000, 20000000);
     this.minScale = 0;
-    this.maxScale = Number.MAX_VALUE;
+    this.maxScale = 443744272.72414012;
     this.scaleToZoomLevels = false;
     this.centerScale = null;
     this.animationCenterScales = [];
@@ -14,7 +15,7 @@ FocusModel.prototype.setCenterScale = function(centerScale, pixXOffset, pixYOffs
     if (centerScale == null) {
         return;
     }
-    centerScale = this.precond(centerScale);
+    centerScale = this.precon(centerScale);
     var scale = centerScale.scale;
     var centerX = centerScale.centerX - (pixXOffset * 0.000352778 * scale);
     var centerY = centerScale.centerY + (pixYOffset * 0.000352778 * scale);
@@ -51,7 +52,12 @@ FocusModel.prototype.setIncubationCenterScale = function(incubationCenterScale) 
     this.incubationTimer.reset();
     var focusModel = this;
     this.incubationTimer.timerHandler = function() {
-        focusModel.incubationCenterScale = incubationCenterScale;
+        var postcon = focusModel.postcon(incubationCenterScale);
+        if (postcon == incubationCenterScale) {
+            focusModel.incubationCenterScale = incubationCenterScale;
+        } else {
+            focusModel.setCenterScale(postcon, 0, 0);
+        }
     };
     
     this.incubationTimer.start();
@@ -110,23 +116,35 @@ FocusModel.prototype.setAnimationCenterScales = function(centerScale) {
     this.animationCenterScales = animationCenterScales;
 }
 
-FocusModel.prototype.precond = function(centerScale) {
-    var centerX = centerScale.centerX;
-    var centerY = centerScale.centerY;
-    var scale = centerScale.scale;
-    
-    if (scale < this.minScale) {
-        return this.precond(new CenterScale(centerX, centerY, this.minScale));
+FocusModel.prototype.precon = function(centerScale) {
+    if (centerScale.scale < this.minScale) {
+        return this.precon(new CenterScale(centerScale.centerX, centerScale.centerY, this.minScale));
     }
-    if (scale > this.maxScale) {
-        return this.precond(new CenterScale(centerX, centerY, this.maxScale));
+    if (centerScale.scale > this.maxScale) {
+        return this.precon(new CenterScale(centerScale.centerX, centerScale.centerY, this.maxScale));
     }
     if (this.scaleToZoomLevels) {
-        var zoomLevelScale = getZoomLevel(scale, true).scale;
-        if (scale != zoomLevelScale) {
-            return new CenterScale(centerX, centerY, zoomLevelScale);
+        var zoomLevelScale = getZoomLevel(centerScale.scale, true).scale;
+        if (centerScale.scale != zoomLevelScale) {
+            return new CenterScale(centerScale.centerX, centerScale.centerY, zoomLevelScale);
         }
     }
-    return new CenterScale(centerX, centerY, scale);
+    return centerScale;
+}
+
+FocusModel.prototype.postcon = function(centerScale) {
+    if (centerScale.centerX < this.maxEnvelope.minX) {
+        return this.postcon(new CenterScale(this.maxEnvelope.minX, centerScale.centerY, centerScale.scale));
+    }
+    if (centerScale.centerX > this.maxEnvelope.maxX) {
+        return this.postcon(new CenterScale(this.maxEnvelope.maxX, centerScale.centerY, centerScale.scale));
+    }
+    if (centerScale.centerY < this.maxEnvelope.minY) {
+        return this.postcon(new CenterScale(centerScale.centerX, this.maxEnvelope.minY, centerScale.scale));
+    }
+    if (centerScale.centerY > this.maxEnvelope.maxY) {
+        return this.postcon(new CenterScale(centerScale.centerX, this.maxEnvelope.maxY, centerScale.scale));
+    }
+    return centerScale;
 }
 

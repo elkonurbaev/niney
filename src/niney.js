@@ -5,7 +5,7 @@
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
-/* Last merge : Mon Jun 11 09:49:02 CEST 2018  */
+/* Last merge : Wed Oct 22 19:39:58 CEST 2014  */
 
 /* Merging order :
 
@@ -23,18 +23,23 @@
 - featuremodel/FeatureType.js
 - featuremodel/Property.js
 - featuremodel/PropertyType.js
+- featuremodel/commands/SelectFeatureCommand.js
 - featuremodel/commands/ToggleSelectFeatureCommand.js
 - featuremodel/commands/ToURLFeatureCommand.js
 - featuremodel/converters/CSVConverter.js
+- filtermodel/converters/URLFilterConverter.js
 - focusmodel/CenterScale.js
 - focusmodel/FocusModel.js
 - focusmodel/EnvelopeCenterScale.js
 - focusmodel/ZoomLevel.js
+- layermodel/Layer.js
 - layermodel/Tile.js
 - layermodel/TileModel.js
+- layermodel/UTFGridModel.js
 - layermodel/WMSModel.js
 - selectionmodel/SelectionModel.js
 - service/file/CSVServiceConnector.js
+- stylemodel/converters/URLClassificationConverter.js
 - niney.angular.js
 
 */
@@ -184,42 +189,6 @@ PanSpeedTimer.prototype.resetAndGetSpeed = function() {
     Timer.prototype.reset.call(this);
     
     return this.speed;
-}
-
-function decorateTouchEvent(touchEvent, lastTouchOnly) {
-    if (touchEvent.touches == null) {  // Not a touch event.
-        return;
-    }
-    
-    var touch = touchEvent.touches[touchEvent.touches.length - 1];
-    if ((touchEvent.touches.length == 1) || lastTouchOnly)  {
-        touchEvent.clientX = touch.clientX;
-        touchEvent.clientY = touch.clientY;
-        touchEvent.radius = 1;
-    } else {  // 2 or more touches.
-        var minX = touch.clientX;
-        var minY = touch.clientY;
-        var maxX = touch.clientX;
-        var maxY = touch.clientY;
-        for (var i = 0; i < touchEvent.touches.length - 1; i++) {
-            touch = touchEvent.touches[i];
-            if (minX > touch.clientX) {
-                minX = touch.clientX;
-            }
-            if (minY > touch.clientY) {
-                minY = touch.clientY;
-            }
-            if (maxX < touch.clientX) {
-                maxX = touch.clientX;
-            }
-            if (maxY < touch.clientY) {
-                maxY = touch.clientY;
-            }
-        }
-        touchEvent.clientX = (minX + maxX) / 2;
-        touchEvent.clientY = (minY + maxY) / 2;
-        touchEvent.radius = Math.sqrt((maxX - minX) * (maxX - minX) + (maxY - minY) * (maxY - minY));
-    }
 }
 
 
@@ -911,6 +880,32 @@ PropertyType.prototype.STRING = "string";
 PropertyType.prototype.GEOMETRY = "geometry";
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* Merging js: featuremodel/commands/SelectFeatureCommand.js begins */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+
+function SelectFeatureCommand(selectionModel, index) {
+    this.selectionModel = selectionModel;
+    this.index = index;
+}
+
+SelectFeatureCommand.prototype.perform = function(feature) {
+    if (this.selectionModel == null) {
+        throw new Error("No selection model present.");
+    }
+    
+    if (feature == null) {
+        this.selectionModel.selectedFeatures[this.index] = null;
+    } else if (this.selectionModel.selectedFeatures[this.index] == null) {
+        this.selectionModel.selectedFeatures[this.index] = feature;
+    } else if (this.selectionModel.selectedFeatures[this.index] != feature) {
+        this.selectionModel.selectedFeatures[this.index] = feature;
+    }
+}
+
+
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 /* Merging js: featuremodel/commands/ToggleSelectFeatureCommand.js begins */
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -918,6 +913,7 @@ PropertyType.prototype.GEOMETRY = "geometry";
 function ToggleSelectFeatureCommand(selectionModel, index) {
     this.selectionModel = selectionModel;
     this.index = index;
+    this.idPropertyName = null;
 }
 
 ToggleSelectFeatureCommand.prototype.perform = function(feature) {
@@ -927,7 +923,11 @@ ToggleSelectFeatureCommand.prototype.perform = function(feature) {
     
     if (feature == null) {
         this.selectionModel.selectedFeatures[this.index] = null;
-    } else if (this.selectionModel.selectedFeatures[this.index] != feature) {
+    } else if (this.selectionModel.selectedFeatures[this.index] == null) {
+        this.selectionModel.selectedFeatures[this.index] = feature;
+    } else if ((this.idPropertyName == null) && (this.selectionModel.selectedFeatures[this.index] != feature)) {
+        this.selectionModel.selectedFeatures[this.index] = feature;
+    } else if ((this.idPropertyName != null) && (this.selectionModel.selectedFeatures[this.index][this.idPropertyName] != feature[this.idPropertyName])) {
         this.selectionModel.selectedFeatures[this.index] = feature;
     } else {
         this.selectionModel.selectedFeatures[this.index] = null;
@@ -1062,6 +1062,35 @@ CSVConverter.prototype.lineToFeature = function(fields, featureType) {
 }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* Merging js: filtermodel/converters/URLFilterConverter.js begins */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+
+function URLFilterConverter() { }
+
+URLFilterConverter.filterModelsToURLFilter = function(filterModels) {
+    var urlFilter = "";
+    for (var i = 0; i < filterModels.length; i++) {
+        if (filterModels[i] != null) {
+            if (urlFilter.length > 0) {
+                urlFilter += ":::";
+            }
+            urlFilter += URLFilterConverter.filterToURLFilter(filterModels[i].filter);
+        }
+    }
+    
+    return urlFilter;
+}
+
+URLFilterConverter.filterToURLFilter = function(filter) {
+    var urlFilter = filter.propertyName + "::EQ::" + filter.value;
+    
+    return urlFilter;
+}
+
+
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 /* Merging js: focusmodel/CenterScale.js begins */
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -1077,9 +1106,9 @@ CenterScale.prototype.equals = function(centerScale) {
     if (centerScale == null) {
         return false;
     }
-    if ((this.centerX == centerScale.centerX) &&
-        (this.centerY == centerScale.centerY) &&
-        (this.scale == centerScale.scale)) {
+    if ((this.centerX == centerScale.centerX) && (this.centerY == centerScale.centerY) &&
+        (this.scale == centerScale.scale)
+    ) {
         return true;
     }
     return false;
@@ -1145,8 +1174,9 @@ CenterScale.prototype.toString = function() {
 function FocusModel() {
     this.animationTimer = new Timer(50, 20);
     this.incubationTimer = new Timer(1000, 1);
+    this.maxEnvelope = new Envelope(-20000000, -20000000, 20000000, 20000000);
     this.minScale = 0;
-    this.maxScale = Number.MAX_VALUE;
+    this.maxScale = 443744272.72414012;
     this.scaleToZoomLevels = false;
     this.centerScale = null;
     this.animationCenterScales = [];
@@ -1158,7 +1188,7 @@ FocusModel.prototype.setCenterScale = function(centerScale, pixXOffset, pixYOffs
     if (centerScale == null) {
         return;
     }
-    centerScale = this.precond(centerScale);
+    centerScale = this.precon(centerScale);
     var scale = centerScale.scale;
     var centerX = centerScale.centerX - (pixXOffset * 0.000352778 * scale);
     var centerY = centerScale.centerY + (pixYOffset * 0.000352778 * scale);
@@ -1195,7 +1225,12 @@ FocusModel.prototype.setIncubationCenterScale = function(incubationCenterScale) 
     this.incubationTimer.reset();
     var focusModel = this;
     this.incubationTimer.timerHandler = function() {
-        focusModel.incubationCenterScale = incubationCenterScale;
+        var postcon = focusModel.postcon(incubationCenterScale);
+        if (postcon == incubationCenterScale) {
+            focusModel.incubationCenterScale = incubationCenterScale;
+        } else {
+            focusModel.setCenterScale(postcon, 0, 0);
+        }
     };
     
     this.incubationTimer.start();
@@ -1254,24 +1289,36 @@ FocusModel.prototype.setAnimationCenterScales = function(centerScale) {
     this.animationCenterScales = animationCenterScales;
 }
 
-FocusModel.prototype.precond = function(centerScale) {
-    var centerX = centerScale.centerX;
-    var centerY = centerScale.centerY;
-    var scale = centerScale.scale;
-    
-    if (scale < this.minScale) {
-        return this.precond(new CenterScale(centerX, centerY, this.minScale));
+FocusModel.prototype.precon = function(centerScale) {
+    if (centerScale.scale < this.minScale) {
+        return this.precon(new CenterScale(centerScale.centerX, centerScale.centerY, this.minScale));
     }
-    if (scale > this.maxScale) {
-        return this.precond(new CenterScale(centerX, centerY, this.maxScale));
+    if (centerScale.scale > this.maxScale) {
+        return this.precon(new CenterScale(centerScale.centerX, centerScale.centerY, this.maxScale));
     }
     if (this.scaleToZoomLevels) {
-        var zoomLevelScale = getZoomLevel(scale, true).scale;
-        if (scale != zoomLevelScale) {
-            return new CenterScale(centerX, centerY, zoomLevelScale);
+        var zoomLevelScale = getZoomLevel(centerScale.scale, true).scale;
+        if (centerScale.scale != zoomLevelScale) {
+            return new CenterScale(centerScale.centerX, centerScale.centerY, zoomLevelScale);
         }
     }
-    return new CenterScale(centerX, centerY, scale);
+    return centerScale;
+}
+
+FocusModel.prototype.postcon = function(centerScale) {
+    if (centerScale.centerX < this.maxEnvelope.minX) {
+        return this.postcon(new CenterScale(this.maxEnvelope.minX, centerScale.centerY, centerScale.scale));
+    }
+    if (centerScale.centerX > this.maxEnvelope.maxX) {
+        return this.postcon(new CenterScale(this.maxEnvelope.maxX, centerScale.centerY, centerScale.scale));
+    }
+    if (centerScale.centerY < this.maxEnvelope.minY) {
+        return this.postcon(new CenterScale(centerScale.centerX, this.maxEnvelope.minY, centerScale.scale));
+    }
+    if (centerScale.centerY > this.maxEnvelope.maxY) {
+        return this.postcon(new CenterScale(centerScale.centerX, this.maxEnvelope.maxY, centerScale.scale));
+    }
+    return centerScale;
 }
 
 
@@ -1282,12 +1329,12 @@ FocusModel.prototype.precond = function(centerScale) {
 
 
 function EnvelopeCenterScale() {
-	this.envelope = null;
-	this.width = -1;
-	this.height = -1;
-	this.centerX = -1;
-	this.centerY = -1;
-	this.scale = -1;
+    this.centerX = -1;
+    this.centerY = -1;
+    this.scale = -1;
+    this.width = -1;
+    this.height = -1;
+    this.envelope = null;
 }
 
 EnvelopeCenterScale.prototype = new CenterScale();
@@ -1303,7 +1350,7 @@ EnvelopeCenterScale.prototype.setBounds = function(bounds) {
 }
 
 EnvelopeCenterScale.prototype.setCenterScale = function(centerScale) {
-	if (centerScale == null) {
+    if (centerScale == null) {
         return;
     }
     this.centerX = centerScale.centerX;
@@ -1312,36 +1359,22 @@ EnvelopeCenterScale.prototype.setCenterScale = function(centerScale) {
     this.envelope = this.toEnvelope(this.width, this.height);
 }
 
-EnvelopeCenterScale.prototype.getEnvelope = function() {
-	return this.envelope;
-}
-
-EnvelopeCenterScale.prototype.getWidth = function() {
-	return this.width;
-}
-
-EnvelopeCenterScale.prototype.getHeight = function() {
-	return this.height;
-}
-
 EnvelopeCenterScale.prototype.equals = function(centerScale) {
-	if(centerScale == null) {
-		return false;
-	}
-	if(centerScale instanceof EnvelopeCenterScale){
-		if((this.centerX = centerScale.centerX) &&
-			(this.centerY == centerScale.centerY) &&
-			(this.scale == centerScale.scale) &&
-			(this.width == centerScale.getWidth()) &&
-			(this.height == centerScale.getHeight())
-		   ) {
-			return true;
-		} else{
-			return false;
-		}
-	}
-	return this.equals(centerScale);
+    if (centerScale == null) {
+        return false;
+    }
+    if (centerScale instanceof EnvelopeCenterScale) {
+        if ((this.centerX = centerScale.centerX) && (this.centerY == centerScale.centerY) &&
+            (this.scale == centerScale.scale) && (this.width == centerScale.width) && (this.height == centerScale.height)
+        ) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    return this.equals(centerScale);
 }
+
 
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -1397,23 +1430,46 @@ function getZoomLevel(scale, round) {
 }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* Merging js: layermodel/Layer.js begins */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+
+function Layer(name) {
+    this.name = name;
+    this.baseURL = "http://b.tile.openstreetmap.org/";
+    this.styleURL = null;
+    this.srs = "EPSG:900913";
+    this.format = "image/png";
+    this.visible = true;
+    this.title = name;
+    this.filterModels = [];
+    this.classification = null;
+}
+
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 /* Merging js: layermodel/Tile.js begins */
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
-function Tile(tileX, tileY, url, x, y, width, height) {
+function Tile(tileX, tileY, tileWidth, tileHeight, url, x, y, scaling) {
     this.tileX = tileX;
     this.tileY = tileY;
+    this.tileWidth = tileWidth;
+    this.tileHeight = tileHeight;
     this.url = url;
     this.x = x;
     this.y = y;
-    this.width = width;
-    this.height = height;
+    this.scaling = scaling;
+    this.scale = -1;
+    this.completed = false;
 }
 
 Tile.prototype.toCSS = function() {
-    return {top: this.y + "px", left: this.x + "px", width: this.width + "px", height: this.height + "px"};
+    return {left: this.x + "px", top: this.y + "px", width: (this.tileWidth * this.scaling) + "px", height: (this.tileHeight * this.scaling) + "px"};
 }
+
+
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 /* Merging js: layermodel/TileModel.js begins */
@@ -1422,13 +1478,14 @@ Tile.prototype.toCSS = function() {
 
 function TileModel() {
     this.bounds = null;
+    this.layer = null;
     this.centerScale = null;
     this.tileWidth = 256;
     this.tileHeight = 256;
-    this.urlBase = "http://b.tile.openstreetmap.org/";
     this.urlExtension = "$Z/$X/$Y.png";
     this.maxX = 20037508.3427892;
     this.maxY = 20037508.3427892;
+    this.numColumns = -1;
     this.tileZ = -1;
     this.tiles = [];
 }
@@ -1469,6 +1526,7 @@ TileModel.prototype.resetLoaders = function() {
     var rightTileX = Math.floor((envelope.maxX + this.maxX) / resolution / this.tileWidth);
     var bottomTileY = Math.min(Math.floor((this.maxY - envelope.minY) / resolution / this.tileHeight), tileLimit - 1);
     
+    this.numColumns = rightTileX - leftTileX + 1;
     if (this.tileZ != tileZ) {
         this.tileZ = tileZ;
         this.tiles = [];
@@ -1506,14 +1564,14 @@ TileModel.prototype.resetLoaders = function() {
             
             tile = null;
             if (i >= this.tiles.length) {
-                this.tiles.push(new Tile(tileX, tileY, this.tileWidth, this.tileHeight, url, x, y, scaling));
+                this.tiles.push(new Tile(tileX, tileY, this.tileWidth, this.tileHeight, this.layer.baseURL + url, x, y, scaling));
             } else if ((this.tiles[i].tileY == tileY) && (this.tiles[i].tileX == tileX)) {
                 tile = this.tiles[i];
                 tile.x = x;
                 tile.y = y;
                 tile.scaling = scaling;
             } else {
-                this.tiles.splice(i, 0, new Tile(tileX, tileY, this.tileWidth, this.tileHeight, url, x, y, scaling));
+                this.tiles.splice(i, 0, new Tile(tileX, tileY, this.tileWidth, this.tileHeight, this.layer.baseURL + url, x, y, scaling));
             }
             i++;
         }
@@ -1521,21 +1579,73 @@ TileModel.prototype.resetLoaders = function() {
     this.tiles.splice(i, this.tiles.length - i);
 }
 
-function Tile(tileX, tileY, tileWidth, tileHeight, url, x, y, scaling) {
-    this.tileX = tileX;
-    this.tileY = tileY;
-    this.tileWidth = tileWidth;
-    this.tileHeight = tileHeight;
-    this.url = url;
-    this.x = x;
-    this.y = y;
-    this.scaling = scaling;
-    this.scale = -1;
-    this.completed = false;
+
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* Merging js: layermodel/UTFGridModel.js begins */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+
+function UTFGridModel() {
+    this.http = null;
+    this.tileWidth = 256;
+    this.tileHeight = 256;
+    this.resolution = 4;
+    this.numColumns = -1;
+    this.firstTile = null;
+    this.utfGrids = [];
 }
 
-Tile.prototype.toCSS = function() {
-    return {left: this.x + "px", top: this.y + "px", width: (this.tileWidth * this.scaling) + "px", height: (this.tileHeight * this.scaling) + "px"};
+UTFGridModel.prototype.setTiles = function(numColumns, tiles) {
+    this.numColumns = numColumns;
+    this.firstTile = tiles.length > 0 ? tiles[0] : null;
+    this.utfGrids = new Array(tiles.length);
+    
+    var utfGrids = this.utfGrids;
+    for (var i = 0; i < tiles.length; i++) {
+        var f = function(j) {
+            return function(data, status, headers, config) {
+                utfGrids[j] = eval(data);
+            }
+        }(i);
+        this.http({ method: "GET", url: tiles[i].url, cache: true }).success(f);
+    }
+}
+
+UTFGridModel.prototype.getFeature = function(mouseX, mouseY) {
+    if ((this.numColumns == -1) || (this.firstTile == null)) {
+        return null;
+    }
+    var x0 = (mouseX - this.firstTile.x);
+    var y0 = (mouseY - this.firstTile.y);
+    var tileIndex = Math.floor(x0 / this.tileWidth) + this.numColumns * Math.floor(y0 / this.tileHeight);
+    var xInTile = Math.floor((x0 % this.tileWidth) / this.resolution);
+    var yInTile = Math.floor((y0 % this.tileHeight) / this.resolution);
+    var tile = this.utfGrids[tileIndex];
+    if (tile == null) {
+        return null;
+    }
+    var index = this.getIndex(tile.grid[yInTile].charCodeAt(xInTile));
+    var key = tile.keys[index];
+    if (!tile.data.hasOwnProperty(key)) {
+        return null;
+    }
+    tile.data[key].fid = key;
+    return tile.data[key];
+}
+
+UTFGridModel.prototype.getIndex = function(utfCode) {
+    if (utfCode >= 93) {
+        utfCode--;
+    }
+    if (utfCode >= 35) {
+        utfCode--;
+    }
+    return utfCode - 32;
+}
+
+function grid(utfGridString) {
+    return utfGridString;
 }
 
 
@@ -1547,8 +1657,10 @@ Tile.prototype.toCSS = function() {
 
 function WMSModel() {
     this.bounds = null;
+    this.layer = null;
     this.centerScale = null;
     this.animationCenterScale = null;
+    this.autoClassification = true;
     this.tile = null;
 }
 
@@ -1600,40 +1712,38 @@ WMSModel.prototype.load = function() {
     var widthX = Math.round(this.centerScale.getNumPixs(maxX - minX));
     var heightY = Math.round(this.centerScale.getNumPixs(maxY - minY));
     
-//    var url = layer.baseURL;
-    var url = "http://geodata.nationaalgeoregister.nl/bestuurlijkegrenzen/ows";
-    url += "?SERVICE=WMS";
+    var url = this.layer.baseURL;
+    url += (url.indexOf("?") == -1 ? "?" : "&") + "SERVICE=WMS";
     url += "&VERSION=1.1.1";
     url += "&REQUEST=GetMap";
     
-//    if (layer.styleURL == null) {
-//        url += "&LAYERS=" + layer.name;
-        url += "&LAYERS=bestuurlijkegrenzen%3Aprovincies";
+    if (this.layer.styleURL == null) {
+        url += "&LAYERS=" + this.layer.name;
         url += "&STYLES=";
-/*    } else {
-        var sldURL:String = layer.styleURL;
-        sldURL += "?layer=" + layer.name;
+    } else {
+        var sldURL = this.layer.styleURL;
+        sldURL += "?layer=" + this.layer.name;
         
-        var filterModels:Array = layer.filterModels;
+        var filterModels = this.layer.filterModels;
         if (filterModels.length > 0) {
             sldURL += "&filter=" + URLFilterConverter.filterModelsToURLFilter(filterModels);
         }
         
-        var classification:* = layer.classification;
+        var classification = this.layer.classification;
         if (classification != null) {
             sldURL += "&classification=" + encodeURIComponent(URLClassificationConverter.classificationToURLClassification(classification));
-            if ((filterModels.length == 0) || (!_autoClassification)) {
+            if ((filterModels.length == 0) || (!this.autoClassification)) {
                 sldURL += "::noFilter";
             }
         }
         url += "&SLD=" + encodeURIComponent(sldURL);
-}*/
+    }
     url += "&TRANSPARENT=true";
-    url += "&SRS=EPSG:900913";
+    url += "&SRS=" + this.layer.srs;
     url += "&BBOX=" + minX + "," + minY + "," + maxX + "," + maxY;
     url += "&WIDTH=" + widthX;
     url += "&HEIGHT=" + heightY;
-    url += "&FORMAT=image/png";
+    url += "&FORMAT=" + this.layer.format;
     url += "&EXCEPTIONS=application/vnd.ogc.se_xml";
     
     var x = this.animationCenterScale.getPixX(this.bounds.width, minX);
@@ -1709,38 +1819,80 @@ CSVServiceConnector.prototype.load = function(scope, callback) {
  
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* Merging js: stylemodel/converters/URLClassificationConverter.js begins */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+
+function URLClassificationConverter() { }
+
+URLClassificationConverter.classificationToURLClassification = function(classification) {
+    var urlClassification = classification.propertyName + "::";
+    
+    urlClassification += classification.numClasses + "::";
+    
+    if (classification.colors != null) {
+        var colorString = null;
+        for (var i = 0; i < classification.colors.length; i++) {
+            colorString = classification.colors[i].toString(16).toUpperCase();
+            while (colorString.length < 6) {
+                colorString = "0" + colorString;
+            }
+            colorString = "#" + colorString;
+            
+            urlClassification += colorString;
+            if (i < classification.colors.length - 1) {
+                urlClassification += ":";
+            }
+            
+            if (classification.numbers != null) {
+                urlClassification += "::";
+            }
+        }
+    }
+    if (classification.numbers != null) {
+        for (var j = 0; j < classification.numbers.length; j++) {
+            urlClassification += classification.numbers[j];
+            if (j < classification.numbers.length - 1) {
+                urlClassification += ":";
+            }
+        }
+    }
+    
+    return urlClassification;
+}
+
+
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 /* Merging js: niney.angular.js begins */
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
-angular.module('nine-e', ['monospaced.mousewheel']).
-    directive('legend', function factory() {
-        var directiveDefinitionObject = {
-            template: '\
-            <div>\
-              <ul>\
-                  <li ng-repeat="layer in layers">\
-                      <input id="layer_{{layer.id}}" type="checkbox" ng-model="layer.visible">\
-                     <label for="layer_{{layer.id}}" class="visible-{{layer.visible}}">{{layer.title}}</label>\
-                </li>\
-              </ul>\
-              </div>',
+angular.module("niney", ["monospaced.mousewheel"]).
+    factory("defaultBoundsModel", function() {
+        return new BoundsModel();
+    }).
+    factory("defaultTilesLayer", function() {
+        return new Layer("Tiles");
+    }).
+    directive("legend", function() {
+        return {
+            template: '<div><ul><li ng-repeat="layer in layers"><label class="visible-{{layer.visible}}"><input type="checkbox" ng-model="layer.visible"/>{{layer.title}}</label></li></ul></div>',
+            restrict: "EA",
             replace: true,
-            restrict: 'E',
             scope: {
-                layers: '='
+                layers: "=layers"
             }
         };
-        return directiveDefinitionObject;
     }).
-    directive("map", ["$document", function factory($document) {
+    directive("map", ["$document", "defaultBoundsModel", function factory($document, defaultBoundsModel) {
         return {
             template: '<div class="mapviewer" ng-mousedown="mouseDownHandler($event)" msd-wheel="mouseWheelHandler($event, $delta)" ng-transclude/>',
-            restrict: "E",
+            restrict: "EA",
             replace: true,
             transclude: true,
             scope: {
-                boundsModel: "=boundsmodel",
+                boundsModel: "=?boundsmodel",
                 focusModel: "=focusmodel",
                 envelopeModel: "=envelopemodel"
             },
@@ -1748,16 +1900,37 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 this.scope = $scope;
             }],
             link: function($scope, $element, $attr) {
-                $scope.mouseX = -1;
-                $scope.mouseY = -1;
-                $scope.mouseDownX = -1;
-                $scope.mouseDownY = -1;
+                $scope.$watch("boundsModel", function(val) {
+                    if (val == null) {
+                        $scope.boundsModel = defaultBoundsModel;
+                    } else {
+                        var resizeTimer = new Timer(2000, -1);
+                        resizeTimer.scope = $scope;
+                        resizeTimer.timerHandler = function() {
+                            var width = $element[0].offsetWidth;
+                            var height = $element[0].offsetHeight;
+                            $scope.boundsModel.setBounds(new Bounds(width, height));
+                        };
+                        resizeTimer.timerHandler.apply();
+                        resizeTimer.start();
+                    }
+                });
+                
+                var mouseX = -1;
+                var mouseY = -1;
+                var mouseDownX = -1;
+                var mouseDownY = -1;
+                var mouseMoveTimer = new Timer(50, -1);
+                mouseMoveTimer.scope = $scope;
+                mouseMoveTimer.timerHandler = function() {
+                    var foo = "bar";
+                };
                 
                 $document.on("mousemove", mouseMoveHandler);
                 
                 function mouseMoveHandler(mouseEvent) {
-                    $scope.mouseX = mouseEvent.pageX - $element[0].offsetLeft;
-                    $scope.mouseY = mouseEvent.pageY - $element[0].offsetTop;
+                    mouseX = mouseEvent.clientX - $element[0].getBoundingClientRect().left;
+                    mouseY = mouseEvent.clientY - $element[0].getBoundingClientRect().top;
                 }
                 
                 $scope.mouseDownHandler = function(mouseEvent) {
@@ -1766,17 +1939,18 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     var height = bounds.height;
                     
                     var cs = $scope.focusModel.animationCenterScale;
-                    var worldX = cs.getWorldX(width, $scope.mouseX);
-                    var worldY = cs.getWorldY(height, $scope.mouseY);
+                    var worldX = cs.getWorldX(width, mouseX);
+                    var worldY = cs.getWorldY(height, mouseY);
                     
-                    var pixXOffset = $scope.mouseX - (width / 2);
-                    var pixYOffset = $scope.mouseY - (height / 2);
+                    var pixXOffset = mouseX - (width / 2);
+                    var pixYOffset = mouseY - (height / 2);
                     
                     $scope.focusModel.bazoo(worldX, worldY, pixXOffset, pixYOffset);
                     
-                    $scope.mouseDownX = $scope.mouseX;
-                    $scope.mouseDownY = $scope.mouseY;
+                    mouseDownX = mouseX;
+                    mouseDownY = mouseY;
                     
+                    mouseMoveTimer.start();
                     $document.on("mousemove", mouseMoveHandler1);
                     $document.on("mouseup", mouseUpHandler);
                     
@@ -1785,21 +1959,22 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 
                 function mouseMoveHandler1(mouseEvent) {
                     var cs = $scope.focusModel.animationCenterScale;
-                    var dx = cs.getNumWorldCoords($scope.mouseX - $scope.mouseDownX);
-                    var dy = cs.getNumWorldCoords($scope.mouseY - $scope.mouseDownY);
+                    var dx = cs.getNumWorldCoords(mouseX - mouseDownX);
+                    var dy = cs.getNumWorldCoords(mouseY - mouseDownY);
                     
                     $scope.focusModel.pan(-dx, dy);
                     
-                    $scope.mouseDownX = $scope.mouseX;
-                    $scope.mouseDownY = $scope.mouseY;
+                    mouseDownX = mouseX;
+                    mouseDownY = mouseY;
                 }
                 
                 function mouseUpHandler(mouseEvent) {
+                    mouseMoveTimer.stop();
                     $document.off("mousemove", mouseMoveHandler1);
                     $document.off("mouseup", mouseUpHandler);
 
-                    $scope.mouseDownX = -1;
-                    $scope.mouseDownY = -1;
+                    mouseDownX = -1;
+                    mouseDownY = -1;
                 }
                 
                 $scope.mouseWheelHandler = function(mouseEvent, delta) {
@@ -1808,8 +1983,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     var height = bounds.height;
                     
                     var cs = $scope.focusModel.animationCenterScale;
-                    var worldX = cs.getWorldX(width, $scope.mouseX);
-                    var worldY = cs.getWorldY(height, $scope.mouseY);
+                    var worldX = cs.getWorldX(width, mouseX);
+                    var worldY = cs.getWorldY(height, mouseY);
                     var scale = cs.scale;
                     
                     if (delta > 0) {
@@ -1817,8 +1992,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     } else {
                         scale *= 2;
                     }
-                    var pixXOffset = $scope.mouseX - (width / 2);
-                    var pixYOffset = $scope.mouseY - (height / 2);
+                    var pixXOffset = mouseX - (width / 2);
+                    var pixYOffset = mouseY - (height / 2);
                     
                     $scope.focusModel.setCenterScale(new CenterScale(worldX, worldY, scale), pixXOffset, pixYOffset);
                     
@@ -1827,35 +2002,82 @@ angular.module('nine-e', ['monospaced.mousewheel']).
             }
         };
     }]).
-    directive("tileslayer", function factory() {
+    directive("tileslayer", ["defaultTilesLayer", function factory(defaultTilesLayer) {
         return {
-            template: '<div class="tileslayer"><img ng-repeat="tile in tileModel.tiles" ng-src="{{tileModel.urlBase + tile.url}}" style="position: absolute; opacity: 0.9;" ng-style="tile.toCSS()"/></div>',
-            restrict: "E",
+            template: '<div class="tileslayer"><img ng-repeat="tile in tileModel.tiles" ng-src="{{tile.url}}" style="position: absolute; opacity: 0.9;" ng-style="tile.toCSS()"/></div>',
+            restrict: "EA",
             require: "^map",
             replace: true,
+            scope: {
+                layer: "=?layer"
+            },
             link: function ($scope, $element, $attr, $parentCtrl) {
                 $scope.tileModel = new TileModel();
                 
                 $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
                 $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
                 
+                $scope.$watch("layer", function(val) { $scope.tileModel.layer = (val || defaultTilesLayer); });
                 $scope.$watch("boundsModel.bounds", function(val) { $scope.tileModel.setBounds(val); });
                 $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.tileModel.setCenterScale(val); });
             }
         };
-    }).
-    directive("wmslayer", function factory() {
+    }]).
+    directive("utfgridlayer", ["$http", function factory($http) {
         return {
-            template: '<div class="wmslayer"><img src="{{wmsModel.tile.url}}" style="position: absolute; opacity: 0.6;" ng-style="wmsModel.tile.toCSS()" ng-show="wmsModel.tile.completed" maploader/></div>',
-            restrict: "E",
+            template: '<div class="tileslayer" ng-mousemove="mouseMoveHandler($event)" ng-click="clickHandler($event)"></div>',
+            restrict: "EA",
             require: "^map",
             replace: true,
+            scope: {
+                layer: "=layer",
+                featureCommands: "=featurecommands"
+            },
+            link: function ($scope, $element, $attr, $parentCtrl) {
+                $scope.tileModel = new TileModel();
+                $scope.tileModel.urlExtension = "$Z/$X/$Y.json";
+                $scope.utfGridModel = new UTFGridModel();
+                $scope.utfGridModel.http = $http;
+                
+                $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
+                $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
+                
+                $scope.$watch("layer", function(val) { $scope.tileModel.layer = val; });
+                $scope.$watch("boundsModel.bounds", function(val) { $scope.tileModel.setBounds(val); });
+                $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.tileModel.setCenterScale(val); });
+                
+                $scope.$watchCollection("tileModel.tiles", function(val) { $scope.utfGridModel.setTiles($scope.tileModel.numColumns, val.concat()); });
+                
+                $scope.mouseMoveHandler = function(mouseEvent) {
+                    var mouseX = mouseEvent.clientX - $element[0].getBoundingClientRect().left;
+                    var mouseY = mouseEvent.clientY - $element[0].getBoundingClientRect().top;
+                    $scope.featureCommands[0].perform($scope.utfGridModel.getFeature(mouseX, mouseY));
+                }
+                $scope.clickHandler = function(mouseEvent) {
+                    var mouseX = mouseEvent.clientX - $element[0].getBoundingClientRect().left;
+                    var mouseY = mouseEvent.clientY - $element[0].getBoundingClientRect().top;
+                    $scope.featureCommands[2].perform($scope.utfGridModel.getFeature(mouseX, mouseY));
+                }
+            }
+        };
+    }]).
+    directive("wmslayer", function factory() {
+        return {
+            template: '<div class="wmslayer"><img ng-src="{{wmsModel.tile.url}}" style="position: absolute; opacity: 0.8;" ng-style="wmsModel.tile.toCSS()" ng-if="layer.visible" ng-show="wmsModel.tile.completed" maploader/></div>',
+            restrict: "EA",
+            require: "^map",
+            replace: true,
+            scope: {
+                layer: "=layer"
+            },
             link: function ($scope, $element, $attr, $parentCtrl) {
                 $scope.wmsModel = new WMSModel();
                 
                 $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
                 $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
                 
+                $scope.$watch("layer", function(val) { $scope.wmsModel.layer = val; $scope.wmsModel.load(); });
+                $scope.$watch("layer.filterModels", function(val) { $scope.wmsModel.load(); });
                 $scope.$watch("boundsModel.bounds", function(val) { $scope.wmsModel.setBounds(val); });
                 $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.wmsModel.setAnimationCenterScale(val); });
                 $scope.$watch("focusModel.incubationCenterScale", function(val) { $scope.wmsModel.setCenterScale(val); });
@@ -1866,23 +2088,23 @@ angular.module('nine-e', ['monospaced.mousewheel']).
         return {
             restrict: "A",
             link: function($scope, $element, $attrs) {
-                $element.on("load", function() { $scope.wmsModel.tile.completed = true; });
-                $element.on("error", function() { $scope.wmsModel.tile.completed = true; });
+                $element.on("load", function() { $scope.$apply(function() { $scope.wmsModel.tile.completed = true; }); });
+                $element.on("error", function() { $scope.$apply(function() { $scope.wmsModel.tile.completed = true; }); });
             }
         };
     }).
     directive("mapfeaturelayer", function factory() {
-        var directiveDefinitionObject = {
+        return {
             template: '<div class="mapfeaturelayer"/>',
-            restrict: 'E',
-            require: '^map',
+            restrict: "EA",
+            require: "^map",
             replace: true,
             transclude: true,
             scope: {
-                layer: '=layer',
-                featureModel: '=featuremodel',
-                selectionModel: '=selectionmodel',
-                featureCommands: '=featurecommands'
+                layer: "=layer",
+                featureModel: "=featuremodel",
+                selectionModel: "=selectionmodel",
+                featureCommands: "=featurecommands"
             },
             controller: ["$scope", function ($scope) {
                 this.scope = $scope;
@@ -1913,7 +2135,6 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 }
             }
         };
-        return directiveDefinitionObject;
     }).
     directive("geometrysymbolizer", function factory() {
         var directiveDefinitionObject = {
@@ -1985,8 +2206,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive('imagesymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.animationCenterScale.scale"><img ng-repeat="feature in featureModel.features | filter:isInsideBoundaries" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="getStyle(feature)" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.animationCenterScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.animationCenterScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px"/></div>',
-            restrict: 'E',
+            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.animationCenterScale.scale"><img ng-repeat="feature in featureModel.features | filter:isInsideBoundaries" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="getStyle(feature)" ng-src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute" ng-style="getCSS(feature)"/></div>',
+            restrict: 'EA',
             require: '^mapfeaturelayer',
             replace: true,
             scope: {
@@ -2014,6 +2235,12 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     }
                     return scope.lowStyle;
                 }*/
+                $scope.getCSS = function(feature) {
+                    var css = {};
+                    css.left = $scope.focusModel.animationCenterScale.getPixX($scope.boundsModel.bounds.width, feature.propertyValues[$scope.propertyIndex].x) + "px";
+                    css.top = $scope.focusModel.animationCenterScale.getPixY($scope.boundsModel.bounds.height, feature.propertyValues[$scope.propertyIndex].y) + "px";
+                    return css;
+                }
                 $scope.isInsideBoundaries = function(item) {
                     var itemEnvelope = item.propertyValues[$scope.propertyIndex].getEnvelope();
                     return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
@@ -2043,7 +2270,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive('geometryimagesymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.animationCenterScale.scale"><div ng-repeat="feature in featureModel.features"><img ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries track by $index" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="getStyle(feature)" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.animationCenterScale.getPixY(boundsModel.bounds.height, geometry.y)}}px; left: {{focusModel.animationCenterScale.getPixX(boundsModel.bounds.width, geometry.x)}}px" /></div></div>',
+            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.animationCenterScale.scale"><div ng-repeat="feature in featureModel.features"><img ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries track by $index" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="getStyle(feature)" ng-src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.animationCenterScale.getPixY(boundsModel.bounds.height, geometry.y)}}px; left: {{focusModel.animationCenterScale.getPixX(boundsModel.bounds.width, geometry.x)}}px" /></div></div>',
             restrict: 'E',
             require: '^mapfeaturelayer',
             replace: true,

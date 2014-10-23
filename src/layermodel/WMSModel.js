@@ -1,7 +1,9 @@
 function WMSModel() {
     this.bounds = null;
+    this.layer = null;
     this.centerScale = null;
     this.animationCenterScale = null;
+    this.autoClassification = true;
     this.tile = null;
 }
 
@@ -53,40 +55,38 @@ WMSModel.prototype.load = function() {
     var widthX = Math.round(this.centerScale.getNumPixs(maxX - minX));
     var heightY = Math.round(this.centerScale.getNumPixs(maxY - minY));
     
-//    var url = layer.baseURL;
-    var url = "http://geodata.nationaalgeoregister.nl/bestuurlijkegrenzen/ows";
-    url += "?SERVICE=WMS";
+    var url = this.layer.baseURL;
+    url += (url.indexOf("?") == -1 ? "?" : "&") + "SERVICE=WMS";
     url += "&VERSION=1.1.1";
     url += "&REQUEST=GetMap";
     
-//    if (layer.styleURL == null) {
-//        url += "&LAYERS=" + layer.name;
-        url += "&LAYERS=bestuurlijkegrenzen%3Aprovincies";
+    if (this.layer.styleURL == null) {
+        url += "&LAYERS=" + this.layer.name;
         url += "&STYLES=";
-/*    } else {
-        var sldURL:String = layer.styleURL;
-        sldURL += "?layer=" + layer.name;
+    } else {
+        var sldURL = this.layer.styleURL;
+        sldURL += "?layer=" + this.layer.name;
         
-        var filterModels:Array = layer.filterModels;
+        var filterModels = this.layer.filterModels;
         if (filterModels.length > 0) {
             sldURL += "&filter=" + URLFilterConverter.filterModelsToURLFilter(filterModels);
         }
         
-        var classification:* = layer.classification;
+        var classification = this.layer.classification;
         if (classification != null) {
             sldURL += "&classification=" + encodeURIComponent(URLClassificationConverter.classificationToURLClassification(classification));
-            if ((filterModels.length == 0) || (!_autoClassification)) {
+            if ((filterModels.length == 0) || (!this.autoClassification)) {
                 sldURL += "::noFilter";
             }
         }
         url += "&SLD=" + encodeURIComponent(sldURL);
-}*/
+    }
     url += "&TRANSPARENT=true";
-    url += "&SRS=EPSG:900913";
+    url += "&SRS=" + this.layer.srs;
     url += "&BBOX=" + minX + "," + minY + "," + maxX + "," + maxY;
     url += "&WIDTH=" + widthX;
     url += "&HEIGHT=" + heightY;
-    url += "&FORMAT=image/png";
+    url += "&FORMAT=" + this.layer.format;
     url += "&EXCEPTIONS=application/vnd.ogc.se_xml";
     
     var x = this.animationCenterScale.getPixX(this.bounds.width, minX);

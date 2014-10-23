@@ -1,31 +1,28 @@
-angular.module('nine-e', ['monospaced.mousewheel']).
-    directive('legend', function factory() {
-        var directiveDefinitionObject = {
-            template: '\
-            <div>\
-              <ul>\
-                  <li ng-repeat="layer in layers">\
-                      <input id="layer_{{layer.id}}" type="checkbox" ng-model="layer.visible">\
-                     <label for="layer_{{layer.id}}" class="visible-{{layer.visible}}">{{layer.title}}</label>\
-                </li>\
-              </ul>\
-              </div>',
+angular.module("niney", ["monospaced.mousewheel"]).
+    factory("defaultBoundsModel", function() {
+        return new BoundsModel();
+    }).
+    factory("defaultTilesLayer", function() {
+        return new Layer("Tiles");
+    }).
+    directive("legend", function() {
+        return {
+            template: '<div><ul><li ng-repeat="layer in layers"><label class="visible-{{layer.visible}}"><input type="checkbox" ng-model="layer.visible"/>{{layer.title}}</label></li></ul></div>',
+            restrict: "EA",
             replace: true,
-            restrict: 'E',
             scope: {
-                layers: '='
+                layers: "=layers"
             }
         };
-        return directiveDefinitionObject;
     }).
-    directive("map", ["$document", function factory($document) {
+    directive("map", ["$document", "defaultBoundsModel", function factory($document, defaultBoundsModel) {
         return {
             template: '<div class="mapviewer" ng-mousedown="mouseDownHandler($event)" msd-wheel="mouseWheelHandler($event, $delta)" ng-transclude/>',
-            restrict: "E",
+            restrict: "EA",
             replace: true,
             transclude: true,
             scope: {
-                boundsModel: "=boundsmodel",
+                boundsModel: "=?boundsmodel",
                 focusModel: "=focusmodel",
                 envelopeModel: "=envelopemodel"
             },
@@ -33,16 +30,37 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 this.scope = $scope;
             }],
             link: function($scope, $element, $attr) {
-                $scope.mouseX = -1;
-                $scope.mouseY = -1;
-                $scope.mouseDownX = -1;
-                $scope.mouseDownY = -1;
+                $scope.$watch("boundsModel", function(val) {
+                    if (val == null) {
+                        $scope.boundsModel = defaultBoundsModel;
+                    } else {
+                        var resizeTimer = new Timer(2000, -1);
+                        resizeTimer.scope = $scope;
+                        resizeTimer.timerHandler = function() {
+                            var width = $element[0].offsetWidth;
+                            var height = $element[0].offsetHeight;
+                            $scope.boundsModel.setBounds(new Bounds(width, height));
+                        };
+                        resizeTimer.timerHandler.apply();
+                        resizeTimer.start();
+                    }
+                });
+                
+                var mouseX = -1;
+                var mouseY = -1;
+                var mouseDownX = -1;
+                var mouseDownY = -1;
+                var mouseMoveTimer = new Timer(50, -1);
+                mouseMoveTimer.scope = $scope;
+                mouseMoveTimer.timerHandler = function() {
+                    var foo = "bar";
+                };
                 
                 $document.on("mousemove", mouseMoveHandler);
                 
                 function mouseMoveHandler(mouseEvent) {
-                    $scope.mouseX = mouseEvent.pageX - $element[0].offsetLeft;
-                    $scope.mouseY = mouseEvent.pageY - $element[0].offsetTop;
+                    mouseX = mouseEvent.clientX - $element[0].getBoundingClientRect().left;
+                    mouseY = mouseEvent.clientY - $element[0].getBoundingClientRect().top;
                 }
                 
                 $scope.mouseDownHandler = function(mouseEvent) {
@@ -51,17 +69,18 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     var height = bounds.height;
                     
                     var cs = $scope.focusModel.animationCenterScale;
-                    var worldX = cs.getWorldX(width, $scope.mouseX);
-                    var worldY = cs.getWorldY(height, $scope.mouseY);
+                    var worldX = cs.getWorldX(width, mouseX);
+                    var worldY = cs.getWorldY(height, mouseY);
                     
-                    var pixXOffset = $scope.mouseX - (width / 2);
-                    var pixYOffset = $scope.mouseY - (height / 2);
+                    var pixXOffset = mouseX - (width / 2);
+                    var pixYOffset = mouseY - (height / 2);
                     
                     $scope.focusModel.bazoo(worldX, worldY, pixXOffset, pixYOffset);
                     
-                    $scope.mouseDownX = $scope.mouseX;
-                    $scope.mouseDownY = $scope.mouseY;
+                    mouseDownX = mouseX;
+                    mouseDownY = mouseY;
                     
+                    mouseMoveTimer.start();
                     $document.on("mousemove", mouseMoveHandler1);
                     $document.on("mouseup", mouseUpHandler);
                     
@@ -70,21 +89,22 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 
                 function mouseMoveHandler1(mouseEvent) {
                     var cs = $scope.focusModel.animationCenterScale;
-                    var dx = cs.getNumWorldCoords($scope.mouseX - $scope.mouseDownX);
-                    var dy = cs.getNumWorldCoords($scope.mouseY - $scope.mouseDownY);
+                    var dx = cs.getNumWorldCoords(mouseX - mouseDownX);
+                    var dy = cs.getNumWorldCoords(mouseY - mouseDownY);
                     
                     $scope.focusModel.pan(-dx, dy);
                     
-                    $scope.mouseDownX = $scope.mouseX;
-                    $scope.mouseDownY = $scope.mouseY;
+                    mouseDownX = mouseX;
+                    mouseDownY = mouseY;
                 }
                 
                 function mouseUpHandler(mouseEvent) {
+                    mouseMoveTimer.stop();
                     $document.off("mousemove", mouseMoveHandler1);
                     $document.off("mouseup", mouseUpHandler);
 
-                    $scope.mouseDownX = -1;
-                    $scope.mouseDownY = -1;
+                    mouseDownX = -1;
+                    mouseDownY = -1;
                 }
                 
                 $scope.mouseWheelHandler = function(mouseEvent, delta) {
@@ -93,8 +113,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     var height = bounds.height;
                     
                     var cs = $scope.focusModel.animationCenterScale;
-                    var worldX = cs.getWorldX(width, $scope.mouseX);
-                    var worldY = cs.getWorldY(height, $scope.mouseY);
+                    var worldX = cs.getWorldX(width, mouseX);
+                    var worldY = cs.getWorldY(height, mouseY);
                     var scale = cs.scale;
                     
                     if (delta > 0) {
@@ -102,8 +122,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     } else {
                         scale *= 2;
                     }
-                    var pixXOffset = $scope.mouseX - (width / 2);
-                    var pixYOffset = $scope.mouseY - (height / 2);
+                    var pixXOffset = mouseX - (width / 2);
+                    var pixYOffset = mouseY - (height / 2);
                     
                     $scope.focusModel.setCenterScale(new CenterScale(worldX, worldY, scale), pixXOffset, pixYOffset);
                     
@@ -112,35 +132,82 @@ angular.module('nine-e', ['monospaced.mousewheel']).
             }
         };
     }]).
-    directive("tileslayer", function factory() {
+    directive("tileslayer", ["defaultTilesLayer", function factory(defaultTilesLayer) {
         return {
-            template: '<div class="tileslayer"><img ng-repeat="tile in tileModel.tiles" ng-src="{{tileModel.urlBase + tile.url}}" style="position: absolute; opacity: 0.9;" ng-style="tile.toCSS()"/></div>',
-            restrict: "E",
+            template: '<div class="tileslayer"><img ng-repeat="tile in tileModel.tiles" ng-src="{{tile.url}}" style="position: absolute; opacity: 0.9;" ng-style="tile.toCSS()"/></div>',
+            restrict: "EA",
             require: "^map",
             replace: true,
+            scope: {
+                layer: "=?layer"
+            },
             link: function ($scope, $element, $attr, $parentCtrl) {
                 $scope.tileModel = new TileModel();
                 
                 $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
                 $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
                 
+                $scope.$watch("layer", function(val) { $scope.tileModel.layer = (val || defaultTilesLayer); });
                 $scope.$watch("boundsModel.bounds", function(val) { $scope.tileModel.setBounds(val); });
                 $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.tileModel.setCenterScale(val); });
             }
         };
-    }).
-    directive("wmslayer", function factory() {
+    }]).
+    directive("utfgridlayer", ["$http", function factory($http) {
         return {
-            template: '<div class="wmslayer"><img src="{{wmsModel.tile.url}}" style="position: absolute; opacity: 0.6;" ng-style="wmsModel.tile.toCSS()" ng-show="wmsModel.tile.completed" maploader/></div>',
-            restrict: "E",
+            template: '<div class="tileslayer" ng-mousemove="mouseMoveHandler($event)" ng-click="clickHandler($event)"></div>',
+            restrict: "EA",
             require: "^map",
             replace: true,
+            scope: {
+                layer: "=layer",
+                featureCommands: "=featurecommands"
+            },
+            link: function ($scope, $element, $attr, $parentCtrl) {
+                $scope.tileModel = new TileModel();
+                $scope.tileModel.urlExtension = "$Z/$X/$Y.json";
+                $scope.utfGridModel = new UTFGridModel();
+                $scope.utfGridModel.http = $http;
+                
+                $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
+                $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
+                
+                $scope.$watch("layer", function(val) { $scope.tileModel.layer = val; });
+                $scope.$watch("boundsModel.bounds", function(val) { $scope.tileModel.setBounds(val); });
+                $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.tileModel.setCenterScale(val); });
+                
+                $scope.$watchCollection("tileModel.tiles", function(val) { $scope.utfGridModel.setTiles($scope.tileModel.numColumns, val.concat()); });
+                
+                $scope.mouseMoveHandler = function(mouseEvent) {
+                    var mouseX = mouseEvent.clientX - $element[0].getBoundingClientRect().left;
+                    var mouseY = mouseEvent.clientY - $element[0].getBoundingClientRect().top;
+                    $scope.featureCommands[0].perform($scope.utfGridModel.getFeature(mouseX, mouseY));
+                }
+                $scope.clickHandler = function(mouseEvent) {
+                    var mouseX = mouseEvent.clientX - $element[0].getBoundingClientRect().left;
+                    var mouseY = mouseEvent.clientY - $element[0].getBoundingClientRect().top;
+                    $scope.featureCommands[2].perform($scope.utfGridModel.getFeature(mouseX, mouseY));
+                }
+            }
+        };
+    }]).
+    directive("wmslayer", function factory() {
+        return {
+            template: '<div class="wmslayer"><img ng-src="{{wmsModel.tile.url}}" style="position: absolute; opacity: 0.8;" ng-style="wmsModel.tile.toCSS()" ng-if="layer.visible" ng-show="wmsModel.tile.completed" maploader/></div>',
+            restrict: "EA",
+            require: "^map",
+            replace: true,
+            scope: {
+                layer: "=layer"
+            },
             link: function ($scope, $element, $attr, $parentCtrl) {
                 $scope.wmsModel = new WMSModel();
                 
                 $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
                 $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
                 
+                $scope.$watch("layer", function(val) { $scope.wmsModel.layer = val; $scope.wmsModel.load(); });
+                $scope.$watch("layer.filterModels", function(val) { $scope.wmsModel.load(); });
                 $scope.$watch("boundsModel.bounds", function(val) { $scope.wmsModel.setBounds(val); });
                 $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.wmsModel.setAnimationCenterScale(val); });
                 $scope.$watch("focusModel.incubationCenterScale", function(val) { $scope.wmsModel.setCenterScale(val); });
@@ -151,23 +218,23 @@ angular.module('nine-e', ['monospaced.mousewheel']).
         return {
             restrict: "A",
             link: function($scope, $element, $attrs) {
-                $element.on("load", function() { $scope.wmsModel.tile.completed = true; });
-                $element.on("error", function() { $scope.wmsModel.tile.completed = true; });
+                $element.on("load", function() { $scope.$apply(function() { $scope.wmsModel.tile.completed = true; }); });
+                $element.on("error", function() { $scope.$apply(function() { $scope.wmsModel.tile.completed = true; }); });
             }
         };
     }).
     directive("mapfeaturelayer", function factory() {
-        var directiveDefinitionObject = {
+        return {
             template: '<div class="mapfeaturelayer"/>',
-            restrict: 'E',
-            require: '^map',
+            restrict: "EA",
+            require: "^map",
             replace: true,
             transclude: true,
             scope: {
-                layer: '=layer',
-                featureModel: '=featuremodel',
-                selectionModel: '=selectionmodel',
-                featureCommands: '=featurecommands'
+                layer: "=layer",
+                featureModel: "=featuremodel",
+                selectionModel: "=selectionmodel",
+                featureCommands: "=featurecommands"
             },
             controller: ["$scope", function ($scope) {
                 this.scope = $scope;
@@ -198,7 +265,6 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                 }
             }
         };
-        return directiveDefinitionObject;
     }).
     directive("geometrysymbolizer", function factory() {
         var directiveDefinitionObject = {
@@ -270,8 +336,8 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive('imagesymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.animationCenterScale.scale"><img ng-repeat="feature in featureModel.features | filter:isInsideBoundaries" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="getStyle(feature)" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.animationCenterScale.getPixY(boundsModel.bounds.height, feature.propertyValues[propertyIndex].y)}}px; left: {{focusModel.animationCenterScale.getPixX(boundsModel.bounds.width, feature.propertyValues[propertyIndex].x)}}px"/></div>',
-            restrict: 'E',
+            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.animationCenterScale.scale"><img ng-repeat="feature in featureModel.features | filter:isInsideBoundaries" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="getStyle(feature)" ng-src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute" ng-style="getCSS(feature)"/></div>',
+            restrict: 'EA',
             require: '^mapfeaturelayer',
             replace: true,
             scope: {
@@ -299,6 +365,12 @@ angular.module('nine-e', ['monospaced.mousewheel']).
                     }
                     return scope.lowStyle;
                 }*/
+                $scope.getCSS = function(feature) {
+                    var css = {};
+                    css.left = $scope.focusModel.animationCenterScale.getPixX($scope.boundsModel.bounds.width, feature.propertyValues[$scope.propertyIndex].x) + "px";
+                    css.top = $scope.focusModel.animationCenterScale.getPixY($scope.boundsModel.bounds.height, feature.propertyValues[$scope.propertyIndex].y) + "px";
+                    return css;
+                }
                 $scope.isInsideBoundaries = function(item) {
                     var itemEnvelope = item.propertyValues[$scope.propertyIndex].getEnvelope();
                     return itemEnvelope.intersects($scope.envelopeModel.getEnvelope());
@@ -328,7 +400,7 @@ angular.module('nine-e', ['monospaced.mousewheel']).
     }).
     directive('geometryimagesymbolizer', function factory() {
         var directiveDefinitionObject = {
-            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.animationCenterScale.scale"><div ng-repeat="feature in featureModel.features"><img ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries track by $index" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="getStyle(feature)" src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.animationCenterScale.getPixY(boundsModel.bounds.height, geometry.y)}}px; left: {{focusModel.animationCenterScale.getPixX(boundsModel.bounds.width, geometry.x)}}px" /></div></div>',
+            template: '<div class="mapfeaturelayer" ng-if="maxScale >= focusModel.animationCenterScale.scale"><div ng-repeat="feature in featureModel.features"><img ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:isInsideBoundaries track by $index" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="getStyle(feature)" ng-src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" style="position: absolute; top: {{focusModel.animationCenterScale.getPixY(boundsModel.bounds.height, geometry.y)}}px; left: {{focusModel.animationCenterScale.getPixX(boundsModel.bounds.width, geometry.x)}}px" /></div></div>',
             restrict: 'E',
             require: '^mapfeaturelayer',
             replace: true,

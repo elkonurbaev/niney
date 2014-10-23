@@ -1,12 +1,13 @@
 function TileModel() {
     this.bounds = null;
+    this.layer = null;
     this.centerScale = null;
     this.tileWidth = 256;
     this.tileHeight = 256;
-    this.urlBase = "http://b.tile.openstreetmap.org/";
     this.urlExtension = "$Z/$X/$Y.png";
     this.maxX = 20037508.3427892;
     this.maxY = 20037508.3427892;
+    this.numColumns = -1;
     this.tileZ = -1;
     this.tiles = [];
 }
@@ -47,6 +48,7 @@ TileModel.prototype.resetLoaders = function() {
     var rightTileX = Math.floor((envelope.maxX + this.maxX) / resolution / this.tileWidth);
     var bottomTileY = Math.min(Math.floor((this.maxY - envelope.minY) / resolution / this.tileHeight), tileLimit - 1);
     
+    this.numColumns = rightTileX - leftTileX + 1;
     if (this.tileZ != tileZ) {
         this.tileZ = tileZ;
         this.tiles = [];
@@ -84,35 +86,18 @@ TileModel.prototype.resetLoaders = function() {
             
             tile = null;
             if (i >= this.tiles.length) {
-                this.tiles.push(new Tile(tileX, tileY, this.tileWidth, this.tileHeight, url, x, y, scaling));
+                this.tiles.push(new Tile(tileX, tileY, this.tileWidth, this.tileHeight, this.layer.baseURL + url, x, y, scaling));
             } else if ((this.tiles[i].tileY == tileY) && (this.tiles[i].tileX == tileX)) {
                 tile = this.tiles[i];
                 tile.x = x;
                 tile.y = y;
                 tile.scaling = scaling;
             } else {
-                this.tiles.splice(i, 0, new Tile(tileX, tileY, this.tileWidth, this.tileHeight, url, x, y, scaling));
+                this.tiles.splice(i, 0, new Tile(tileX, tileY, this.tileWidth, this.tileHeight, this.layer.baseURL + url, x, y, scaling));
             }
             i++;
         }
     }
     this.tiles.splice(i, this.tiles.length - i);
-}
-
-function Tile(tileX, tileY, tileWidth, tileHeight, url, x, y, scaling) {
-    this.tileX = tileX;
-    this.tileY = tileY;
-    this.tileWidth = tileWidth;
-    this.tileHeight = tileHeight;
-    this.url = url;
-    this.x = x;
-    this.y = y;
-    this.scaling = scaling;
-    this.scale = -1;
-    this.completed = false;
-}
-
-Tile.prototype.toCSS = function() {
-    return {left: this.x + "px", top: this.y + "px", width: (this.tileWidth * this.scaling) + "px", height: (this.tileHeight * this.scaling) + "px"};
 }
 

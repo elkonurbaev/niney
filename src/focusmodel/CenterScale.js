@@ -9,9 +9,9 @@ CenterScale.prototype.equals = function(centerScale) {
     if (centerScale == null) {
         return false;
     }
-    if ((this.centerX == centerScale.centerX) &&
-        (this.centerY == centerScale.centerY) &&
-        (this.scale == centerScale.scale)) {
+    if ((this.centerX == centerScale.centerX) && (this.centerY == centerScale.centerY) &&
+        (this.scale == centerScale.scale)
+    ) {
         return true;
     }
     return false;

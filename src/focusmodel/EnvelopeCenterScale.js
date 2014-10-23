@@ -1,10 +1,10 @@
 function EnvelopeCenterScale() {
-	this.envelope = null;
-	this.width = -1;
-	this.height = -1;
-	this.centerX = -1;
-	this.centerY = -1;
-	this.scale = -1;
+    this.centerX = -1;
+    this.centerY = -1;
+    this.scale = -1;
+    this.width = -1;
+    this.height = -1;
+    this.envelope = null;
 }
 
 EnvelopeCenterScale.prototype = new CenterScale();
@@ -20,7 +20,7 @@ EnvelopeCenterScale.prototype.setBounds = function(bounds) {
 }
 
 EnvelopeCenterScale.prototype.setCenterScale = function(centerScale) {
-	if (centerScale == null) {
+    if (centerScale == null) {
         return;
     }
     this.centerX = centerScale.centerX;
@@ -29,33 +29,19 @@ EnvelopeCenterScale.prototype.setCenterScale = function(centerScale) {
     this.envelope = this.toEnvelope(this.width, this.height);
 }
 
-EnvelopeCenterScale.prototype.getEnvelope = function() {
-	return this.envelope;
-}
-
-EnvelopeCenterScale.prototype.getWidth = function() {
-	return this.width;
-}
-
-EnvelopeCenterScale.prototype.getHeight = function() {
-	return this.height;
-}
-
 EnvelopeCenterScale.prototype.equals = function(centerScale) {
-	if(centerScale == null) {
-		return false;
-	}
-	if(centerScale instanceof EnvelopeCenterScale){
-		if((this.centerX = centerScale.centerX) &&
-			(this.centerY == centerScale.centerY) &&
-			(this.scale == centerScale.scale) &&
-			(this.width == centerScale.getWidth()) &&
-			(this.height == centerScale.getHeight())
-		   ) {
-			return true;
-		} else{
-			return false;
-		}
-	}
-	return this.equals(centerScale);
+    if (centerScale == null) {
+        return false;
+    }
+    if (centerScale instanceof EnvelopeCenterScale) {
+        if ((this.centerX = centerScale.centerX) && (this.centerY == centerScale.centerY) &&
+            (this.scale == centerScale.scale) && (this.width == centerScale.width) && (this.height == centerScale.height)
+        ) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    return this.equals(centerScale);
 }
+
