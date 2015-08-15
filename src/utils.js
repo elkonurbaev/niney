@@ -139,3 +139,39 @@ PanSpeedTimer.prototype.resetAndGetSpeed = function() {
     return this.speed;
 }
 
+function decorateTouchEvent(touchEvent, lastTouchOnly) {
+    if (touchEvent.touches == null) {  // Not a touch event.
+        return;
+    }
+    
+    var touch = touchEvent.touches[touchEvent.touches.length - 1];
+    if ((touchEvent.touches.length == 1) || lastTouchOnly)  {
+        touchEvent.clientX = touch.clientX;
+        touchEvent.clientY = touch.clientY;
+        touchEvent.radius = 1;
+    } else {  // 2 or more touches.
+        var minX = touch.clientX;
+        var minY = touch.clientY;
+        var maxX = touch.clientX;
+        var maxY = touch.clientY;
+        for (var i = 0; i < touchEvent.touches.length - 1; i++) {
+            touch = touchEvent.touches[i];
+            if (minX > touch.clientX) {
+                minX = touch.clientX;
+            }
+            if (minY > touch.clientY) {
+                minY = touch.clientY;
+            }
+            if (maxX < touch.clientX) {
+                maxX = touch.clientX;
+            }
+            if (maxY < touch.clientY) {
+                maxY = touch.clientY;
+            }
+        }
+        touchEvent.clientX = (minX + maxX) / 2;
+        touchEvent.clientY = (minY + maxY) / 2;
+        touchEvent.radius = Math.sqrt((maxX - minX) * (maxX - minX) + (maxY - minY) * (maxY - minY));
+    }
+}
+

@@ -36,6 +36,9 @@ WMSModel.prototype.load = function() {
     if (this.centerScale == null) {
         return;
     }
+    if (this.animationCenterScale == null) {
+        return;
+    }
     
     var envelope = this.centerScale.toEnvelope(this.bounds.width, this.bounds.height);
     var minX = envelope.minX;
@@ -52,8 +55,8 @@ WMSModel.prototype.load = function() {
     maxX = Math.min(maxX, 20000000);
     maxY = Math.min(maxY, 20000000);
     
-    var widthX = Math.round(this.centerScale.getNumPixs(maxX - minX));
-    var heightY = Math.round(this.centerScale.getNumPixs(maxY - minY));
+    var tileWidth = Math.round(this.centerScale.getNumPixs(maxX - minX));
+    var tileHeight = Math.round(this.centerScale.getNumPixs(maxY - minY));
     
     var url = this.layer.baseURL;
     url += (url.indexOf("?") == -1 ? "?" : "&") + "SERVICE=WMS";
@@ -84,15 +87,13 @@ WMSModel.prototype.load = function() {
     url += "&TRANSPARENT=true";
     url += "&SRS=" + this.layer.srs;
     url += "&BBOX=" + minX + "," + minY + "," + maxX + "," + maxY;
-    url += "&WIDTH=" + widthX;
-    url += "&HEIGHT=" + heightY;
+    url += "&WIDTH=" + tileWidth;
+    url += "&HEIGHT=" + tileHeight;
     url += "&FORMAT=" + this.layer.format;
     url += "&EXCEPTIONS=application/vnd.ogc.se_xml";
     
-    var x = this.animationCenterScale.getPixX(this.bounds.width, minX);
-    var y = this.animationCenterScale.getPixY(this.bounds.height, maxY);
-    var tile = new Tile(minX, maxY, widthX, heightY, url, x, y, 1);
-    tile.scale = this.centerScale.scale;
+    var tile = new Tile(minX, maxY, this.centerScale.scale, tileWidth, tileHeight, url);
+    tile.reset(this.bounds, this.animationCenterScale, minX, maxY);
     this.tile = tile;
 }
 
@@ -107,12 +108,6 @@ WMSModel.prototype.resetLoaders = function() {
         return;
     }
     
-    var x = this.animationCenterScale.getPixX(this.bounds.width, this.tile.tileX);
-    var y = this.animationCenterScale.getPixY(this.bounds.height, this.tile.tileY);
-    var scaling = this.tile.scale / this.animationCenterScale.scale;
-    var tile = new Tile(this.tile.tileX, this.tile.tileY, this.tile.tileWidth, this.tile.tileHeight, this.tile.url, x, y, scaling);
-    tile.scale = this.tile.scale;
-    tile.completed = this.tile.completed;
-    this.tile = tile;
+    this.tile.reset(this.bounds, this.animationCenterScale, this.tile.tileX, this.tile.tileY);
 }
 

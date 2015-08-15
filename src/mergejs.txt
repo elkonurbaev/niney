@@ -7,6 +7,7 @@ geometrymodel/GeometryTools.js
 geometrymodel/LineString.js
 geometrymodel/Polygon.js
 geometrymodel/converters/WKTConverter.js
+geometrymodel/converters/SVGConverter.js
 featuremodel/Feature.js
 featuremodel/FeatureModel.js
 featuremodel/FeatureType.js
