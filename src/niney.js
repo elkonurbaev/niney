@@ -5,7 +5,7 @@
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
-/* Last merge : Sat Aug 15 11:35:03 CEST 2015  */
+/* Last merge : Fri Jul 8 17:06:59 CEST 2016  */
 
 /* Merging order :
 
@@ -604,43 +604,51 @@ Envelope.prototype.toString = function() {
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
-function GeometryTools() {}
+function GeometryTools() { }
 
-GeometryTools.prototype.getGeometryClass = function(geometryType) {
-	geometryType = geometryType.toUpperCase();
-	if (geometryType == "POINT") {
-		return Point;
-	} else if (geometryType == "ENVELOPE") {
-		return Envelope;
-	} else if (geometryType == "CIRCLE") {
-		return Circle;
-	} else if (geometryType == "LINESTRING") {
-		return LineString;
-	} else if (geometryType == "POLYGON") {
-		return Polygon;
-	}
-	return null;
+GeometryTools.getGeometryClass = function(geometryType) {
+    geometryType = geometryType.toUpperCase();
+    if (geometryType == "POINT") {
+        return Point;
+    } else if (geometryType == "ENVELOPE") {
+        return Envelope;
+    } else if (geometryType == "CIRCLE") {
+        return Circle;
+    } else if (geometryType == "LINESTRING") {
+        return LineString;
+    } else if (geometryType == "POLYGON") {
+        return Polygon;
+    }
+    return null;
 }
-		
-GeometryTools.prototype.transform = function(geometry, srid) {
-	if (geometry == null) {
-		alert("No geometry given.");
-	}
-	if (!(geometry instanceof Point)) {
-		alert("The given geometry is not a point. Only point geometries are currently supported.");
-	}	
-	var point = geometry;
-			
-	if ((point.srid == 4326) && (srid == 900913)) {
-		var x = Number(point.x) * 20037508.3427892 / 180;
-		var y = Math.log(Math.tan((90 + Number(point.y)) * Math.PI / 360)) * 180 / Math.PI;
-		y = y * 20037508.3427892 / 180;
-		point = new Point(x, y);
-		point.srid = srid;
-		return point;
-	}
-	alert("The given srid transformation is currently not supported.");
-} 
+
+GeometryTools.transform = function(geometry, srid) {
+    if (geometry == null) {
+        alert("No geometry given.");
+    }
+    if (!(geometry instanceof Point)) {
+        alert("Given geometry is not a point. Only point geometries are currently supported.");
+    }	
+    var point = geometry;
+    
+    if ((point.srid == 4326) && (srid == 900913)) {
+        var x = point.x * 20037508.3427892 / 180;
+        var y = Math.log(Math.tan((90 + point.y) * Math.PI / 360)) * 180 / Math.PI;
+        y = y * 20037508.3427892 / 180;
+        point = new Point(x, y);
+        point.srid = srid;
+        return point;
+    } else if ((point.srid == 900913) && (srid == 4326)) {
+        var x = point.x * 180 / 20037508.3427892;
+        var y = point.y * 180 / 20037508.3427892;
+        y = Math.atan(Math.exp(y / 180 * Math.PI)) * 360 / Math.PI - 90;
+        point = new Point(x, y);
+        point.srid = srid;
+        return point;
+    }
+    
+    alert("Given SRID transformation is currently not supported.");
+}
 
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -963,6 +971,23 @@ SelectFeatureCommand.prototype.perform = function(feature) {
     }
 }
 
+
+function AggressiveSelectFeatureCommand(selectionModel, index) {
+    this.selectionModel = selectionModel;
+    this.index = index;
+}
+
+AggressiveSelectFeatureCommand.prototype.perform = function(feature) {
+    if (this.selectionModel == null) {
+        throw new Error("No selection model present.");
+    }
+    
+    if (feature == null) {
+        this.selectionModel.selectedFeatures[this.index] = null;
+    } else {
+        this.selectionModel.selectedFeatures[this.index] = angular.copy(feature);
+    }
+}
 
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -1534,6 +1559,11 @@ function Layer(name) {
     this.title = name;
     this.filterModels = [];
     this.classification = null;
+    this.vendorSpecifics = {};
+}
+
+Layer.prototype.forceReload = function() {
+    this.vendorSpecifics.epochtime = (new Date()).getTime();
 }
 
 
@@ -1591,7 +1621,7 @@ function TileModel() {
     this.tileWidth = 256;
     this.tileHeight = 256;
     this.urlExtension = "$Z/$X/$Y.png";
-    this.maxX = 20037508.3427892;
+    this.minX = -20037508.3427892;
     this.maxY = 20037508.3427892;
     this.tiles = [];
 }
@@ -1625,9 +1655,9 @@ TileModel.prototype.resetLoaders = function() {
     var zoomLevel = getZoomLevel(this.centerScale.scale);
     var tileZ = zoomLevel.zoomLevel;
     var tileLimit = Math.pow(2, tileZ);
-    var leftTileX = Math.floor((envelope.minX + this.maxX) / zoomLevel.resolution / this.tileWidth);
+    var leftTileX = Math.floor((envelope.minX - this.minX) / zoomLevel.resolution / this.tileWidth);
     var topTileY = Math.max(Math.floor((this.maxY - envelope.maxY) / zoomLevel.resolution / this.tileHeight), 0);
-    var rightTileX = Math.floor((envelope.maxX + this.maxX) / zoomLevel.resolution / this.tileWidth);
+    var rightTileX = Math.floor((envelope.maxX - this.minX) / zoomLevel.resolution / this.tileWidth);
     var bottomTileY = Math.min(Math.floor((this.maxY - envelope.minY) / zoomLevel.resolution / this.tileHeight), tileLimit - 1);
     
     for (var i = 0; i < this.tiles.length; i++) {
@@ -1641,7 +1671,7 @@ TileModel.prototype.resetLoaders = function() {
     
     for (var tileY = topTileY; tileY <= bottomTileY; tileY++) {
         for (var tileX = leftTileX; tileX <= rightTileX; tileX++) {
-            minX = tileX * this.tileWidth * zoomLevel.resolution - this.maxX;
+            minX = tileX * this.tileWidth * zoomLevel.resolution + this.minX;
             maxY = -(tileY * this.tileHeight * zoomLevel.resolution - this.maxY);
             
             tile = this.getTile(tileX, tileY, zoomLevel.scale);
@@ -1696,7 +1726,7 @@ function UTFGridModel() {
     this.tileWidth = 256;
     this.tileHeight = 256;
     this.urlExtension = "$Z/$X/$Y.json";
-    this.maxX = 20037508.3427892;
+    this.minX = -20037508.3427892;
     this.maxY = 20037508.3427892;
     this.tiles = [];
     
@@ -1710,7 +1740,7 @@ UTFGridModel.prototype.getFeature = function(pixX, pixY) {
     var zoomLevel = getZoomLevel(this.centerScale.scale);
     var worldX = this.centerScale.getWorldX(this.bounds.width, pixX);
     var worldY = this.centerScale.getWorldY(this.bounds.height, pixY);
-    var tileX = Math.floor((worldX + this.maxX) / zoomLevel.resolution / this.tileWidth);
+    var tileX = Math.floor((worldX - this.minX) / zoomLevel.resolution / this.tileWidth);
     var tileY = Math.max(Math.floor((this.maxY - worldY) / zoomLevel.resolution / this.tileHeight), 0);
     var tile = this.getTile(tileX, tileY, zoomLevel.scale);
     if (tile == null) {
@@ -1831,14 +1861,15 @@ WMSModel.prototype.load = function() {
         sldURL += "?layer=" + this.layer.name;
         
         var filterModels = this.layer.filterModels;
-        if (filterModels.length > 0) {
-            sldURL += "&filter=" + URLFilterConverter.filterModelsToURLFilter(filterModels);
+        var urlFilter = URLFilterConverter.filterModelsToURLFilter(filterModels);
+        if (urlFilter.length > 0) {
+            sldURL += "&filter=" + urlFilter;
         }
         
         var classification = this.layer.classification;
         if (classification != null) {
             sldURL += "&classification=" + encodeURIComponent(URLClassificationConverter.classificationToURLClassification(classification));
-            if ((filterModels.length == 0) || (!this.autoClassification)) {
+            if ((urlFilter.length == 0) || (!this.autoClassification)) {
                 sldURL += "::noFilter";
             }
         }
@@ -1852,9 +1883,14 @@ WMSModel.prototype.load = function() {
     url += "&FORMAT=" + this.layer.format;
     url += "&EXCEPTIONS=application/vnd.ogc.se_xml";
     
-    var tile = new Tile(minX, maxY, this.centerScale.scale, tileWidth, tileHeight, url);
-    tile.reset(this.bounds, this.animationCenterScale, minX, maxY);
-    this.tile = tile;
+    angular.forEach(this.layer.vendorSpecifics, function(value, key) {
+        url += "&" + key + "=" + value;
+    });
+    
+    if ((this.tile == null) || (this.tile.url != url)) {
+        this.tile = new Tile(minX, maxY, this.centerScale.scale, tileWidth, tileHeight, url);
+    }
+    this.tile.reset(this.bounds, this.animationCenterScale, minX, maxY);
 }
 
 WMSModel.prototype.resetLoaders = function() {
@@ -2118,7 +2154,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
                 $element.on("mousedown", pressHandler);
                 $element.on("touchstart", pressHandler);
                 
-                var panTimer = new PanSpeedTimer(100, -1); // Role of timer is 2-fold: measure pan speed, but also apply digest cycle every tick.
+                var panTimer = new PanSpeedTimer(50, -1); // Role of timer is 2-fold: measure pan speed, but also apply digest cycle every tick.
                 panTimer.scope = $scope;
                 
                 function pressHandler(event) {
@@ -2346,7 +2382,8 @@ angular.module("niney", ["monospaced.mousewheel"]).
                 $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
                 
                 $scope.$watch("layer", function(val) { $scope.wmsModel.layer = val; $scope.wmsModel.load(); });
-                $scope.$watch("layer.filterModels", function(val) { $scope.wmsModel.load(); });
+                $scope.$watchCollection("layer.filterModels", function(val) { $scope.wmsModel.load(); });
+                $scope.$watch("layer.vendorSpecifics", function(val) { $scope.wmsModel.load(); }, true);
                 $scope.$watch("boundsModel.bounds", function(val) { $scope.wmsModel.setBounds(val); });
                 $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.wmsModel.setAnimationCenterScale(val); });
                 $scope.$watch("focusModel.incubationCenterScale", function(val) { $scope.wmsModel.setCenterScale(val); });

@@ -6,7 +6,7 @@ function TileModel() {
     this.tileWidth = 256;
     this.tileHeight = 256;
     this.urlExtension = "$Z/$X/$Y.png";
-    this.maxX = 20037508.3427892;
+    this.minX = -20037508.3427892;
     this.maxY = 20037508.3427892;
     this.tiles = [];
 }
@@ -40,9 +40,9 @@ TileModel.prototype.resetLoaders = function() {
     var zoomLevel = getZoomLevel(this.centerScale.scale);
     var tileZ = zoomLevel.zoomLevel;
     var tileLimit = Math.pow(2, tileZ);
-    var leftTileX = Math.floor((envelope.minX + this.maxX) / zoomLevel.resolution / this.tileWidth);
+    var leftTileX = Math.floor((envelope.minX - this.minX) / zoomLevel.resolution / this.tileWidth);
     var topTileY = Math.max(Math.floor((this.maxY - envelope.maxY) / zoomLevel.resolution / this.tileHeight), 0);
-    var rightTileX = Math.floor((envelope.maxX + this.maxX) / zoomLevel.resolution / this.tileWidth);
+    var rightTileX = Math.floor((envelope.maxX - this.minX) / zoomLevel.resolution / this.tileWidth);
     var bottomTileY = Math.min(Math.floor((this.maxY - envelope.minY) / zoomLevel.resolution / this.tileHeight), tileLimit - 1);
     
     for (var i = 0; i < this.tiles.length; i++) {
@@ -56,7 +56,7 @@ TileModel.prototype.resetLoaders = function() {
     
     for (var tileY = topTileY; tileY <= bottomTileY; tileY++) {
         for (var tileX = leftTileX; tileX <= rightTileX; tileX++) {
-            minX = tileX * this.tileWidth * zoomLevel.resolution - this.maxX;
+            minX = tileX * this.tileWidth * zoomLevel.resolution + this.minX;
             maxY = -(tileY * this.tileHeight * zoomLevel.resolution - this.maxY);
             
             tile = this.getTile(tileX, tileY, zoomLevel.scale);

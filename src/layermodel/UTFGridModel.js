@@ -6,7 +6,7 @@ function UTFGridModel() {
     this.tileWidth = 256;
     this.tileHeight = 256;
     this.urlExtension = "$Z/$X/$Y.json";
-    this.maxX = 20037508.3427892;
+    this.minX = -20037508.3427892;
     this.maxY = 20037508.3427892;
     this.tiles = [];
     
@@ -20,7 +20,7 @@ UTFGridModel.prototype.getFeature = function(pixX, pixY) {
     var zoomLevel = getZoomLevel(this.centerScale.scale);
     var worldX = this.centerScale.getWorldX(this.bounds.width, pixX);
     var worldY = this.centerScale.getWorldY(this.bounds.height, pixY);
-    var tileX = Math.floor((worldX + this.maxX) / zoomLevel.resolution / this.tileWidth);
+    var tileX = Math.floor((worldX - this.minX) / zoomLevel.resolution / this.tileWidth);
     var tileY = Math.max(Math.floor((this.maxY - worldY) / zoomLevel.resolution / this.tileHeight), 0);
     var tile = this.getTile(tileX, tileY, zoomLevel.scale);
     if (tile == null) {

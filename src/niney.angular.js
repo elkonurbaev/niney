@@ -150,7 +150,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
                 $element.on("mousedown", pressHandler);
                 $element.on("touchstart", pressHandler);
                 
-                var panTimer = new PanSpeedTimer(100, -1); // Role of timer is 2-fold: measure pan speed, but also apply digest cycle every tick.
+                var panTimer = new PanSpeedTimer(50, -1); // Role of timer is 2-fold: measure pan speed, but also apply digest cycle every tick.
                 panTimer.scope = $scope;
                 
                 function pressHandler(event) {
@@ -378,7 +378,8 @@ angular.module("niney", ["monospaced.mousewheel"]).
                 $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
                 
                 $scope.$watch("layer", function(val) { $scope.wmsModel.layer = val; $scope.wmsModel.load(); });
-                $scope.$watch("layer.filterModels", function(val) { $scope.wmsModel.load(); });
+                $scope.$watchCollection("layer.filterModels", function(val) { $scope.wmsModel.load(); });
+                $scope.$watch("layer.vendorSpecifics", function(val) { $scope.wmsModel.load(); }, true);
                 $scope.$watch("boundsModel.bounds", function(val) { $scope.wmsModel.setBounds(val); });
                 $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.wmsModel.setAnimationCenterScale(val); });
                 $scope.$watch("focusModel.incubationCenterScale", function(val) { $scope.wmsModel.setCenterScale(val); });

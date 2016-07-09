@@ -8,4 +8,9 @@ function Layer(name) {
     this.title = name;
     this.filterModels = [];
     this.classification = null;
+    this.vendorSpecifics = {};
+}
+
+Layer.prototype.forceReload = function() {
+    this.vendorSpecifics.epochtime = (new Date()).getTime();
 }

@@ -71,14 +71,15 @@ WMSModel.prototype.load = function() {
         sldURL += "?layer=" + this.layer.name;
         
         var filterModels = this.layer.filterModels;
-        if (filterModels.length > 0) {
-            sldURL += "&filter=" + URLFilterConverter.filterModelsToURLFilter(filterModels);
+        var urlFilter = URLFilterConverter.filterModelsToURLFilter(filterModels);
+        if (urlFilter.length > 0) {
+            sldURL += "&filter=" + urlFilter;
         }
         
         var classification = this.layer.classification;
         if (classification != null) {
             sldURL += "&classification=" + encodeURIComponent(URLClassificationConverter.classificationToURLClassification(classification));
-            if ((filterModels.length == 0) || (!this.autoClassification)) {
+            if ((urlFilter.length == 0) || (!this.autoClassification)) {
                 sldURL += "::noFilter";
             }
         }
@@ -92,9 +93,14 @@ WMSModel.prototype.load = function() {
     url += "&FORMAT=" + this.layer.format;
     url += "&EXCEPTIONS=application/vnd.ogc.se_xml";
     
-    var tile = new Tile(minX, maxY, this.centerScale.scale, tileWidth, tileHeight, url);
-    tile.reset(this.bounds, this.animationCenterScale, minX, maxY);
-    this.tile = tile;
+    angular.forEach(this.layer.vendorSpecifics, function(value, key) {
+        url += "&" + key + "=" + value;
+    });
+    
+    if ((this.tile == null) || (this.tile.url != url)) {
+        this.tile = new Tile(minX, maxY, this.centerScale.scale, tileWidth, tileHeight, url);
+    }
+    this.tile.reset(this.bounds, this.animationCenterScale, minX, maxY);
 }
 
 WMSModel.prototype.resetLoaders = function() {
