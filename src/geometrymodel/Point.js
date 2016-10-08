@@ -71,3 +71,8 @@ Point.prototype.getDistance = function(point) {
 	var distance = Math.sqrt((dx * dx) + (dy * dy));
 	return distance;
 }
+
+Point.prototype.toString = function() {
+    return "Point(" + this.x + ", " + this.y + ")";
+}
+

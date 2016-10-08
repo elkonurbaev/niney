@@ -5,7 +5,6 @@ function TileModel() {
     this.centerScale = null;
     this.tileWidth = 256;
     this.tileHeight = 256;
-    this.urlExtension = "$Z/$X/$Y.png";
     this.minX = -20037508.3427892;
     this.maxY = 20037508.3427892;
     this.tiles = [];
@@ -61,7 +60,7 @@ TileModel.prototype.resetLoaders = function() {
             
             tile = this.getTile(tileX, tileY, zoomLevel.scale);
             if (tile == null) {
-                url = this.urlExtension;
+                url = this.layer.urlExtension;
                 url = url.replace("$Z", tileZ);
                 url = url.replace("$X", ((tileX % tileLimit) + tileLimit) % tileLimit);
                 url = url.replace("$Y", tileY);

@@ -5,7 +5,7 @@
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
-/* Last merge : Fri Jul 8 17:06:59 CEST 2016  */
+/* Last merge : Fri Oct 7 21:31:10 CEST 2016  */
 
 /* Merging order :
 
@@ -472,6 +472,12 @@ Point.prototype.getDistance = function(point) {
 	var distance = Math.sqrt((dx * dx) + (dy * dy));
 	return distance;
 }
+
+Point.prototype.toString = function() {
+    return "Point(" + this.x + ", " + this.y + ")";
+}
+
+
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 /* Merging js: geometrymodel/Envelope.js begins */
@@ -1553,6 +1559,7 @@ function Layer(name) {
     this.name = name;
     this.baseURL = "http://b.tile.openstreetmap.org/";
     this.styleURL = null;
+    this.urlExtension = "$Z/$X/$Y.png";
     this.srs = "EPSG:900913";
     this.format = "image/png";
     this.visible = true;
@@ -1620,7 +1627,6 @@ function TileModel() {
     this.centerScale = null;
     this.tileWidth = 256;
     this.tileHeight = 256;
-    this.urlExtension = "$Z/$X/$Y.png";
     this.minX = -20037508.3427892;
     this.maxY = 20037508.3427892;
     this.tiles = [];
@@ -1676,7 +1682,7 @@ TileModel.prototype.resetLoaders = function() {
             
             tile = this.getTile(tileX, tileY, zoomLevel.scale);
             if (tile == null) {
-                url = this.urlExtension;
+                url = this.layer.urlExtension;
                 url = url.replace("$Z", tileZ);
                 url = url.replace("$X", ((tileX % tileLimit) + tileLimit) % tileLimit);
                 url = url.replace("$Y", tileY);
@@ -1725,7 +1731,6 @@ function UTFGridModel() {
     this.centerScale = null;
     this.tileWidth = 256;
     this.tileHeight = 256;
-    this.urlExtension = "$Z/$X/$Y.json";
     this.minX = -20037508.3427892;
     this.maxY = 20037508.3427892;
     this.tiles = [];
@@ -2526,6 +2531,9 @@ angular.module("niney", ["monospaced.mousewheel"]).
                     $scope.featureCommands[2].perform(feature);
                 }
                 $scope.isSelected = function(feature) {
+                    if ($scope.selectionModel == null) {
+                        return false;
+                    }
                     for (var i = 0; i < $scope.selectionModel.selectedFeatures.length; i++) {
                         if ($scope.selectionModel.selectedFeatures[i] == feature) {
                             return true;

@@ -5,7 +5,6 @@ function UTFGridModel() {
     this.centerScale = null;
     this.tileWidth = 256;
     this.tileHeight = 256;
-    this.urlExtension = "$Z/$X/$Y.json";
     this.minX = -20037508.3427892;
     this.maxY = 20037508.3427892;
     this.tiles = [];

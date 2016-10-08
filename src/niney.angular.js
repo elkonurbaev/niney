@@ -522,6 +522,9 @@ angular.module("niney", ["monospaced.mousewheel"]).
                     $scope.featureCommands[2].perform(feature);
                 }
                 $scope.isSelected = function(feature) {
+                    if ($scope.selectionModel == null) {
+                        return false;
+                    }
                     for (var i = 0; i < $scope.selectionModel.selectedFeatures.length; i++) {
                         if ($scope.selectionModel.selectedFeatures[i] == feature) {
                             return true;

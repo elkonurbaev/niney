@@ -2,6 +2,7 @@ function Layer(name) {
     this.name = name;
     this.baseURL = "http://b.tile.openstreetmap.org/";
     this.styleURL = null;
+    this.urlExtension = "$Z/$X/$Y.png";
     this.srs = "EPSG:900913";
     this.format = "image/png";
     this.visible = true;
