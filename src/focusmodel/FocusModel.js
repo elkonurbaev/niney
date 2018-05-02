@@ -63,6 +63,10 @@ FocusModel.prototype.sawoo = function(cs, pixXOffset, pixYOffset, animate) {
     var centerY = cs.centerY + (pixYOffset * 0.000352778 * scale);
     cs = this.centercon(new CenterScale(centerX, centerY, scale));
     
+    if (this.centerScale.equals(cs)) {
+        return;
+    }
+    
     if (animate) {
         this.setAnimationCenterScale(cs);
     } else {
@@ -76,15 +80,15 @@ FocusModel.prototype.sawoo = function(cs, pixXOffset, pixYOffset, animate) {
     this.setIncubationCenterScale(cs);
 }
 
-FocusModel.prototype.setCenterScale = function(centerScale, scaleToZoomLevels) {
+FocusModel.prototype.setCenterScale = function(centerScale, roundToZoomLevels) {
     if (centerScale == null) {
         return;
     }
-    if (scaleToZoomLevels === undefined) {
-        scaleToZoomLevels = true;
+    if (roundToZoomLevels == null) {
+        roundToZoomLevels = true;
     }
     
-    centerScale = this.centercon(this.scalecon(centerScale, scaleToZoomLevels));
+    centerScale = this.centercon(this.scalecon(centerScale, roundToZoomLevels));
     if (this.centerScale == null) {
         this.centerScale = centerScale;
         this.animationCenterScale = centerScale;
@@ -146,31 +150,21 @@ FocusModel.prototype.setAnimationCenterScales = function(centerScale) {
 
 // Center-related conditions. Relevant for zooming and panning.
 FocusModel.prototype.centercon = function(centerScale) {
-    if (centerScale.centerX < this.maxEnvelope.minX) {
-        return this.centercon(new CenterScale(this.maxEnvelope.minX, centerScale.centerY, centerScale.scale));
-    }
-    if (centerScale.centerX > this.maxEnvelope.maxX) {
-        return this.centercon(new CenterScale(this.maxEnvelope.maxX, centerScale.centerY, centerScale.scale));
-    }
-    if (centerScale.centerY < this.maxEnvelope.minY) {
-        return this.centercon(new CenterScale(centerScale.centerX, this.maxEnvelope.minY, centerScale.scale));
-    }
-    if (centerScale.centerY > this.maxEnvelope.maxY) {
-        return this.centercon(new CenterScale(centerScale.centerX, this.maxEnvelope.maxY, centerScale.scale));
-    }
-    return centerScale;
+    var centerX = Math.min(Math.max(centerScale.centerX, this.maxEnvelope.getMinX()), this.maxEnvelope.getMaxX());
+    var centerY = Math.min(Math.max(centerScale.centerY, this.maxEnvelope.getMinY()), this.maxEnvelope.getMaxY());
+    return new CenterScale(centerX, centerY, centerScale.scale);
 }
 
 // Scale-related conditions. Relevant for zooming only.
-FocusModel.prototype.scalecon = function(centerScale, scaleToZoomLevels) {
+FocusModel.prototype.scalecon = function(centerScale, roundToZoomLevels) {
     if (centerScale.scale < this.minScale) {
-        return this.scalecon(new CenterScale(centerScale.centerX, centerScale.centerY, this.minScale), scaleToZoomLevels);
+        return this.scalecon(new CenterScale(centerScale.centerX, centerScale.centerY, this.minScale), roundToZoomLevels);
     }
     if (centerScale.scale > this.maxScale) {
-        return this.scalecon(new CenterScale(centerScale.centerX, centerScale.centerY, this.maxScale), scaleToZoomLevels);
+        return this.scalecon(new CenterScale(centerScale.centerX, centerScale.centerY, this.maxScale), roundToZoomLevels);
     }
-    if (scaleToZoomLevels && this.scaleToZoomLevels) {
-        var zoomLevelScale = getZoomLevel(centerScale.scale, true).scale;
+    if (this.scaleToZoomLevels) {
+        var zoomLevelScale = getZoomLevel(centerScale.scale, roundToZoomLevels).scale;
         if (centerScale.scale != zoomLevelScale) {
             return new CenterScale(centerScale.centerX, centerScale.centerY, zoomLevelScale);
         }

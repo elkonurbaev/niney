@@ -68,13 +68,14 @@ function PanSpeedTimer(delay, numRepeats) {
     this.delay = delay;
     this.numRepeats = numRepeats;
     this.currentCount = 0;
+    this.scope = null;
+    this.interval = -1;
+    
     this.panEvent = null;
     this.lastPoint0 = null;
     this.lastPoint1 = null;
     this.lastPointWas0 = false;
     this.speed = {h: -1, v: -1};
-    this.scope = null;
-    this.interval = -1;
     
     var panSpeedTimer = this;
     this.timerHandler = function() {

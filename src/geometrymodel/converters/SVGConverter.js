@@ -1,16 +1,20 @@
-function SVGConverter() {}
+function SVGConverter() { }
 
-SVGConverter.prototype.pointsToSVGPoints = function(bounds, centerScale, points) {
-    if (points == null) {
-        return "";
+SVGConverter.prototype.geometryToPath = function(bounds, centerScale, geometry) {
+    var path = "";
+    var lineStrings = geometry.getLineStrings();
+    for (var i = 0; i < lineStrings.length; i++) {
+        path += "M ";
+        var points = lineStrings[i].getPoints();
+        for (var j = 0; j < points.length; j++) {
+            if (j == 1) {
+                path += "L ";
+            }
+            var x = centerScale.getPixX(bounds.width, points[j].x);
+            var y = centerScale.getPixY(bounds.height, points[j].y);
+            path += x + " " + y + " ";
+        }
     }
-    
-    var svgPoints = "";
-    for (var i = 0; i < points.length; i++) {
-        var x = centerScale.getPixX(bounds.width, points[i].x);
-        var y = centerScale.getPixY(bounds.height, points[i].y);
-        svgPoints += x + "," + y + " ";
-    }
-    return svgPoints;
+    return path;
 }
 

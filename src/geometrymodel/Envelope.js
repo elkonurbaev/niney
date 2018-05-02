@@ -1,116 +1,83 @@
 function Envelope(minX, minY, maxX, maxY) {
-	this.point0 = new Point(minX, minY);
-	this.point0.setParent(this);
-	this.point1 = new Point(maxX, maxY);
-	this.point1.setParent(this);
-	this.minX = minX;
-	this.minY = minY;
-	this.maxX = maxX;
-	this.maxY = maxY;
+    this.$parent = null;
+    this.childGeometries = new Array();
+    this.envelope = null;
+    
+    var point0 = new Point(minX, minY);
+    var point1 = new Point(maxX, maxY);
+    point0.setParent(this);
+    point1.setParent(this);
 }
 
 Envelope.prototype = new Geometry();
 Envelope.prototype.constructor = Envelope;
 
-Envelope.prototype.childGeometries = function() {
-	return new Array(this.point0, this.point1);
-}
-		
-Envelope.prototype.getPoints = function() {
-	return new Array(this.point0, this.point1);
-}
-		
-Envelope.prototype.getEndPoint = function() {
-	return this.point1;
-}
-		
-Envelope.prototype.getCenterPoint = function() {
-	var centerX = (this.minX + this.maxX) / 2;
-	var centerY = (this.minY + this.maxY) / 2;
-	return new Point(centerX, centerY);
-}
-		
 Envelope.prototype.getEnvelope = function() {
-	return new Envelope(this.minX, this.minY, this.maxX, this.maxY);
+    return this.clone();
 }
-		
+
 Envelope.prototype.intersects = function(intersectingEnvelope) {
-	if (
-		(this.minX > intersectingEnvelope.maxX) ||
-		(this.maxX < intersectingEnvelope.minX) ||
-		(this.minY > intersectingEnvelope.maxY) ||
-		(this.maxY < intersectingEnvelope.minY)
-	) {
-		return false;
-	}
-	return true;
-}		
+    return (
+        (this.getMinX() <= intersectingEnvelope.getMaxX()) &&
+        (this.getMinY() <= intersectingEnvelope.getMaxY()) &&
+        (this.getMaxX() >= intersectingEnvelope.getMinX()) &&
+        (this.getMaxY() >= intersectingEnvelope.getMinY())
+    );
+}
 
 Envelope.prototype.equals = function(geometry) {
-	if(!(geometry instanceof Envelope)) {
-		return false;
-	}
-	if(
-		(minX == Envelope(geometry).minX) &&
-		(minY == Envelope(geometry).minY) &&
-		(maxX == Envelope(geometry).maxX) &&
-		(maxY == Envelope(geometry).maxY)
-	) {
-		return true;
-	}
-	return false;
+    if (!(geometry instanceof Envelope)) {
+        return false;
+    }
+    return (
+        (
+         this.childGeometries[0].equals(geometry.childGeometries[0]) &&
+         this.childGeometries[1].equals(geometry.childGeometries[1])
+        ) || (
+         this.childGeometries[1].equals(geometry.childGeometries[0]) &&
+         this.childGeometries[0].equals(geometry.childGeometries[1])
+        )
+    );
 }
 
 Envelope.prototype.clone = function() {
-	return new Envelope(this.minX, this.minY, this.maxX, this.maxY);
-}
-		
-Envelope.prototype.getMinX = function(){
-	if (this.point0.getX() <= this.point1.getX()) {
-		return this.point0.getX();
-	} else {
-		return this.point1.getX();
-	}
-}
-		
-Envelope.prototype.getMinY = function() {
-	if (this.point0.getY() <= this.point1.getY()) {
-		return this.point0.getY();
-	} else {
-		return this.point1.getY();
-	}
+    return new Envelope(this.getMinX(), this.getMinY(), this.getMaxX(), this.getMaxY());
 }
 
-Envelope.prototype.getMaxX = function(){
-	if (this.point0.getX() >= this.point1.getX()) {
-		return this.point0.getX();
-	} else {
-		return this.point1.getX();
-	}
-}		
+Envelope.prototype.getMinX = function() {
+    return Math.min(this.childGeometries[0].x, this.childGeometries[1].x);
+}
+
+Envelope.prototype.getMinY = function() {
+    return Math.min(this.childGeometries[0].y, this.childGeometries[1].y);
+}
+
+Envelope.prototype.getMaxX = function() {
+    return Math.max(this.childGeometries[0].x, this.childGeometries[1].x);
+}
 
 Envelope.prototype.getMaxY = function() {
-	if (this.point0.getY() >= this.point1.getY()) {
-		return this.point0.getY();
-	} else {
-		return this.point1.getY();
-	}
+    return Math.max(this.childGeometries[0].y, this.childGeometries[1].y);
 }
 
 Envelope.prototype.getWidth = function() {
-    return this.maxX - this.minX;
+    return this.getMaxX() - this.getMinX();
 }
 
 Envelope.prototype.getHeight = function() {
-    return this.maxY - this.minY;
+    return this.getMaxY() - this.getMinY();
 }
 
 Envelope.prototype.grow = function(factor) {
-	var displacementFactor = (factor - 1) / 2;
-	var dx = width * displacementFactor;
-	var dy = height * displacementFactor;
-	this.point0.move(-dx, -dy);
-	this.point1.move(dx, dy);
+    var displacementFactor = (factor - 1) / 2;
+    var dx = width * displacementFactor;
+    var dy = height * displacementFactor;
+    var minX = this.getMinX() - dx;
+    var minY = this.getMinY() - dy;
+    var maxX = this.getMaxX() + dx;
+    var maxY = this.getMaxY() + dy;
+    this.childGeometries[0].setXY(minX, minY);
+    this.childGeometries[1].setXY(maxX, maxY);
 }
 
 Envelope.prototype.toString = function() {

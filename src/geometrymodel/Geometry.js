@@ -1,105 +1,134 @@
-function Geometry(){ 
-    this.parent = null;
-	this.envelope = null;
-	this.childGeometries = new Array();
+function Geometry() {
+    this.$parent = null;  // Starts with $ to prevent recursion in angular.equals (geometry.childGeometries[0].$parent == geometry and so on).
+    this.childGeometries = new Array();
+    this.envelope = null;
 }
 
 Geometry.prototype.setParent = function(parent) {
-	if(this.parent == parent) {
-		return;
-	}
-	if(this.parent != null) {
-		var previousParent = this.parent;
-		this.parent = null;
-		previousParent.removeChild(this);
-	}
-	if(parent != null) {
-		this.parent = parent;
-		parent.addChild(this);
-	}
-	this.parent = parent;
-}	
-
-Geometry.prototype.getParent = function() {
-	return this.parent;
+    if (this.$parent == parent) {
+        return;
+    }
+    if (this.$parent != null) {
+        var previousParent = this.$parent;
+        this.$parent = null;
+        previousParent.removeChild(this);
+    }
+    if (parent != null) {
+        this.$parent = parent;
+        parent.addChild(this);
+    }
 }
 
-Geometry.prototype.addChild = function(child) {}
+Geometry.prototype.addChild = function(child) {
+    if (this.isChild(child)) {
+        return;
+    }
+    
+    this.childGeometries.push(child);
+    child.setParent(this);
+}
 
-Geometry.prototype.removeChild = function(child) {}
-
-Geometry.prototype.getChildGeometries = function() {
-	return null;
+Geometry.prototype.removeChild = function(child) {
+    if (!this.isChild(child)) {
+        return;
+    }
+    
+    for (var i = 0; i < this.childGeometries.length; i++) {
+        if (this.childGeometries[i] == child) {
+            this.childGeometries.splice(i, 1);
+            break;
+        }
+    }
+    child.$parent = null;
 }
 
 Geometry.prototype.isChild = function(child) {
-	var _childGeometries = this.getChildGeometries();
-	for(var i = 0; i < _childGeometries.length; ++i) {
-		if(_childGeometries[i] == child){
-			return true;
-		}
-	}
-	return false;
+    for (var i = 0; i < this.childGeometries.length; ++i) {
+        if (this.childGeometries[i] == child) {
+            return true;
+        }
+    }
+    return false;
 }
 
 Geometry.prototype.getPoints = function() {
-	var points = new Array();
-	var _childGeometries = this.getChildGeometries();
-	for(var i = 0; i < _childGeometries.length; ++i) {
-		points = points.concat(_childGeometries[i].getPoints());
-	}
-	return points;
+    var points = new Array();
+    for (var i = 0; i < this.childGeometries.length; ++i) {
+        points = points.concat(this.childGeometries[i].getPoints());
+    }
+    return points;
 }
 
 Geometry.prototype.getEndPoint = function() {
-	return this.points[this.points.length - 1];
+    var points = this.getPoints();
+    return points[points.length - 1];
 }
 
 Geometry.prototype.getCenterPoint = function() {
-	var sumX = 0;
-	var sumY = 0;
-	for(var i = 0; i < this.points.length; ++i) {
-		sumX += this.points[i].x;
-		sumY += this.points[i].y;
-	}
-	var numPoints = this.points.length;
-	return new Point(sumX / numPoints, sumY / numPoints);
+    var points = this.getPoints();
+    var sumX = 0;
+    var sumY = 0;
+    for (var i = 0; i < points.length; ++i) {
+        sumX += points[i].x;
+        sumY += points[i].y;
+    }
+    return new Point(sumX / points.length, sumY / points.length);
+}
+
+Geometry.prototype.getLineStrings = function() {
+    var lineStrings = [];
+    for (var i = 0; i < this.childGeometries.length; i++) {
+        lineStrings = lineStrings.concat(this.childGeometries[i].getLineStrings());
+    }
+    return lineStrings;
 }
 
 Geometry.prototype.getEnvelope = function() {
-	if(this.envelope == null) {
-		var minX = Number.MAX_VALUE;
-		var minY = Number.MAX_VALUE;
-		var maxX = -Number.MAX_VALUE;
-		var maxY = -Number.MAX_VALUE;
-		var points = this.getPoints();
-        for(var i = 0; i < points.length; ++i) {
-			if(minX > points[i].x) {
-				minX = points[i].x;
-			}
-			if(minY > points[i].y) {
-				minY = points[i].y;
-			}
-			if(maxX < points[i].x) {
-				maxX = points[i].x;
-			}
-			if(maxY < points[i].y) {
-				maxY = points[i].y;
-			}
-		}
-		this.envelope = new Envelope(minX, minY, maxX, maxY);
-	}
-	return this.envelope;
+    if (this.envelope == null) {
+        var points = this.getPoints();
+        var minX = Number.MAX_VALUE;
+        var minY = Number.MAX_VALUE;
+        var maxX = -Number.MAX_VALUE;
+        var maxY = -Number.MAX_VALUE;
+        for (var i = 0; i < points.length; ++i) {
+            if (minX > points[i].x) {
+                minX = points[i].x;
+            }
+            if (minY > points[i].y) {
+                minY = points[i].y;
+            }
+            if (maxX < points[i].x) {
+                maxX = points[i].x;
+            }
+            if (maxY < points[i].y) {
+                maxY = points[i].y;
+            }
+        }
+        this.envelope = new Envelope(minX, minY, maxX, maxY);
+    }
+    return this.envelope;
 }
 
 Geometry.prototype.intersects = function(intersectingEnvelope) {
-	return this.envelope.intersects(intersectingEnvelope);
+    return this.getEnvelope().intersects(intersectingEnvelope);
 }
 
 Geometry.prototype.equals = function(geometry) {
-	return false;
+    if (geometry == null) {
+        return false;
+    }
+    if (this.childGeometries.length != geometry.childGeometries.length) {
+        return false;
+    }
+    for (var i = 0; i < this.childGeometries.length; i++) {
+        if (!this.childGeometries[i].equals(geometry.childGeometries[i])) {
+            return false;
+        }
+    }
+    return true;
 }
 
 Geometry.prototype.clone = function() {
-	return null;
+    return null;
 }
+

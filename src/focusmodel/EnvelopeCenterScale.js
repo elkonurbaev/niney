@@ -2,6 +2,7 @@ function EnvelopeCenterScale() {
     this.centerX = -1;
     this.centerY = -1;
     this.scale = -1;
+    
     this.width = -1;
     this.height = -1;
     this.envelope = null;

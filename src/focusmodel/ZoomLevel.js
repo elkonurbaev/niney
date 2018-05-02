@@ -29,18 +29,26 @@ var zoomLevels = [
 ];
 
 function getZoomLevel(scale, round) {
-    var zoomLevel = null;
-    for (var i = 0; i < zoomLevels.length - 1; i++) {
-        zoomLevel = zoomLevels[i];
-        if (!round) {
-            if (scale >= zoomLevel.scale) {
-                return zoomLevel;
-            }
-        } else {
-            if (scale >= (zoomLevel.scale + zoomLevels[i + 1].scale) / 2) {
-                return zoomLevel;
+    if ((round === undefined) || (round === false) || (round == "DOWN")) {
+        for (var i = 0; i < zoomLevels.length - 1; i++) {
+            if (scale >= zoomLevels[i].scale) {
+                return zoomLevels[i];
             }
         }
+        return zoomLevels[zoomLevels.length - 1];
+    } else if ((round === true) || (round == "ROUND")) {
+        for (var i = 0; i < zoomLevels.length - 1; i++) {
+            if (scale >= (zoomLevels[i].scale + zoomLevels[i + 1].scale) / 2) {
+                return zoomLevels[i];
+            }
+        }
+        return zoomLevels[zoomLevels.length - 1];
+    } else {  // round == "UP"
+        for (var i = zoomLevels.length - 1; i > 0; i--) {
+            if (scale <= zoomLevels[i].scale) {
+                return zoomLevels[i];
+            }
+        }
+        return zoomLevels[0];
     }
-    return zoomLevels[zoomLevels.length - 1];
 }

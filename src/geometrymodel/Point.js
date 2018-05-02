@@ -1,78 +1,72 @@
-function Point(x, y) { 
-	this.x = x;
+function Point(x, y) {
+    this.$parent = null;
+    this.childGeometries = new Array();
+    this.envelope = null;
+    
+    this.x = x;
     this.y = y;
 }
 
 Point.prototype = new Geometry();
 Point.prototype.constructor = Point;
 
-Point.prototype.getChildGeometries = function() {
-	return new Array();
-}
+Point.prototype.addChild = function(child) { }
+
+Point.prototype.removeChild = function(child) { }
 
 Point.prototype.getPoints = function() {
-	return new Array(this);
+    return new Array(this);
 }
 
 Point.prototype.getEndPoint = function() {
-	return this;
+    return this;
 }
 
 Point.prototype.getCenterPoint = function() {
-	return new Point(this.x, this.y);
+    return this.clone();
 }
 
 Point.prototype.getEnvelope = function() {
-	return new Envelope(this.x, this.y, this.x, this.y);
+    return new Envelope(this.x, this.y, this.x, this.y);
 }
 
 Point.prototype.intersects = function(intersectingEnvelope) {
-	if (
-		(this.x >= intersectingEnvelope.minX) &&
-		(this.x <= intersectingEnvelope.maxX) &&
-		(this.y >= intersectingEnvelope.minY) &&
-		(this.y <= intersectingEnvelope.maxY)
-	) {
-		return true;
-	}
-	return false;
-}	
-
-Point.prototype.move = function(dx, dy) {
-	this.x += dx;
-	this.y += dy;
+    return (
+        (this.x >= intersectingEnvelope.getMinX()) &&
+        (this.y >= intersectingEnvelope.getMinY()) &&
+        (this.x <= intersectingEnvelope.getMaxX()) &&
+        (this.y <= intersectingEnvelope.getMaxY())
+    );
 }
 
 Point.prototype.equals = function(geometry) {
-	if (!(geometry instanceof Point)) {
-		return false;
-	}
-	if ((this.x == geometry.x) && (this.y == geometry.y)) {
-		return true;
-	}
-	return false;
+    if (!(geometry instanceof Point)) {
+        return false;
+    }
+    if ((this.x == geometry.x) && (this.y == geometry.y)) {
+        return true;
+    }
+    return false;
 }
-		
+
 Point.prototype.clone = function() {
-	return new Point(this.x, this.y);
-}
-
-Point.prototype.getX = function() {
-	return this.x;
-}
-
-Point.prototype.getY = function() {
-	return this.y;
+    return new Point(this.x, this.y);
 }
 
 Point.prototype.getDistance = function(point) {
-	var dx = this.x - point.getX();
-	var dy = this.y - point.getY();
-	var distance = Math.sqrt((dx * dx) + (dy * dy));
-	return distance;
+    var dx = this.x - point.x;
+    var dy = this.y - point.y;
+    var distance = Math.sqrt((dx * dx) + (dy * dy));
+    return distance;
 }
 
-Point.prototype.toString = function() {
-    return "Point(" + this.x + ", " + this.y + ")";
+Point.prototype.setXY = function(x, y) {
+    this.x = x;
+    this.y = y;
+}
+
+Point.prototype.move = function(dx, dy) {
+    this.x += dx;
+    this.y += dy;
 }
 

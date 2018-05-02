@@ -1,7 +1,9 @@
-function Tile(tileX, tileY, scale, tileWidth, tileHeight, url) {
+function Tile(minX, maxY, scale, tileX, tileY, tileWidth, tileHeight, url) {
+    this.minX = minX;
+    this.maxY = maxY;
+    this.scale = scale;
     this.tileX = tileX;
     this.tileY = tileY;
-    this.scale = scale;
     this.tileWidth = tileWidth;
     this.tileHeight = tileHeight;
     this.url = url;
@@ -11,17 +13,23 @@ function Tile(tileX, tileY, scale, tileWidth, tileHeight, url) {
     this.completed = false;
 }
 
-Tile.prototype.reset = function(bounds, centerScale, minX, maxY) {
+Tile.prototype.reset = function(bounds, centerScale) {
+    this.x = centerScale.getPixX(bounds.width, this.minX);
+    this.y = centerScale.getPixY(bounds.height, this.maxY);
+    this.scaling = this.scale / centerScale.scale;
+}
+
+Tile.prototype.resetWithPoint = function(bounds, centerScale, minX, maxY) {
     this.x = centerScale.getPixX(bounds.width, minX);
     this.y = centerScale.getPixY(bounds.height, maxY);
     this.scaling = this.scale / centerScale.scale;
 }
 
 Tile.prototype.resetWithEnvelope = function(bounds, centerScale, envelope) {
-    var minPixX = centerScale.getPixX(bounds.width, envelope.minX);
-    var minPixY = centerScale.getPixY(bounds.height, envelope.maxY);
-    var maxPixX = centerScale.getPixX(bounds.width, envelope.maxX);
-    var maxPixY = centerScale.getPixY(bounds.height, envelope.minY);
+    var minPixX = centerScale.getPixX(bounds.width, envelope.getMinX());
+    var minPixY = centerScale.getPixY(bounds.height, envelope.getMaxY());
+    var maxPixX = centerScale.getPixX(bounds.width, envelope.getMaxX());
+    //var maxPixY = centerScale.getPixY(bounds.height, envelope.getMinY());
     
     this.x = minPixX;
     this.y = minPixY;

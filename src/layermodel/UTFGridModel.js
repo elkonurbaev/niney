@@ -8,6 +8,7 @@ function UTFGridModel() {
     this.minX = -20037508.3427892;
     this.maxY = 20037508.3427892;
     this.tiles = [];
+    this.tileIndex = {};
     
     this.resolution = 4;
 }

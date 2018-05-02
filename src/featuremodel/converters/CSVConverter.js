@@ -1,4 +1,4 @@
-function CSVConverter() {}
+function CSVConverter() { }
 
 CSVConverter.prototype.csvToFeatures = function(csv, simple, fieldSeparator, textDelimiter, featureType){
 	var features = new Array();

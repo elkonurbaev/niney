@@ -41,10 +41,10 @@ WMSModel.prototype.load = function() {
     }
     
     var envelope = this.centerScale.toEnvelope(this.bounds.width, this.bounds.height);
-    var minX = envelope.minX;
-    var minY = envelope.minY;
-    var maxX = envelope.maxX;
-    var maxY = envelope.maxY;
+    var minX = envelope.getMinX();
+    var minY = envelope.getMinY();
+    var maxX = envelope.getMaxX();
+    var maxY = envelope.getMaxY();
     
     if ((minX > 20000000) || (minY > 20000000) || (maxX < -20000000) || (maxY < -20000000)) {
         return;
@@ -68,17 +68,15 @@ WMSModel.prototype.load = function() {
         url += "&STYLES=";
     } else {
         var sldURL = this.layer.styleURL;
-        sldURL += "?layer=" + this.layer.name;
-        
-        var filterModels = this.layer.filterModels;
-        var urlFilter = URLFilterConverter.filterModelsToURLFilter(filterModels);
+        if (this.layer.name != null) {
+            sldURL += "?layer=" + this.layer.name;
+        }
+        var urlFilter = URLFilterConverter.filterModelsToURLFilter(this.layer.filterModels);
         if (urlFilter.length > 0) {
             sldURL += "&filter=" + urlFilter;
         }
-        
-        var classification = this.layer.classification;
-        if (classification != null) {
-            sldURL += "&classification=" + encodeURIComponent(URLClassificationConverter.classificationToURLClassification(classification));
+        if (this.layer.classification != null) {
+            sldURL += "&classification=" + encodeURIComponent(URLClassificationConverter.classificationToURLClassification(this.layer.classification));
             if ((urlFilter.length == 0) || (!this.autoClassification)) {
                 sldURL += "::noFilter";
             }
@@ -98,9 +96,9 @@ WMSModel.prototype.load = function() {
     });
     
     if ((this.tile == null) || (this.tile.url != url)) {
-        this.tile = new Tile(minX, maxY, this.centerScale.scale, tileWidth, tileHeight, url);
+        this.tile = new Tile(minX, maxY, this.centerScale.scale, 1, 1, tileWidth, tileHeight, url);
     }
-    this.tile.reset(this.bounds, this.animationCenterScale, minX, maxY);
+    this.tile.reset(this.bounds, this.animationCenterScale);
 }
 
 WMSModel.prototype.resetLoaders = function() {
@@ -114,6 +112,6 @@ WMSModel.prototype.resetLoaders = function() {
         return;
     }
     
-    this.tile.reset(this.bounds, this.animationCenterScale, this.tile.tileX, this.tile.tileY);
+    this.tile.reset(this.bounds, this.animationCenterScale);
 }
 

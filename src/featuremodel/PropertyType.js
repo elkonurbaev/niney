@@ -1,4 +1,4 @@
-function PropertyType() {}
+function PropertyType() { }
 
 PropertyType.prototype.BOOLEAN = "boolean";
 PropertyType.prototype.DOUBLE = "double";
