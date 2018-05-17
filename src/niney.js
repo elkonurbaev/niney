@@ -5,7 +5,7 @@
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
-/* Last merge : Wed May 2 00:07:00 CEST 2018  */
+/* Last merge : Thu May 17 00:17:00 CEST 2018  */
 
 /* Merging order :
 
@@ -2188,8 +2188,26 @@ angular.module("niney", ["monospaced.mousewheel"]).
     factory("defaultEnvelopeModel", function() {
         return new EnvelopeCenterScale();
     }).
+    factory("defaultAnimationEnvelopeModel", function() {
+        return new EnvelopeCenterScale();
+    }).
     factory("defaultTilesLayer", function() {
         return new Layer("Tiles");
+    }).
+    run(function($rootScope, defaultBoundsModel, defaultFocusModel, defaultEnvelopeModel, defaultAnimationEnvelopeModel) {
+        $rootScope.defaultBoundsModel = defaultBoundsModel;
+        $rootScope.defaultFocusModel = defaultFocusModel;
+        
+        $rootScope.$watch("defaultBoundsModel.bounds", function(val) {
+            defaultEnvelopeModel.setBounds(val);
+            defaultAnimationEnvelopeModel.setBounds(val);
+        });
+        $rootScope.$watch("defaultFocusModel.centerScale", function(val) {
+            defaultEnvelopeModel.setCenterScale(val);
+        });
+        $rootScope.$watch("defaultFocusModel.animationCenterScale", function(val) {
+            defaultAnimationEnvelopeModel.setCenterScale(val);
+        });
     }).
     directive("legend", function() {
         return {
@@ -2201,7 +2219,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
             }
         };
     }).
-    directive("map", ["$document", "heartbeatTimer", "defaultBoundsModel", "defaultFocusModel", "defaultEnvelopeModel", function($document, heartbeatTimer, defaultBoundsModel, defaultFocusModel, defaultEnvelopeModel) {
+    directive("map", ["$document", "heartbeatTimer", "defaultBoundsModel", "defaultFocusModel", "defaultAnimationEnvelopeModel", function($document, heartbeatTimer, defaultBoundsModel, defaultFocusModel, defaultAnimationEnvelopeModel) {
         return {
             template: '<div ng-transclude msd-wheel="mouseWheelHandler($event, $delta, $deltaX, $deltaY)" class="mapviewer"></div>',
             restrict: "EA",
@@ -2234,14 +2252,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
                 });
                 $scope.$watch("envelopeModel", function(val) {
                     if (val == null) {
-                        $scope.envelopeModel = defaultEnvelopeModel;
-                    } else {
-                        $scope.$watch("boundsModel.bounds", function(val1) {
-                            val.setBounds(val1);
-                        });
-                        $scope.$watch("focusModel.animationCenterScale", function(val1) {
-                            val.setCenterScale(val1);
-                        });
+                        $scope.envelopeModel = defaultAnimationEnvelopeModel;
                     }
                 });
                 
