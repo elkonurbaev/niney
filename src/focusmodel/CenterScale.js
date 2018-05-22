@@ -22,6 +22,10 @@ CenterScale.prototype.clone = function() {
     return new CenterScale(this.centerX, this.centerY, this.scale);
 }
 
+CenterScale.prototype.subtract = function(centerScale) {
+    return new CenterScale(this.centerX - centerScale.centerX, this.centerY - centerScale.centerY, this.scale - centerScale.scale);
+}
+
 CenterScale.prototype.toEnvelope = function(width, height) {
     var numHorzCoords = width * this.coordPixFactor * this.scale;
     var numVertCoords = height * this.coordPixFactor * this.scale;
@@ -30,6 +34,16 @@ CenterScale.prototype.toEnvelope = function(width, height) {
     var maxX = minX + numHorzCoords;
     var maxY = minY + numVertCoords;
     return new Envelope(minX, minY, maxX, maxY);
+}
+
+CenterScale.prototype.toOffset = function(pixXOffset, pixYOffset) {
+    var a = this.coordPixFactor * this.scale;
+    return new CenterScale(this.centerX + pixXOffset * a, this.centerY - pixYOffset * a, this.scale);
+}
+
+CenterScale.prototype.fromOffset = function(pixXOffset, pixYOffset) {
+    var a = this.coordPixFactor * this.scale;
+    return new CenterScale(this.centerX - pixXOffset * a, this.centerY + pixYOffset * a, this.scale);
 }
 
 CenterScale.prototype.getNumWorldCoords = function(numPixs) {

@@ -13,6 +13,7 @@ featuremodel/FeatureModel.js
 featuremodel/FeatureType.js
 featuremodel/Property.js
 featuremodel/PropertyType.js
+featuremodel/commands/EmptyFeatureCommand.js
 featuremodel/commands/SelectFeatureCommand.js
 featuremodel/commands/ToggleSelectFeatureCommand.js
 featuremodel/commands/ToURLFeatureCommand.js

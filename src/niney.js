@@ -5,7 +5,7 @@
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
-/* Last merge : Thu May 17 00:17:00 CEST 2018  */
+/* Last merge : Tue May 22 00:27:00 CEST 2018  */
 
 /* Merging order :
 
@@ -24,6 +24,7 @@
 - featuremodel/FeatureType.js
 - featuremodel/Property.js
 - featuremodel/PropertyType.js
+- featuremodel/commands/EmptyFeatureCommand.js
 - featuremodel/commands/SelectFeatureCommand.js
 - featuremodel/commands/ToggleSelectFeatureCommand.js
 - featuremodel/commands/ToURLFeatureCommand.js
@@ -115,6 +116,54 @@ Timer.prototype.tick = function() {
     } else {
         this.timerHandler.apply();
     }
+};
+
+function AnimationTimer(duration) {
+    this.delay = -1;
+    this.numRepeats = -1;
+    this.currentCount = 0;  // currentTime - startTime
+    this.scope = null;
+    this.interval = -1;
+    this.timerHandler = function() { };
+    
+    this.duration = duration;
+    this.startTime = -1;
+}
+
+AnimationTimer.prototype = new Timer();
+AnimationTimer.prototype.constructor = AnimationTimer;
+
+AnimationTimer.prototype.start = function() {
+    if (this.interval == -1) {
+        this.startTime = performance.now();
+        var timer = this;
+        this.interval = window.requestAnimationFrame(preTick);
+        
+        function preTick(currentTime) {
+            timer.currentCount = currentTime - timer.startTime;
+            if (timer.currentCount > timer.duration) {
+                timer.currentCount = timer.duration;
+                timer.tick();
+                timer.stop();
+            } else {
+                timer.tick();
+                timer.interval = window.requestAnimationFrame(preTick);
+            }
+        }
+    }
+};
+
+AnimationTimer.prototype.stop = function() {
+    if (this.interval != -1) {
+        window.cancelAnimationFrame(this.interval);
+        this.interval = -1;
+        this.startTime = -1;
+        this.currentCount = 0;
+    }
+};
+
+AnimationTimer.prototype.reset = function() {
+    this.stop();
 };
 
 function PanSpeedTimer(delay, numRepeats) {
@@ -986,6 +1035,21 @@ PropertyType.prototype.GEOMETRY = "geometry";
 
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* Merging js: featuremodel/commands/EmptyFeatureCommand.js begins */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+
+function EmptyFeatureCommand() {
+}
+
+EmptyFeatureCommand.prototype.perform = function() {
+}
+
+var defaultFeatureCommands = [new EmptyFeatureCommand(), new EmptyFeatureCommand(), new EmptyFeatureCommand()];
+
+
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 /* Merging js: featuremodel/commands/SelectFeatureCommand.js begins */
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -1243,6 +1307,10 @@ CenterScale.prototype.clone = function() {
     return new CenterScale(this.centerX, this.centerY, this.scale);
 }
 
+CenterScale.prototype.subtract = function(centerScale) {
+    return new CenterScale(this.centerX - centerScale.centerX, this.centerY - centerScale.centerY, this.scale - centerScale.scale);
+}
+
 CenterScale.prototype.toEnvelope = function(width, height) {
     var numHorzCoords = width * this.coordPixFactor * this.scale;
     var numVertCoords = height * this.coordPixFactor * this.scale;
@@ -1251,6 +1319,16 @@ CenterScale.prototype.toEnvelope = function(width, height) {
     var maxX = minX + numHorzCoords;
     var maxY = minY + numVertCoords;
     return new Envelope(minX, minY, maxX, maxY);
+}
+
+CenterScale.prototype.toOffset = function(pixXOffset, pixYOffset) {
+    var a = this.coordPixFactor * this.scale;
+    return new CenterScale(this.centerX + pixXOffset * a, this.centerY - pixYOffset * a, this.scale);
+}
+
+CenterScale.prototype.fromOffset = function(pixXOffset, pixYOffset) {
+    var a = this.coordPixFactor * this.scale;
+    return new CenterScale(this.centerX - pixXOffset * a, this.centerY + pixYOffset * a, this.scale);
 }
 
 CenterScale.prototype.getNumWorldCoords = function(numPixs) {
@@ -1297,85 +1375,89 @@ CenterScale.prototype.toString = function() {
 
 
 function FocusModel() {
-    this.animationTimer = new Timer(50, 20);
+    this.animationTimer = new AnimationTimer(1000);
     this.incubationTimer = new Timer(1000, 1);
     this.maxEnvelope = new Envelope(-20000000, -20000000, 20000000, 20000000);
     this.minScale = 0;
     this.maxScale = 443744272.72414012;
     this.scaleToZoomLevels = false;
     this.centerScale = null;
-    this.animationCenterScales = [];
+    this.animationBase = null;
     this.animationCenterScale = null;
     this.incubationCenterScale = null;
-}
-
-FocusModel.prototype.bazoo = function(x, y, pixXOffset, pixYOffset) {
-    if (!this.animationTimer.isRunning() && !this.incubationTimer.isRunning()) {
-        return;
-    }
     
-    var cs = null;
-    if (this.animationTimer.isRunning()) {
-        if (this.animationCenterScales[this.animationTimer.currentCount].scale == this.centerScale.scale) {
-            this.animationTimer.reset();
-            animationCenterScales = [];
-            cs = this.animationCenterScale;
-        } else {
-            var scale = this.centerScale.scale;
-            var centerX = x - (pixXOffset * 0.000352778 * scale);
-            var centerY = y + (pixYOffset * 0.000352778 * scale);
-            cs = this.centercon(new CenterScale(centerX, centerY, scale));
-            this.setAnimationCenterScales(cs);
-        }
-        this.centerScale = cs;
-    } else {  // incubationTimer.isRunning()
-        cs = this.centerScale;  // == animationCenterScale
-    }
-    this.setIncubationCenterScale(cs);
+    var focusModel = this;
+    this.animationTimer.timerHandler = function() {
+        focusModel.animationCenterScale = focusModel.getAnimationCenterScale();
+    };
+    this.incubationTimer.timerHandler = function() {
+        focusModel.incubationCenterScale = focusModel.centerScale;
+    };
 }
 
-FocusModel.prototype.pan = function(dx, dy) {
-    var cs = null;
+// Click or touch while zooming/panning.
+FocusModel.prototype.grab = function(x, y, pixXOffset, pixYOffset) {
     if (this.animationTimer.isRunning()) {
-        if (this.animationCenterScales[this.animationTimer.currentCount].scale == this.centerScale.scale) {
+        if (this.animationCenterScale.scale == this.centerScale.scale) {
             this.animationTimer.reset();
-            animationCenterScales = [];
-            cs = this.centercon(new CenterScale(this.animationCenterScale.centerX + dx, this.animationCenterScale.centerY + dy, this.animationCenterScale.scale));
-            this.animationCenterScale = cs;
+            this.centerScale = this.animationCenterScale;
         } else {
-            cs = this.centercon(new CenterScale(this.centerScale.centerX + dx, this.centerScale.centerY + dy, this.centerScale.scale));
-            this.setAnimationCenterScales(cs);
+            this.centerScale = this.centercon(new CenterScale(x, y, this.centerScale.scale).fromOffset(pixXOffset, pixYOffset));
+            this.animationBase = {
+                centerScale: new CenterScale(x, y, this.animationBase.centerScale.scale),
+                pixXOffset: pixXOffset,
+                pixYOffset: pixYOffset
+            };
+        }
+        this.setIncubationCenterScale();
+    }
+}
+
+// Pan with mouse move.
+FocusModel.prototype.pan = function(dx, dy, pixXOffset, pixYOffset) {
+    if (this.animationTimer.isRunning()) {
+        if (this.animationCenterScale.scale == this.centerScale.scale) {
+            this.animationTimer.reset();
+            this.centerScale = this.animationCenterScale = this.centercon(
+                new CenterScale(this.animationCenterScale.centerX + dx, this.animationCenterScale.centerY + dy, this.animationCenterScale.scale)
+            );
+        } else {
+            this.centerScale = this.centercon(
+                new CenterScale(this.centerScale.centerX + dx, this.centerScale.centerY + dy, this.centerScale.scale)
+            );
+            this.animationBase.pixXOffset = pixXOffset;
+            this.animationBase.pixYOffset = pixYOffset;
         }
     } else {
-        cs = this.centercon(new CenterScale(this.centerScale.centerX + dx, this.centerScale.centerY + dy, this.centerScale.scale));
-        this.animationCenterScale = cs;
+        this.centerScale = this.animationCenterScale = this.centercon(
+            new CenterScale(this.centerScale.centerX + dx, this.centerScale.centerY + dy, this.centerScale.scale)
+        );
     }
-    this.centerScale = cs;
-    this.setIncubationCenterScale(cs);
+    this.setIncubationCenterScale();
 }
 
-FocusModel.prototype.sawoo = function(cs, pixXOffset, pixYOffset, animate) {
-    cs = this.scalecon(cs, animate);
-    var scale = cs.scale;
-    var centerX = cs.centerX - (pixXOffset * 0.000352778 * scale);
-    var centerY = cs.centerY + (pixYOffset * 0.000352778 * scale);
-    cs = this.centercon(new CenterScale(centerX, centerY, scale));
-    
-    if (this.centerScale.equals(cs)) {
+// Zoom with mouse wheel (animate == true) or pan/zoom with touch move/pinch (animate == false).
+FocusModel.prototype.zoom = function(centerScale, pixXOffset, pixYOffset, animate) {
+    centerScale = this.scalecon(centerScale, animate);
+    if (animate && (this.animationCenterScale.scale == centerScale.scale)) {
         return;
     }
+    if (!animate && (this.animationTimer.isRunning())) {
+        this.animationTimer.reset();
+    }
     
+    this.centerScale = this.centercon(centerScale.fromOffset(pixXOffset, pixYOffset));
     if (animate) {
-        this.setAnimationCenterScale(cs);
+        this.animationBase = {
+            centerScale: new CenterScale(centerScale.centerX, centerScale.centerY, this.animationCenterScale.scale),
+            pixXOffset: pixXOffset,
+            pixYOffset: pixYOffset
+        };
+        this.setAnimationCenterScale();
     } else {
-        if (this.animationTimer.isRunning()) {
-            this.animationTimer.reset();
-            animationCenterScales = [];
-        }
-        this.animationCenterScale = cs;
+        this.animationCenterScale = this.centerScale;
     }
-    this.centerScale = cs;
-    this.setIncubationCenterScale(cs);
+    this.setIncubationCenterScale();
 }
 
 FocusModel.prototype.setCenterScale = function(centerScale, roundToZoomLevels) {
@@ -1389,6 +1471,7 @@ FocusModel.prototype.setCenterScale = function(centerScale, roundToZoomLevels) {
     centerScale = this.centercon(this.scalecon(centerScale, roundToZoomLevels));
     if (this.centerScale == null) {
         this.centerScale = centerScale;
+        this.animationBase = {centerScale: centerScale, pixXOffset: 0, pixYOffset: 0};
         this.animationCenterScale = centerScale;
         this.incubationCenterScale = centerScale;
         return;
@@ -1398,52 +1481,33 @@ FocusModel.prototype.setCenterScale = function(centerScale, roundToZoomLevels) {
     }
     
     this.centerScale = centerScale;
-    this.setAnimationCenterScale(centerScale);
-    this.setIncubationCenterScale(centerScale);
+    this.animationBase = {centerScale: this.animationCenterScale, pixXOffset: 0, pixYOffset: 0};
+    this.setAnimationCenterScale();
+    this.setIncubationCenterScale();
 }
 
-FocusModel.prototype.setAnimationCenterScale = function(animationCenterScale) {
+FocusModel.prototype.setAnimationCenterScale = function() {
     this.animationTimer.reset();
-    var focusModel = this;
-    this.animationTimer.timerHandler = function() {
-        focusModel.animationCenterScale = focusModel.animationCenterScales[focusModel.animationTimer.currentCount];
-    };
-    
-    this.setAnimationCenterScales(animationCenterScale);
-    this.animationCenterScale = this.animationCenterScales[0];
-    
     this.animationTimer.start();
 }
 
-FocusModel.prototype.setIncubationCenterScale = function(incubationCenterScale) {
+FocusModel.prototype.setIncubationCenterScale = function() {
     this.incubationTimer.reset();
-    var focusModel = this;
-    this.incubationTimer.timerHandler = function() {
-        focusModel.incubationCenterScale = incubationCenterScale;
-    };
-    
     this.incubationTimer.start();
 }
 
-FocusModel.prototype.setAnimationCenterScales = function(centerScale) {
-    var animationCenterScales = new Array(this.animationTimer.numRepeats + 1);
-    var numRemaining = this.animationTimer.numRepeats - this.animationTimer.currentCount;
-    var dCenterX = (centerScale.centerX - this.animationCenterScale.centerX) / numRemaining;
-    var dCenterY = (centerScale.centerY - this.animationCenterScale.centerY) / numRemaining;
-    var dScale = (centerScale.scale - this.animationCenterScale.scale) / numRemaining;
-    var m = -1;
+FocusModel.prototype.getAnimationCenterScale = function() {
+    var pixXOffset = this.animationBase.pixXOffset;
+    var pixYOffset = this.animationBase.pixYOffset;
+    var base = this.animationBase.centerScale;
+    var delta = this.centerScale.toOffset(pixXOffset, pixYOffset).subtract(base);
+    var progress = this.animationTimer.currentCount / this.animationTimer.duration;
     
-    for (var i = this.animationTimer.currentCount; i < this.animationTimer.numRepeats; i++) {
-        m = i - this.animationTimer.currentCount;
-        animationCenterScales[i] = new CenterScale(
-            this.animationCenterScale.centerX + (-dCenterX / numRemaining * m * m + 2 * dCenterX * m),
-            this.animationCenterScale.centerY + (-dCenterY / numRemaining * m * m + 2 * dCenterY * m),
-            this.animationCenterScale.scale + (-dScale / numRemaining * m * m + 2 * dScale * m)
-        );
-    }
-    animationCenterScales[this.animationTimer.numRepeats] = centerScale;
-    
-    this.animationCenterScales = animationCenterScales;
+    return new CenterScale(
+        base.centerX + (-delta.centerX * progress * progress + 2 * delta.centerX * progress),
+        base.centerY + (-delta.centerY * progress * progress + 2 * delta.centerY * progress),
+        base.scale + (-delta.scale * progress * progress + 2 * delta.scale * progress)
+    ).fromOffset(pixXOffset, pixYOffset);
 }
 
 // Center-related conditions. Relevant for zooming and panning.
@@ -2229,7 +2293,11 @@ angular.module("niney", ["monospaced.mousewheel"]).
                 boundsModel: "=?boundsmodel",
                 focusModel: "=?focusmodel",
                 envelopeModel: "=?envelopemodel",
-                mouseWheelAction: "@mousewheelaction"
+                mouseWheelAction: "@mousewheelaction",
+                tapFunction: "=nTap",
+                pressFunction: "=nPress",
+                releaseFunction: "=nRelease",
+                mouseMoveFunction: "=nMouseMove"
             },
             controller: ["$scope", function($scope) {
                 this.scope = $scope;
@@ -2262,22 +2330,22 @@ angular.module("niney", ["monospaced.mousewheel"]).
                 $scope.mouseWheelHandler = function(mouseEvent, delta, deltaX, deltaY) {
                     mouseEvent.preventDefault();
                     
-                    var bounds = $scope.boundsModel.bounds;
-                    var width = bounds.width;
-                    var height = bounds.height;
+                    var width = $scope.boundsModel.bounds.width;
+                    var height = $scope.boundsModel.bounds.height;
                     
                     var cs = $scope.focusModel.centerScale;
+                    var acs = $scope.focusModel.animationCenterScale;
                     
                     if ($scope.mouseWheelAction == "HORIZONTAL_PAN") {
                         if (delta > 0) {
                             $scope.focusModel.setCenterScale(new CenterScale(
-                                cs.centerX - cs.getNumWorldCoords(width / 2),
+                                cs.centerX - acs.getNumWorldCoords(width / 2),
                                 cs.centerY,
                                 cs.scale
                             ));
                         } else {
                             $scope.focusModel.setCenterScale(new CenterScale(
-                                cs.centerX + cs.getNumWorldCoords(width / 2),
+                                cs.centerX + acs.getNumWorldCoords(width / 2),
                                 cs.centerY,
                                 cs.scale
                             ));
@@ -2286,13 +2354,13 @@ angular.module("niney", ["monospaced.mousewheel"]).
                         if (delta > 0) {
                             $scope.focusModel.setCenterScale(new CenterScale(
                                 cs.centerX,
-                                cs.centerY + cs.getNumWorldCoords(height / 2),
+                                cs.centerY + acs.getNumWorldCoords(height / 2),
                                 cs.scale
                             ));
                         } else {
                             $scope.focusModel.setCenterScale(new CenterScale(
                                 cs.centerX,
-                                cs.centerY - cs.getNumWorldCoords(height / 2),
+                                cs.centerY - acs.getNumWorldCoords(height / 2),
                                 cs.scale
                             ));
                         }
@@ -2305,8 +2373,8 @@ angular.module("niney", ["monospaced.mousewheel"]).
                             var mouseX = mouseEvent.originalEvent.clientX - $element[0].getBoundingClientRect().left;
                             var mouseY = mouseEvent.originalEvent.clientY - $element[0].getBoundingClientRect().top;
                             
-                            var worldX = cs.getWorldX(width, mouseX);
-                            var worldY = cs.getWorldY(height, mouseY);
+                            var worldX = acs.getWorldX(width, mouseX);
+                            var worldY = acs.getWorldY(height, mouseY);
                             var scale = cs.scale;
                             
                             if (!$scope.focusModel.scaleToZoomLevels) {
@@ -2325,7 +2393,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
                             var pixXOffset = mouseX - (width / 2);
                             var pixYOffset = mouseY - (height / 2);
                             
-                            $scope.focusModel.sawoo(new CenterScale(worldX, worldY, scale), pixXOffset, pixYOffset, true);
+                            $scope.focusModel.zoom(new CenterScale(worldX, worldY, scale), pixXOffset, pixYOffset, true);
                         }
                     }
                 };
@@ -2333,6 +2401,8 @@ angular.module("niney", ["monospaced.mousewheel"]).
                 $element.on("mousedown", pressHandler);
                 $element.on("touchstart", pressHandler);
                 
+                var pressX = -1;
+                var pressY = -1;
                 var panTimer = new PanSpeedTimer(50, -1); // Role of timer is 2-fold: measure pan speed, but also apply digest cycle every tick.
                 panTimer.scope = $scope;
                 
@@ -2344,12 +2414,11 @@ angular.module("niney", ["monospaced.mousewheel"]).
                     event.preventDefault();
                     decorateTouchEvent(event, false);
                     
-                    var pressX = event.clientX - $element[0].getBoundingClientRect().left;
-                    var pressY = event.clientY - $element[0].getBoundingClientRect().top;
+                    pressX = event.clientX - $element[0].getBoundingClientRect().left;
+                    pressY = event.clientY - $element[0].getBoundingClientRect().top;
                     
-                    var bounds = $scope.boundsModel.bounds;
-                    var width = bounds.width;
-                    var height = bounds.height;
+                    var width = $scope.boundsModel.bounds.width;
+                    var height = $scope.boundsModel.bounds.height;
                     
                     var cs = $scope.focusModel.animationCenterScale;
                     var worldX = cs.getWorldX(width, pressX);
@@ -2358,7 +2427,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
                     var pixXOffset = pressX - (width / 2);
                     var pixYOffset = pressY - (height / 2);
                     
-                    $scope.focusModel.bazoo(worldX, worldY, pixXOffset, pixYOffset);
+                    $scope.focusModel.grab(worldX, worldY, pixXOffset, pixYOffset);
                     
                     if (event.type == "mousedown") {
                         $document.on("mousemove", mouseMoveHandler);
@@ -2371,18 +2440,41 @@ angular.module("niney", ["monospaced.mousewheel"]).
                     
                     panTimer.panEvent = event;
                     panTimer.start();
+                    
+                    if ($scope.pressFunction != null) {
+                        $scope.$apply($scope.pressFunction(worldX, worldY));
+                    }
                 };
                 
                 function mouseMoveHandler(mouseEvent) {
                     mouseEvent.preventDefault();
                     
+                    var mouseX = mouseEvent.clientX - $element[0].getBoundingClientRect().left;
+                    var mouseY = mouseEvent.clientY - $element[0].getBoundingClientRect().top;
+                    
+                    var width = $scope.boundsModel.bounds.width;
+                    var height = $scope.boundsModel.bounds.height;
+                    
                     var cs = $scope.focusModel.animationCenterScale;
-                    var dx = cs.getNumWorldCoords(mouseEvent.clientX - panTimer.panEvent.clientX);
-                    var dy = cs.getNumWorldCoords(mouseEvent.clientY - panTimer.panEvent.clientY);
                     
-                    $scope.focusModel.pan(-dx, dy);
-                    
-                    panTimer.panEvent = mouseEvent;
+                    if (panTimer.panEvent != null) {
+                        var dx = cs.getNumWorldCoords(mouseEvent.clientX - panTimer.panEvent.clientX);
+                        var dy = cs.getNumWorldCoords(mouseEvent.clientY - panTimer.panEvent.clientY);
+                        
+                        var pixXOffset = mouseX - (width / 2);
+                        var pixYOffset = mouseY - (height / 2);
+                        
+                        $scope.focusModel.pan(-dx, dy, pixXOffset, pixYOffset);
+                        
+                        panTimer.panEvent = mouseEvent;
+                    } else {
+/*                      var worldX = cs.getWorldX(width, mouseX);
+                        var worldY = cs.getWorldY(height, mouseY);
+                        
+                        if ($scope.mouseMoveFunction != null) {
+                            $scope.$apply($scope.mouseMoveFunction(worldX, worldY));
+                        }*/
+                    }
                 }
                 
                 function touchMoveHandler(touchEvent) {
@@ -2393,9 +2485,8 @@ angular.module("niney", ["monospaced.mousewheel"]).
                         var pinchX = touchEvent.clientX - $element[0].getBoundingClientRect().left;
                         var pinchY = touchEvent.clientY - $element[0].getBoundingClientRect().top;
                         
-                        var bounds = $scope.boundsModel.bounds;
-                        var width = bounds.width;
-                        var height = bounds.height;
+                        var width = $scope.boundsModel.bounds.width;
+                        var height = $scope.boundsModel.bounds.height;
                         
                         var cs = $scope.focusModel.animationCenterScale;
                         var worldX = cs.getWorldX(width, pinchX);
@@ -2405,7 +2496,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
                         var pixXOffset = pinchX + (touchEvent.clientX - panTimer.panEvent.clientX) - (width / 2);
                         var pixYOffset = pinchY + (touchEvent.clientY - panTimer.panEvent.clientY) - (height / 2);
                         
-                        $scope.focusModel.sawoo(new CenterScale(worldX, worldY, scale), pixXOffset, pixYOffset, false);
+                        $scope.focusModel.zoom(new CenterScale(worldX, worldY, scale), pixXOffset, pixYOffset, false);
                     }
                     
                     panTimer.panEvent = touchEvent;
@@ -2416,11 +2507,22 @@ angular.module("niney", ["monospaced.mousewheel"]).
                         return;
                     }
                     
+                    var releaseX = event.clientX - $element[0].getBoundingClientRect().left;
+                    var releaseY = event.clientY - $element[0].getBoundingClientRect().top;
+                    
+                    var width = $scope.boundsModel.bounds.width;
+                    var height = $scope.boundsModel.bounds.height;
+                    
+                    var cs = $scope.focusModel.animationCenterScale;
+                    var worldX = cs.getWorldX(width, releaseX);
+                    var worldY = cs.getWorldY(height, releaseY);
+                    
+                    var tolerance = 0;
+                    
                     var speed = panTimer.resetAndGetSpeed();
                     if ((speed.h == 0) || (speed.v == 0)) {
                         panTimer.tick();
                     } else {
-                        var cs = $scope.focusModel.animationCenterScale;
                         $scope.focusModel.setCenterScale(new CenterScale(
                             cs.centerX - cs.getNumWorldCoords(speed.h) * 1000 / 4,  // * animationDuration / 2 ^ deceleration
                             cs.centerY + cs.getNumWorldCoords(speed.v) * 1000 / 4,
@@ -2435,9 +2537,20 @@ angular.module("niney", ["monospaced.mousewheel"]).
                         $document.off("touchmove", touchMoveHandler);
                         $document.off("touchend", releaseHandler);
                         $document.off("touchcancel", releaseHandler);
+                        
+                        tolerance = 100;
                     }
                     
                     panTimer.panEvent = null;
+                    
+                    if ($scope.releaseFunction != null) {
+                        $scope.$apply($scope.releaseFunction(worldX, worldY));
+                    }
+                    if (($scope.tapFunction != null) && (
+                        (pressX - releaseX) * (pressX - releaseX) + (pressY - releaseY) * (pressY - releaseY) <= tolerance * tolerance)
+                    ) {
+                        $scope.$apply($scope.tapFunction(worldX, worldY));
+                    }
                 }
             }
         };
@@ -2589,7 +2702,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
                 layer: "=layer",
                 featureModel: "=featuremodel",
                 selectionModel: "=selectionmodel",
-                featureCommands: "=featurecommands"
+                featureCommands: "=?featurecommands"
             },
             controller: ["$scope", function($scope) {
                 this.scope = $scope;
@@ -2767,7 +2880,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
                 $parentCtrl.scope.$watch("envelopeModel", function(val) { $scope.envelopeModel = val; });
                 $parentCtrl.scope.$watch("featureModel", function(val) { $scope.featureModel = val; });
                 $parentCtrl.scope.$watch("selectionModel", function(val) { $scope.selectionModel = val; });
-                $parentCtrl.scope.$watch("featureCommands", function(val) { $scope.featureCommands = val; });
+                $parentCtrl.scope.$watch("featureCommands", function(val) { $scope.featureCommands = val || defaultFeatureCommands; });
                 
                 $scope.filteredFeatures = [];
                 
@@ -2850,7 +2963,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
                 $parentCtrl.scope.$watch("envelopeModel", function(val) { $scope.envelopeModel = val; });
                 $parentCtrl.scope.$watch("featureModel", function(val) { $scope.featureModel = val; });
                 $parentCtrl.scope.$watch("selectionModel", function(val) { $scope.selectionModel = val; });
-                $parentCtrl.scope.$watch("featureCommands", function(val) { $scope.featureCommands = val; });
+                $parentCtrl.scope.$watch("featureCommands", function(val) { $scope.featureCommands = val || defaultFeatureCommands; });
                 
                 $scope.filteredFeatures = [];
                 
@@ -2923,7 +3036,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
                 $parentCtrl.scope.$watch("envelopeModel", function(val) { $scope.envelopeModel = val; });
                 $parentCtrl.scope.$watch("featureModel", function(val) { $scope.featureModel = val; });
                 $parentCtrl.scope.$watch("selectionModel", function(val) { $scope.selectionModel = val; });
-                $parentCtrl.scope.$watch("featureCommands", function(val) { $scope.featureCommands = val; });
+                $parentCtrl.scope.$watch("featureCommands", function(val) { $scope.featureCommands = val || defaultFeatureCommands; });
                 
                 $scope.$watch("MAX_SCALE", function(val) { $scope.maxScale = angular.isDefined(val) ? Number(val) : Number.MAX_VALUE; });
                 
