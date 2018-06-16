@@ -1,11 +1,10 @@
 function TileModel() {
     this.bounds = null;
     this.layer = null;
+    this.srs = null;
     this.centerScale = null;
     this.tileWidth = 256;
     this.tileHeight = 256;
-    this.minX = -285401.92;
-    this.maxY = 903401.9199999999;
     this.tiles = [];
     this.tileIndex = {};
     this.ctx = null;  // Used only for tile models that draw on a canvas.
@@ -21,15 +20,15 @@ TileModel.prototype.setBounds = function(bounds) {
     this.resetLoaders();
 }
 
-TileModel.prototype.setCenterScale = function(centerScale) {
-    this.centerScale = centerScale;
-    this.resetLoaders();
-}
-
 TileModel.prototype.setLayer = function(layer) {
     this.layer = layer;
     this.tiles = [];
     this.tileIndex = {};
+    this.resetLoaders();
+}
+
+TileModel.prototype.setCenterScale = function(centerScale) {
+    this.centerScale = centerScale;
     this.resetLoaders();
 }
 
@@ -53,20 +52,20 @@ TileModel.prototype.resetLoaders = function() {
     }
     
     var envelope = this.centerScale.toEnvelope(this.bounds.width, this.bounds.height);
-    var zoomLevel = getZoomLevel(this.centerScale.scale);
+    var zoomLevel = this.srs.getZoomLevel(this.centerScale.scale);
     var tileLimit = Math.pow(2, zoomLevel.zoomLevel);
-    var leftTileX = Math.floor((envelope.getMinX() - this.minX) / zoomLevel.resolution / this.tileWidth);
-    var topTileY = Math.max(Math.floor((this.maxY - envelope.getMaxY()) / zoomLevel.resolution / this.tileHeight), 0);
-    var rightTileX = Math.floor((envelope.getMaxX() - this.minX) / zoomLevel.resolution / this.tileWidth);
-    var bottomTileY = Math.min(Math.floor((this.maxY - envelope.getMinY()) / zoomLevel.resolution / this.tileHeight), tileLimit - 1);
+    var leftTileX = Math.floor((envelope.getMinX() - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
+    var topTileY = Math.max(Math.floor((this.srs.maxY - envelope.getMaxY()) / zoomLevel.resolution / this.tileHeight), 0);
+    var rightTileX = Math.floor((envelope.getMaxX() - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
+    var bottomTileY = Math.min(Math.floor((this.srs.maxY - envelope.getMinY()) / zoomLevel.resolution / this.tileHeight), tileLimit - 1);
     
     for (var tileY = topTileY; tileY <= bottomTileY; tileY++) {
         for (var tileX = leftTileX; tileX <= rightTileX; tileX++) {
             var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);
             
             if ((tile == null) || (!tile.completed)) {
-                var minX = tileX * this.tileWidth * zoomLevel.resolution + this.minX;
-                var maxY = -(tileY * this.tileHeight * zoomLevel.resolution - this.maxY);
+                var minX = tileX * this.tileWidth * zoomLevel.resolution + this.srs.minX;
+                var maxY = -(tileY * this.tileHeight * zoomLevel.resolution - this.srs.maxY);
                 
                 if (this.ctx != null) {
                     this.drawTilesAroundZoomLevel(zoomLevel.zoomLevel, minX, maxY);
@@ -85,7 +84,7 @@ TileModel.prototype.resetLoaders = function() {
                         var e = function(t, env) {
                             return function() {
                                 t.completed = true;
-                                if (getZoomLevel(env.centerScale.scale) == getZoomLevel(t.scale)) {
+                                if (env.srs.getZoomLevel(env.centerScale.scale) == env.srs.getZoomLevel(t.scale)) {
                                     t.reset(env.bounds, env.centerScale);
                                     env.drawTile(t);
                                 }
@@ -139,11 +138,11 @@ TileModel.prototype.getTile = function(zoomLevel, tileX, tileY) {
 TileModel.prototype.drawTilesAroundZoomLevel = function(zl, minX, maxY) {
     // Find any completed tile in the zoom levels above the given zoom level.
     for (var i = zl - 1; i >= 0; i--) {
-        var zoomLevel = zoomLevels[i];
+        var zoomLevel = this.srs.zoomLevels[i];
         var zoomFactor = Math.pow(2, zl - i);
-        var subTileX = Math.round((minX - this.minX) / zoomLevel.resolution / this.tileWidth * zoomFactor) / zoomFactor;
+        var subTileX = Math.round((minX - this.srs.minX) / zoomLevel.resolution / this.tileWidth * zoomFactor) / zoomFactor;
         var tileX = Math.floor(subTileX);
-        var subTileY = Math.round((this.maxY - maxY) / zoomLevel.resolution / this.tileHeight * zoomFactor) / zoomFactor;
+        var subTileY = Math.round((this.srs.maxY - maxY) / zoomLevel.resolution / this.tileHeight * zoomFactor) / zoomFactor;
         var tileY = Math.max(Math.floor(subTileY), 0);
         var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);
         if ((tile != null) && (tile.completed)) {
@@ -160,12 +159,12 @@ TileModel.prototype.drawTilesAroundZoomLevel = function(zl, minX, maxY) {
     }
 
     // Find completed tiles in the (single one) zoom level below the given zoom level.
-    if (zl == zoomLevels.length - 1) {
+    if (zl == this.srs.zoomLevels.length - 1) {
         return;
     }
-    var zoomLevel = zoomLevels[zl + 1];
-    var leftTileX = Math.round((minX - this.minX) / zoomLevel.resolution / this.tileWidth);
-    var topTileY = Math.max(Math.round((this.maxY - maxY) / zoomLevel.resolution / this.tileHeight), 0);
+    var zoomLevel = this.srs.zoomLevels[zl + 1];
+    var leftTileX = Math.round((minX - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
+    var topTileY = Math.max(Math.round((this.srs.maxY - maxY) / zoomLevel.resolution / this.tileHeight), 0);
     for (var tileY = topTileY; tileY <= topTileY + 1; tileY++) {
         for (var tileX = leftTileX; tileX <= leftTileX + 1; tileX++) {
             var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);

@@ -23,6 +23,7 @@ focusmodel/CenterScale.js
 focusmodel/FocusModel.js
 focusmodel/EnvelopeCenterScale.js
 focusmodel/ZoomLevel.js
+focusmodel/SRS.js
 layermodel/Layer.js
 layermodel/Tile.js
 layermodel/TileModel.js

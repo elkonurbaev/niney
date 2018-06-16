@@ -5,7 +5,7 @@
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
-/* Last merge : Tue May 22 00:27:00 CEST 2018  */
+/* Last merge : Sat Jun 16 13:23:21 CEST 2018  */
 
 /* Merging order :
 
@@ -34,6 +34,7 @@
 - focusmodel/FocusModel.js
 - focusmodel/EnvelopeCenterScale.js
 - focusmodel/ZoomLevel.js
+- focusmodel/SRS.js
 - layermodel/Layer.js
 - layermodel/Tile.js
 - layermodel/TileModel.js
@@ -141,7 +142,7 @@ AnimationTimer.prototype.start = function() {
         
         function preTick(currentTime) {
             timer.currentCount = currentTime - timer.startTime;
-            if (timer.currentCount > timer.duration) {
+            if ((timer.duration > -1) && (timer.currentCount > timer.duration)) {
                 timer.currentCount = timer.duration;
                 timer.tick();
                 timer.stop();
@@ -166,80 +167,71 @@ AnimationTimer.prototype.reset = function() {
     this.stop();
 };
 
-function PanSpeedTimer(delay, numRepeats) {
-    this.delay = delay;
-    this.numRepeats = numRepeats;
+function PanSpeedTimer() {
+    this.delay = -1;
+    this.numRepeats = -1;
     this.currentCount = 0;
     this.scope = null;
     this.interval = -1;
+    this.timerHandler = function() { };
     
-    this.panEvent = null;
-    this.lastPoint0 = null;
-    this.lastPoint1 = null;
-    this.lastPointWas0 = false;
-    this.speed = {h: -1, v: -1};
+    this.duration = -1;
+    this.startTime = -1;
     
-    var panSpeedTimer = this;
-    this.timerHandler = function() {
-        if (!panSpeedTimer.lastPointWas0) {
-            panSpeedTimer.lastPoint0 = {
-                x: panSpeedTimer.panEvent.clientX,
-                y: panSpeedTimer.panEvent.clientY,
-                numTouches: (panSpeedTimer.panEvent.touches? panSpeedTimer.panEvent.touches.length: 1),
-                time: (new Date()).getTime()
-            };
-            panSpeedTimer.lastPointWas0 = true;
-        } else {
-            panSpeedTimer.lastPoint1 = {
-                x: panSpeedTimer.panEvent.clientX,
-                y: panSpeedTimer.panEvent.clientY,
-                numTouches: (panSpeedTimer.panEvent.touches? panSpeedTimer.panEvent.touches.length: 1),
-                time: (new Date()).getTime()
-            };
-            panSpeedTimer.lastPointWas0 = false;
-        }
-    };
+    this.panEvents = [];
 }
 
-PanSpeedTimer.prototype = new Timer();
+PanSpeedTimer.prototype = new AnimationTimer();
 PanSpeedTimer.prototype.constructor = PanSpeedTimer;
 
-PanSpeedTimer.prototype.start = function() {
-    this.lastPoint0 = {
-        x: this.panEvent.clientX,
-        y: this.panEvent.clientY,
-        numTouches: (this.panEvent.touches? this.panEvent.touches.length: 1),
-        time: (new Date()).getTime()
-    };
-    this.lastPointWas0 = true;
+PanSpeedTimer.prototype.start = function(panEvent) {
+    this.push(panEvent);
     
-    Timer.prototype.start.call(this);
+    AnimationTimer.prototype.start.call(this);
 }
 
-PanSpeedTimer.prototype.resetAndGetSpeed = function() {
-    if (this.lastPoint1 == null) {
-        // timerHandler has not been called yet. Use the initial point, no other point is available.
-    } else if (this.lastPointWas0) {
-        // Then use point 1, else use point 0. Always use the oldest point available.
-        this.lastPoint0 = this.lastPoint1;
-    }
+PanSpeedTimer.prototype.resetAndGetSpeed = function(panEvent) {
+    var speed = {h: 0, v: 0, z: 1};
     
-    if ((this.panEvent.touches == null) || (this.panEvent.touches.length == this.lastPoint0.numTouches)) {
-        var timeSpan = (new Date()).getTime() - this.lastPoint0.time;
-        this.speed.h = (this.panEvent.clientX - this.lastPoint0.x) / timeSpan;
-        this.speed.v = (this.panEvent.clientY - this.lastPoint0.y) / timeSpan;
+    if (panEvent.touches == null) {
+        this.push(panEvent);
     } else {
-        this.speed.h = 0;
-        this.speed.v = 0;
+        // For touch events, make sure that only events with the same number of touches are included in the speed calculation.
+        var eventSeries = [];
+        for (var i = 0; i < this.panEvents.length; i++) {
+            // Group them in series of subsequent events with the same number of touches.
+            if ((i == 0) || (this.panEvents[i].touches.length != this.panEvents[i - 1].touches.length)) {
+                eventSeries.push([this.panEvents[i]]);
+            } else {
+                eventSeries[eventSeries.length - 1].push(this.panEvents[i]);
+            }
+        }
+        this.panEvents = eventSeries.sort(function(a, b) { return b.length - a.length; })[0];  // Select the event series with the most members.
+        panEvent = this.panEvents[this.panEvents.length - 1];
+    }
+    var previousEvent = this.panEvents[0];
+    var timeSpan = panEvent.time - previousEvent.time;
+    if (timeSpan > 0) {
+        speed.h = (panEvent.clientX - previousEvent.clientX) / timeSpan;
+        speed.v = (panEvent.clientY - previousEvent.clientY) / timeSpan;
+        if (panEvent.touches != null) {
+            speed.z = Math.pow(panEvent.radius / previousEvent.radius, 1 / timeSpan);
+        }
     }
     
-    this.lastPoint0 = null;
-    this.lastPoint1 = null;
-    this.lastPointWas0 = false;
+    this.panEvents = [];
     
-    Timer.prototype.reset.call(this);
+    AnimationTimer.prototype.reset.call(this);
     
-    return this.speed;
+    return speed;
+}
+
+PanSpeedTimer.prototype.push = function(panEvent) {
+    panEvent.time = performance.now();
+    this.panEvents.push(panEvent);
+    while (performance.now() - this.panEvents[0].time > 100) {
+        this.panEvents.shift();
+    }
 }
 
 function decorateTouchEvent(touchEvent, lastTouchOnly) {
@@ -248,7 +240,11 @@ function decorateTouchEvent(touchEvent, lastTouchOnly) {
     }
     
     var touch = touchEvent.touches[touchEvent.touches.length - 1];
-    if ((touchEvent.touches.length == 1) || lastTouchOnly)  {
+    if (touchEvent.touches.length == 0) {
+        touchEvent.clientX = touchEvent.changedTouches[0].clientX;
+        touchEvent.clientY = touchEvent.changedTouches[0].clientY;
+        touchEvent.radius = 1;
+    } else if ((touchEvent.touches.length == 1) || lastTouchOnly) {
         touchEvent.clientX = touch.clientX;
         touchEvent.clientY = touch.clientY;
         touchEvent.radius = 1;
@@ -1377,18 +1373,26 @@ CenterScale.prototype.toString = function() {
 function FocusModel() {
     this.animationTimer = new AnimationTimer(1000);
     this.incubationTimer = new Timer(1000, 1);
-    this.maxEnvelope = new Envelope(-20000000, -20000000, 20000000, 20000000);
+    this.srs = new SRS();
     this.minScale = 0;
     this.maxScale = 443744272.72414012;
     this.scaleToZoomLevels = false;
     this.centerScale = null;
-    this.animationBase = null;
+    this.animation = null;
     this.animationCenterScale = null;
     this.incubationCenterScale = null;
     
     var focusModel = this;
     this.animationTimer.timerHandler = function() {
-        focusModel.animationCenterScale = focusModel.getAnimationCenterScale();
+        var base = focusModel.animation.base;
+        var delta = focusModel.animation.target.subtract(base);
+        var progress = focusModel.animationTimer.currentCount / focusModel.animationTimer.duration;
+        
+        focusModel.animationCenterScale = new CenterScale(
+            base.centerX + (-delta.centerX * progress * progress + 2 * delta.centerX * progress),
+            base.centerY + (-delta.centerY * progress * progress + 2 * delta.centerY * progress),
+            base.scale + (-delta.scale * progress * progress + 2 * delta.scale * progress)
+        ).fromOffset(focusModel.animation.pixXOffset, focusModel.animation.pixYOffset);
     };
     this.incubationTimer.timerHandler = function() {
         focusModel.incubationCenterScale = focusModel.centerScale;
@@ -1403,60 +1407,72 @@ FocusModel.prototype.grab = function(x, y, pixXOffset, pixYOffset) {
             this.centerScale = this.animationCenterScale;
         } else {
             this.centerScale = this.centercon(new CenterScale(x, y, this.centerScale.scale).fromOffset(pixXOffset, pixYOffset));
-            this.animationBase = {
-                centerScale: new CenterScale(x, y, this.animationBase.centerScale.scale),
+            this.animation = {
+                base: new CenterScale(x, y, this.animation.base.scale),
+                target: this.centerScale.toOffset(pixXOffset, pixYOffset),
                 pixXOffset: pixXOffset,
                 pixYOffset: pixYOffset
             };
         }
         this.setIncubationCenterScale();
     }
-}
-
-// Pan with mouse move.
-FocusModel.prototype.pan = function(dx, dy, pixXOffset, pixYOffset) {
-    if (this.animationTimer.isRunning()) {
-        if (this.animationCenterScale.scale == this.centerScale.scale) {
-            this.animationTimer.reset();
-            this.centerScale = this.animationCenterScale = this.centercon(
-                new CenterScale(this.animationCenterScale.centerX + dx, this.animationCenterScale.centerY + dy, this.animationCenterScale.scale)
-            );
-        } else {
-            this.centerScale = this.centercon(
-                new CenterScale(this.centerScale.centerX + dx, this.centerScale.centerY + dy, this.centerScale.scale)
-            );
-            this.animationBase.pixXOffset = pixXOffset;
-            this.animationBase.pixYOffset = pixYOffset;
-        }
-    } else {
-        this.centerScale = this.animationCenterScale = this.centercon(
-            new CenterScale(this.centerScale.centerX + dx, this.centerScale.centerY + dy, this.centerScale.scale)
-        );
-    }
-    this.setIncubationCenterScale();
-}
-
-// Zoom with mouse wheel (animate == true) or pan/zoom with touch move/pinch (animate == false).
-FocusModel.prototype.zoom = function(centerScale, pixXOffset, pixYOffset, animate) {
-    centerScale = this.scalecon(centerScale, animate);
-    if (animate && (this.animationCenterScale.scale == centerScale.scale)) {
-        return;
-    }
-    if (!animate && (this.animationTimer.isRunning())) {
-        this.animationTimer.reset();
-    }
     
-    this.centerScale = this.centercon(centerScale.fromOffset(pixXOffset, pixYOffset));
-    if (animate) {
-        this.animationBase = {
-            centerScale: new CenterScale(centerScale.centerX, centerScale.centerY, this.animationCenterScale.scale),
+    if (!this.animationTimer.isRunning()) {
+        this.animation = {
+            base: new CenterScale(x, y, this.centerScale.scale),
+            target: this.centerScale.toOffset(pixXOffset, pixYOffset),
             pixXOffset: pixXOffset,
             pixYOffset: pixYOffset
         };
-        this.setAnimationCenterScale();
-    } else {
-        this.animationCenterScale = this.centerScale;
     }
+}
+
+// Pan with mouse move or one-finger touch.
+FocusModel.prototype.pan = function(pixXOffset, pixYOffset) {
+    this.animation.pixXOffset = pixXOffset;
+    this.animation.pixYOffset = pixYOffset;
+}
+
+// Pan/zoom with multi-finger touch.
+FocusModel.prototype.pinchPan = function(centerScale, pixXOffset, pixYOffset) {
+    centerScale = this.scalecon(centerScale, false);
+    if (this.animationTimer.isRunning()) {
+        this.animationTimer.reset();
+    }
+    
+    this.animation = {
+        base: centerScale,
+        target: centerScale,
+        pixXOffset: pixXOffset,
+        pixYOffset: pixYOffset
+    };
+}
+
+FocusModel.prototype.panimate = function() {
+    if (!this.animationTimer.isRunning()) {
+        var centerScale = this.centercon(this.animation.target.fromOffset(this.animation.pixXOffset, this.animation.pixYOffset));
+        if (!this.centerScale.equals(centerScale)) {
+            this.centerScale = this.animationCenterScale = centerScale;
+            this.setIncubationCenterScale();
+        }
+    }
+}
+
+// Zoom with mouse wheel.
+FocusModel.prototype.zoom = function(centerScale, pixXOffset, pixYOffset) {
+    centerScale = this.scalecon(centerScale, true);
+    if (this.animationCenterScale.scale == centerScale.scale) {
+        return;
+    }
+    
+    this.centerScale = this.centercon(centerScale.fromOffset(pixXOffset, pixYOffset));
+    this.animation = {
+        base: new CenterScale(centerScale.centerX, centerScale.centerY, this.animationCenterScale.scale),
+        target: this.centerScale.toOffset(pixXOffset, pixYOffset),
+        pixXOffset: pixXOffset,
+        pixYOffset: pixYOffset
+    };
+    this.setAnimationCenterScale();
     this.setIncubationCenterScale();
 }
 
@@ -1471,7 +1487,7 @@ FocusModel.prototype.setCenterScale = function(centerScale, roundToZoomLevels) {
     centerScale = this.centercon(this.scalecon(centerScale, roundToZoomLevels));
     if (this.centerScale == null) {
         this.centerScale = centerScale;
-        this.animationBase = {centerScale: centerScale, pixXOffset: 0, pixYOffset: 0};
+        this.animation = {base: centerScale, target: centerScale, pixXOffset: 0, pixYOffset: 0};
         this.animationCenterScale = centerScale;
         this.incubationCenterScale = centerScale;
         return;
@@ -1481,7 +1497,7 @@ FocusModel.prototype.setCenterScale = function(centerScale, roundToZoomLevels) {
     }
     
     this.centerScale = centerScale;
-    this.animationBase = {centerScale: this.animationCenterScale, pixXOffset: 0, pixYOffset: 0};
+    this.animation = {base: this.animationCenterScale, target: centerScale, pixXOffset: 0, pixYOffset: 0};
     this.setAnimationCenterScale();
     this.setIncubationCenterScale();
 }
@@ -1496,24 +1512,10 @@ FocusModel.prototype.setIncubationCenterScale = function() {
     this.incubationTimer.start();
 }
 
-FocusModel.prototype.getAnimationCenterScale = function() {
-    var pixXOffset = this.animationBase.pixXOffset;
-    var pixYOffset = this.animationBase.pixYOffset;
-    var base = this.animationBase.centerScale;
-    var delta = this.centerScale.toOffset(pixXOffset, pixYOffset).subtract(base);
-    var progress = this.animationTimer.currentCount / this.animationTimer.duration;
-    
-    return new CenterScale(
-        base.centerX + (-delta.centerX * progress * progress + 2 * delta.centerX * progress),
-        base.centerY + (-delta.centerY * progress * progress + 2 * delta.centerY * progress),
-        base.scale + (-delta.scale * progress * progress + 2 * delta.scale * progress)
-    ).fromOffset(pixXOffset, pixYOffset);
-}
-
 // Center-related conditions. Relevant for zooming and panning.
 FocusModel.prototype.centercon = function(centerScale) {
-    var centerX = Math.min(Math.max(centerScale.centerX, this.maxEnvelope.getMinX()), this.maxEnvelope.getMaxX());
-    var centerY = Math.min(Math.max(centerScale.centerY, this.maxEnvelope.getMinY()), this.maxEnvelope.getMaxY());
+    var centerX = Math.min(Math.max(centerScale.centerX, this.srs.minX), this.srs.maxX);
+    var centerY = Math.min(Math.max(centerScale.centerY, this.srs.minY), this.srs.maxY);
     return new CenterScale(centerX, centerY, centerScale.scale);
 }
 
@@ -1526,7 +1528,7 @@ FocusModel.prototype.scalecon = function(centerScale, roundToZoomLevels) {
         return this.scalecon(new CenterScale(centerScale.centerX, centerScale.centerY, this.maxScale), roundToZoomLevels);
     }
     if (this.scaleToZoomLevels) {
-        var zoomLevelScale = getZoomLevel(centerScale.scale, roundToZoomLevels).scale;
+        var zoomLevelScale = this.srs.getZoomLevel(centerScale.scale, roundToZoomLevels).scale;
         if (centerScale.scale != zoomLevelScale) {
             return new CenterScale(centerScale.centerX, centerScale.centerY, zoomLevelScale);
         }
@@ -1602,54 +1604,69 @@ function ZoomLevel(zoomLevel, scale, resolution) {
     this.resolution = resolution;
 }
 
-var zoomLevels = [
-    new ZoomLevel(0, 443744272.72414012, 156543.0339),
-    new ZoomLevel(1, 221872136.36207006, 78271.51695),
-    new ZoomLevel(2, 110936068.18103503, 39135.758475),
-    new ZoomLevel(3, 55468034.090517517, 19567.8792375),
-    new ZoomLevel(4, 27734017.045258758, 9783.93961875),
-    new ZoomLevel(5, 13867008.522629379, 4891.969809375),
-    new ZoomLevel(6, 6933504.261314690, 2445.9849046875),
-    new ZoomLevel(7, 3466752.130657345, 1222.99245234375),
-    new ZoomLevel(8, 1733376.065328672, 611.496226171875),
-    new ZoomLevel(9, 866688.0326643360, 305.7481130859375),
-    new ZoomLevel(10, 433344.01633216810, 152.87405654296876),
-    new ZoomLevel(11, 216672.00816608404, 76.43702827148438),
-    new ZoomLevel(12, 108336.00408304202, 38.21851413574219),
-    new ZoomLevel(13, 54168.002041521010, 19.109257067871095),
-    new ZoomLevel(14, 27084.001020760505, 9.554628533935547),
-    new ZoomLevel(15, 13542.000510380252, 4.777314266967774),
-    new ZoomLevel(16, 6771.0002551901260, 2.388657133483887),
-    new ZoomLevel(17, 3385.5001275950630, 1.1943285667419434),
-    new ZoomLevel(18, 1692.7500637975315, 0.5971642833709717),
-    new ZoomLevel(19, 846.37503189876580, 0.2985821416854859),
-    new ZoomLevel(20, 423.18751594938290, 0.1492910708427429)
-];
 
-function getZoomLevel(scale, round) {
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* Merging js: focusmodel/SRS.js begins */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+
+function SRS() {
+    this.srid = 900913;
+    this.zoomLevels = [
+        new ZoomLevel(0, 443744272.72414012, 156543.0339),
+        new ZoomLevel(1, 221872136.36207006, 78271.51695),
+        new ZoomLevel(2, 110936068.18103503, 39135.758475),
+        new ZoomLevel(3, 55468034.090517517, 19567.8792375),
+        new ZoomLevel(4, 27734017.045258758, 9783.93961875),
+        new ZoomLevel(5, 13867008.522629379, 4891.969809375),
+        new ZoomLevel(6, 6933504.261314690, 2445.9849046875),
+        new ZoomLevel(7, 3466752.130657345, 1222.99245234375),
+        new ZoomLevel(8, 1733376.065328672, 611.496226171875),
+        new ZoomLevel(9, 866688.0326643360, 305.7481130859375),
+        new ZoomLevel(10, 433344.01633216810, 152.87405654296876),
+        new ZoomLevel(11, 216672.00816608404, 76.43702827148438),
+        new ZoomLevel(12, 108336.00408304202, 38.21851413574219),
+        new ZoomLevel(13, 54168.002041521010, 19.109257067871095),
+        new ZoomLevel(14, 27084.001020760505, 9.554628533935547),
+        new ZoomLevel(15, 13542.000510380252, 4.777314266967774),
+        new ZoomLevel(16, 6771.0002551901260, 2.388657133483887),
+        new ZoomLevel(17, 3385.5001275950630, 1.1943285667419434),
+        new ZoomLevel(18, 1692.7500637975315, 0.5971642833709717),
+        new ZoomLevel(19, 846.37503189876580, 0.2985821416854859),
+        new ZoomLevel(20, 423.18751594938290, 0.1492910708427429)
+    ];
+    this.minX = -20037508.3427892;
+    this.minY = -20037508.3427892;
+    this.maxX = 20037508.3427892;
+    this.maxY = 20037508.3427892;
+}
+
+SRS.prototype.getZoomLevel = function(scale, round) {
     if ((round === undefined) || (round === false) || (round == "DOWN")) {
-        for (var i = 0; i < zoomLevels.length - 1; i++) {
-            if (scale >= zoomLevels[i].scale) {
-                return zoomLevels[i];
+        for (var i = 0; i < this.zoomLevels.length - 1; i++) {
+            if (scale >= this.zoomLevels[i].scale) {
+                return this.zoomLevels[i];
             }
         }
-        return zoomLevels[zoomLevels.length - 1];
+        return this.zoomLevels[this.zoomLevels.length - 1];
     } else if ((round === true) || (round == "ROUND")) {
-        for (var i = 0; i < zoomLevels.length - 1; i++) {
-            if (scale >= (zoomLevels[i].scale + zoomLevels[i + 1].scale) / 2) {
-                return zoomLevels[i];
+        for (var i = 0; i < this.zoomLevels.length - 1; i++) {
+            if (scale >= (this.zoomLevels[i].scale + this.zoomLevels[i + 1].scale) / 2) {
+                return this.zoomLevels[i];
             }
         }
-        return zoomLevels[zoomLevels.length - 1];
+        return this.zoomLevels[this.zoomLevels.length - 1];
     } else {  // round == "UP"
-        for (var i = zoomLevels.length - 1; i > 0; i--) {
-            if (scale <= zoomLevels[i].scale) {
-                return zoomLevels[i];
+        for (var i = this.zoomLevels.length - 1; i > 0; i--) {
+            if (scale <= this.zoomLevels[i].scale) {
+                return this.zoomLevels[i];
             }
         }
-        return zoomLevels[0];
+        return this.zoomLevels[0];
     }
 }
+
 
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -1662,7 +1679,6 @@ function Layer(name) {
     this.baseURL = "http://b.tile.openstreetmap.org/";
     this.styleURL = null;
     this.urlExtension = "$Z/$X/$Y.png";
-    this.srs = "EPSG:900913";
     this.format = "image/png";
     this.visible = true;
     this.title = name;
@@ -1672,7 +1688,7 @@ function Layer(name) {
 }
 
 Layer.prototype.forceReload = function() {
-    this.vendorSpecifics.epochtime = (new Date()).getTime();
+    this.vendorSpecifics.epochtime = performance.now();
 }
 
 
@@ -1733,11 +1749,10 @@ Tile.prototype.toCSS = function() {
 function TileModel() {
     this.bounds = null;
     this.layer = null;
+    this.srs = null;
     this.centerScale = null;
     this.tileWidth = 256;
     this.tileHeight = 256;
-    this.minX = -285401.92;
-    this.maxY = 903401.9199999999;
     this.tiles = [];
     this.tileIndex = {};
     this.ctx = null;  // Used only for tile models that draw on a canvas.
@@ -1753,15 +1768,15 @@ TileModel.prototype.setBounds = function(bounds) {
     this.resetLoaders();
 }
 
-TileModel.prototype.setCenterScale = function(centerScale) {
-    this.centerScale = centerScale;
-    this.resetLoaders();
-}
-
 TileModel.prototype.setLayer = function(layer) {
     this.layer = layer;
     this.tiles = [];
     this.tileIndex = {};
+    this.resetLoaders();
+}
+
+TileModel.prototype.setCenterScale = function(centerScale) {
+    this.centerScale = centerScale;
     this.resetLoaders();
 }
 
@@ -1785,20 +1800,20 @@ TileModel.prototype.resetLoaders = function() {
     }
     
     var envelope = this.centerScale.toEnvelope(this.bounds.width, this.bounds.height);
-    var zoomLevel = getZoomLevel(this.centerScale.scale);
+    var zoomLevel = this.srs.getZoomLevel(this.centerScale.scale);
     var tileLimit = Math.pow(2, zoomLevel.zoomLevel);
-    var leftTileX = Math.floor((envelope.getMinX() - this.minX) / zoomLevel.resolution / this.tileWidth);
-    var topTileY = Math.max(Math.floor((this.maxY - envelope.getMaxY()) / zoomLevel.resolution / this.tileHeight), 0);
-    var rightTileX = Math.floor((envelope.getMaxX() - this.minX) / zoomLevel.resolution / this.tileWidth);
-    var bottomTileY = Math.min(Math.floor((this.maxY - envelope.getMinY()) / zoomLevel.resolution / this.tileHeight), tileLimit - 1);
+    var leftTileX = Math.floor((envelope.getMinX() - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
+    var topTileY = Math.max(Math.floor((this.srs.maxY - envelope.getMaxY()) / zoomLevel.resolution / this.tileHeight), 0);
+    var rightTileX = Math.floor((envelope.getMaxX() - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
+    var bottomTileY = Math.min(Math.floor((this.srs.maxY - envelope.getMinY()) / zoomLevel.resolution / this.tileHeight), tileLimit - 1);
     
     for (var tileY = topTileY; tileY <= bottomTileY; tileY++) {
         for (var tileX = leftTileX; tileX <= rightTileX; tileX++) {
             var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);
             
             if ((tile == null) || (!tile.completed)) {
-                var minX = tileX * this.tileWidth * zoomLevel.resolution + this.minX;
-                var maxY = -(tileY * this.tileHeight * zoomLevel.resolution - this.maxY);
+                var minX = tileX * this.tileWidth * zoomLevel.resolution + this.srs.minX;
+                var maxY = -(tileY * this.tileHeight * zoomLevel.resolution - this.srs.maxY);
                 
                 if (this.ctx != null) {
                     this.drawTilesAroundZoomLevel(zoomLevel.zoomLevel, minX, maxY);
@@ -1817,7 +1832,7 @@ TileModel.prototype.resetLoaders = function() {
                         var e = function(t, env) {
                             return function() {
                                 t.completed = true;
-                                if (getZoomLevel(env.centerScale.scale) == getZoomLevel(t.scale)) {
+                                if (env.srs.getZoomLevel(env.centerScale.scale) == env.srs.getZoomLevel(t.scale)) {
                                     t.reset(env.bounds, env.centerScale);
                                     env.drawTile(t);
                                 }
@@ -1871,11 +1886,11 @@ TileModel.prototype.getTile = function(zoomLevel, tileX, tileY) {
 TileModel.prototype.drawTilesAroundZoomLevel = function(zl, minX, maxY) {
     // Find any completed tile in the zoom levels above the given zoom level.
     for (var i = zl - 1; i >= 0; i--) {
-        var zoomLevel = zoomLevels[i];
+        var zoomLevel = this.srs.zoomLevels[i];
         var zoomFactor = Math.pow(2, zl - i);
-        var subTileX = Math.round((minX - this.minX) / zoomLevel.resolution / this.tileWidth * zoomFactor) / zoomFactor;
+        var subTileX = Math.round((minX - this.srs.minX) / zoomLevel.resolution / this.tileWidth * zoomFactor) / zoomFactor;
         var tileX = Math.floor(subTileX);
-        var subTileY = Math.round((this.maxY - maxY) / zoomLevel.resolution / this.tileHeight * zoomFactor) / zoomFactor;
+        var subTileY = Math.round((this.srs.maxY - maxY) / zoomLevel.resolution / this.tileHeight * zoomFactor) / zoomFactor;
         var tileY = Math.max(Math.floor(subTileY), 0);
         var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);
         if ((tile != null) && (tile.completed)) {
@@ -1892,12 +1907,12 @@ TileModel.prototype.drawTilesAroundZoomLevel = function(zl, minX, maxY) {
     }
 
     // Find completed tiles in the (single one) zoom level below the given zoom level.
-    if (zl == zoomLevels.length - 1) {
+    if (zl == this.srs.zoomLevels.length - 1) {
         return;
     }
-    var zoomLevel = zoomLevels[zl + 1];
-    var leftTileX = Math.round((minX - this.minX) / zoomLevel.resolution / this.tileWidth);
-    var topTileY = Math.max(Math.round((this.maxY - maxY) / zoomLevel.resolution / this.tileHeight), 0);
+    var zoomLevel = this.srs.zoomLevels[zl + 1];
+    var leftTileX = Math.round((minX - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
+    var topTileY = Math.max(Math.round((this.srs.maxY - maxY) / zoomLevel.resolution / this.tileHeight), 0);
     for (var tileY = topTileY; tileY <= topTileY + 1; tileY++) {
         for (var tileX = leftTileX; tileX <= leftTileX + 1; tileX++) {
             var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);
@@ -1928,11 +1943,10 @@ function UTFGridModel() {
     this.http = null;
     this.bounds = null;
     this.layer = null;
+    this.srs = null;
     this.centerScale = null;
     this.tileWidth = 256;
     this.tileHeight = 256;
-    this.minX = -20037508.3427892;
-    this.maxY = 20037508.3427892;
     this.tiles = [];
     this.tileIndex = {};
     
@@ -1943,11 +1957,11 @@ UTFGridModel.prototype = new TileModel();
 UTFGridModel.prototype.constructor = UTFGridModel;
 
 UTFGridModel.prototype.getFeature = function(pixX, pixY) {
-    var zoomLevel = getZoomLevel(this.centerScale.scale);
+    var zoomLevel = this.srs.getZoomLevel(this.centerScale.scale);
     var worldX = this.centerScale.getWorldX(this.bounds.width, pixX);
     var worldY = this.centerScale.getWorldY(this.bounds.height, pixY);
-    var tileX = Math.floor((worldX - this.minX) / zoomLevel.resolution / this.tileWidth);
-    var tileY = Math.max(Math.floor((this.maxY - worldY) / zoomLevel.resolution / this.tileHeight), 0);
+    var tileX = Math.floor((worldX - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
+    var tileY = Math.max(Math.floor((this.srs.maxY - worldY) / zoomLevel.resolution / this.tileHeight), 0);
     var tile = this.getTile(tileX, tileY, zoomLevel.scale);
     if (tile == null) {
         return null;
@@ -1997,6 +2011,7 @@ function grid(utfGridString) {
 function WMSModel() {
     this.bounds = null;
     this.layer = null;
+    this.srs = null;
     this.centerScale = null;
     this.animationCenterScale = null;
     this.autoClassification = true;
@@ -2042,14 +2057,14 @@ WMSModel.prototype.load = function() {
     var maxX = envelope.getMaxX();
     var maxY = envelope.getMaxY();
     
-    if ((minX > 20000000) || (minY > 20000000) || (maxX < -20000000) || (maxY < -20000000)) {
+    if ((minX > this.srs.maxX) || (minY > this.srs.maxY) || (maxX < this.srs.minX) || (maxY < this.srs.minY)) {
         return;
     }
     
-    minX = Math.max(minX, -20000000);
-    minY = Math.max(minY, -20000000);
-    maxX = Math.min(maxX, 20000000);
-    maxY = Math.min(maxY, 20000000);
+    minX = Math.max(minX, this.srs.minX);
+    minY = Math.max(minY, this.srs.minY);
+    maxX = Math.min(maxX, this.srs.maxX);
+    maxY = Math.min(maxY, this.srs.maxY);
     
     var tileWidth = Math.round(this.centerScale.getNumPixs(maxX - minX));
     var tileHeight = Math.round(this.centerScale.getNumPixs(maxY - minY));
@@ -2080,7 +2095,7 @@ WMSModel.prototype.load = function() {
         url += "&SLD=" + encodeURIComponent(sldURL);
     }
     url += "&TRANSPARENT=true";
-    url += "&SRS=" + this.layer.srs;
+    url += "&SRS=EPSG:" + this.srs.srid;
     url += "&BBOX=" + minX + "," + minY + "," + maxX + "," + maxY;
     url += "&WIDTH=" + tileWidth;
     url += "&HEIGHT=" + tileHeight;
@@ -2324,7 +2339,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
                     }
                 });
                 
-                var mouseWheelTime = (new Date()).getTime();
+                var mouseWheelTime = performance.now();
                 var mouseWheelDelta = -1;
                 
                 $scope.mouseWheelHandler = function(mouseEvent, delta, deltaX, deltaY) {
@@ -2365,7 +2380,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
                             ));
                         }
                     } else {  // ZOOM
-                        var now = (new Date()).getTime();
+                        var now = performance.now();
                         if (!$scope.focusModel.scaleToZoomLevels || (now - mouseWheelTime > 250) || (mouseWheelDelta * delta < 0)) {
                             mouseWheelTime = now;
                             mouseWheelDelta = delta;
@@ -2393,7 +2408,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
                             var pixXOffset = mouseX - (width / 2);
                             var pixYOffset = mouseY - (height / 2);
                             
-                            $scope.focusModel.zoom(new CenterScale(worldX, worldY, scale), pixXOffset, pixYOffset, true);
+                            $scope.focusModel.zoom(new CenterScale(worldX, worldY, scale), pixXOffset, pixYOffset);
                         }
                     }
                 };
@@ -2401,10 +2416,11 @@ angular.module("niney", ["monospaced.mousewheel"]).
                 $element.on("mousedown", pressHandler);
                 $element.on("touchstart", pressHandler);
                 
-                var pressX = -1;
-                var pressY = -1;
-                var panTimer = new PanSpeedTimer(50, -1); // Role of timer is 2-fold: measure pan speed, but also apply digest cycle every tick.
+                var panTimer = new PanSpeedTimer();  // Role of timer is 2-fold: measure pan speed, but also apply digest cycle every tick.
                 panTimer.scope = $scope;
+                panTimer.timerHandler = function() {
+                    $scope.focusModel.panimate();
+                };
                 
                 function pressHandler(event) {
                     if (panTimer.isRunning()) {  // From 1 to 2 fingers is not a true press anymore.
@@ -2414,8 +2430,8 @@ angular.module("niney", ["monospaced.mousewheel"]).
                     event.preventDefault();
                     decorateTouchEvent(event, false);
                     
-                    pressX = event.clientX - $element[0].getBoundingClientRect().left;
-                    pressY = event.clientY - $element[0].getBoundingClientRect().top;
+                    var pressX = event.clientX - $element[0].getBoundingClientRect().left;
+                    var pressY = event.clientY - $element[0].getBoundingClientRect().top;
                     
                     var width = $scope.boundsModel.bounds.width;
                     var height = $scope.boundsModel.bounds.height;
@@ -2429,6 +2445,8 @@ angular.module("niney", ["monospaced.mousewheel"]).
                     
                     $scope.focusModel.grab(worldX, worldY, pixXOffset, pixYOffset);
                     
+                    panTimer.start(event);
+                    
                     if (event.type == "mousedown") {
                         $document.on("mousemove", mouseMoveHandler);
                         $document.on("mouseup", releaseHandler);
@@ -2437,9 +2455,6 @@ angular.module("niney", ["monospaced.mousewheel"]).
                         $document.on("touchend", releaseHandler);
                         $document.on("touchcancel", releaseHandler);
                     }
-                    
-                    panTimer.panEvent = event;
-                    panTimer.start();
                     
                     if ($scope.pressFunction != null) {
                         $scope.$apply($scope.pressFunction(worldX, worldY));
@@ -2455,20 +2470,16 @@ angular.module("niney", ["monospaced.mousewheel"]).
                     var width = $scope.boundsModel.bounds.width;
                     var height = $scope.boundsModel.bounds.height;
                     
-                    var cs = $scope.focusModel.animationCenterScale;
-                    
-                    if (panTimer.panEvent != null) {
-                        var dx = cs.getNumWorldCoords(mouseEvent.clientX - panTimer.panEvent.clientX);
-                        var dy = cs.getNumWorldCoords(mouseEvent.clientY - panTimer.panEvent.clientY);
-                        
+                    if (panTimer.isRunning()) {
                         var pixXOffset = mouseX - (width / 2);
                         var pixYOffset = mouseY - (height / 2);
                         
-                        $scope.focusModel.pan(-dx, dy, pixXOffset, pixYOffset);
+                        $scope.focusModel.pan(pixXOffset, pixYOffset);
                         
-                        panTimer.panEvent = mouseEvent;
+                        panTimer.push(mouseEvent);
                     } else {
-/*                      var worldX = cs.getWorldX(width, mouseX);
+                        /*var cs = $scope.focusModel.animationCenterScale;
+                        var worldX = cs.getWorldX(width, mouseX);
                         var worldY = cs.getWorldY(height, mouseY);
                         
                         if ($scope.mouseMoveFunction != null) {
@@ -2481,25 +2492,37 @@ angular.module("niney", ["monospaced.mousewheel"]).
                     touchEvent.preventDefault();
                     decorateTouchEvent(touchEvent, false);
                     
-                    if (touchEvent.touches.length == panTimer.panEvent.touches.length) {
-                        var pinchX = touchEvent.clientX - $element[0].getBoundingClientRect().left;
-                        var pinchY = touchEvent.clientY - $element[0].getBoundingClientRect().top;
-                        
-                        var width = $scope.boundsModel.bounds.width;
-                        var height = $scope.boundsModel.bounds.height;
-                        
+                    var pinchX = touchEvent.clientX - $element[0].getBoundingClientRect().left;
+                    var pinchY = touchEvent.clientY - $element[0].getBoundingClientRect().top;
+                    
+                    var width = $scope.boundsModel.bounds.width;
+                    var height = $scope.boundsModel.bounds.height;
+                    
+                    var pixXOffset = pinchX - (width / 2);
+                    var pixYOffset = pinchY - (height / 2);
+                    
+                    var previousEvent = panTimer.panEvents[panTimer.panEvents.length - 1];
+                    if ((touchEvent.touches.length == 1) && (previousEvent.touches.length == 1)) {
+                        $scope.focusModel.pan(pixXOffset, pixYOffset);
+                    } else {
                         var cs = $scope.focusModel.animationCenterScale;
-                        var worldX = cs.getWorldX(width, pinchX);
-                        var worldY = cs.getWorldY(height, pinchY);
-                        var scale = cs.scale / (touchEvent.radius / panTimer.panEvent.radius);
+                        var worldX = -1;
+                        var worldY = -1;
+                        var scale = cs.scale;
                         
-                        var pixXOffset = pinchX + (touchEvent.clientX - panTimer.panEvent.clientX) - (width / 2);
-                        var pixYOffset = pinchY + (touchEvent.clientY - panTimer.panEvent.clientY) - (height / 2);
+                        if (touchEvent.touches.length != previousEvent.touches.length) {
+                            worldX = cs.getWorldX(width, pinchX);
+                            worldY = cs.getWorldY(height, pinchY);
+                        } else {
+                            worldX = $scope.focusModel.animation.target.centerX;
+                            worldY = $scope.focusModel.animation.target.centerY;
+                            scale = $scope.focusModel.animation.target.scale / (touchEvent.radius / previousEvent.radius);
+                        }
                         
-                        $scope.focusModel.zoom(new CenterScale(worldX, worldY, scale), pixXOffset, pixYOffset, false);
+                        $scope.focusModel.pinchPan(new CenterScale(worldX, worldY, scale), pixXOffset, pixYOffset);
                     }
                     
-                    panTimer.panEvent = touchEvent;
+                    panTimer.push(touchEvent);
                 }
                 
                 function releaseHandler(event) {
@@ -2507,26 +2530,17 @@ angular.module("niney", ["monospaced.mousewheel"]).
                         return;
                     }
                     
-                    var releaseX = event.clientX - $element[0].getBoundingClientRect().left;
-                    var releaseY = event.clientY - $element[0].getBoundingClientRect().top;
-                    
-                    var width = $scope.boundsModel.bounds.width;
-                    var height = $scope.boundsModel.bounds.height;
+                    decorateTouchEvent(event, false);
                     
                     var cs = $scope.focusModel.animationCenterScale;
-                    var worldX = cs.getWorldX(width, releaseX);
-                    var worldY = cs.getWorldY(height, releaseY);
                     
-                    var tolerance = 0;
-                    
-                    var speed = panTimer.resetAndGetSpeed();
-                    if ((speed.h == 0) || (speed.v == 0)) {
-                        panTimer.tick();
-                    } else {
+                    var tapped = ((panTimer.currentCount < 500) && (panTimer.panEvents.length == 1));
+                    var speed = panTimer.resetAndGetSpeed(event);
+                    if ((speed.h != 0) || (speed.v != 0) || (speed.z != 1)) {
                         $scope.focusModel.setCenterScale(new CenterScale(
-                            cs.centerX - cs.getNumWorldCoords(speed.h) * 1000 / 4,  // * animationDuration / 2 ^ deceleration
-                            cs.centerY + cs.getNumWorldCoords(speed.v) * 1000 / 4,
-                            cs.scale
+                            cs.centerX - cs.getNumWorldCoords(speed.h) * 250,  // 250 = 1000 / 4 = animationDuration / deceleration
+                            cs.centerY + cs.getNumWorldCoords(speed.v) * 250,
+                            cs.scale / Math.pow(speed.z, 250)
                         ), (event.type == "mouseup"));  // On touch devices, don't do the zoom level check.
                     }
                     
@@ -2538,18 +2552,27 @@ angular.module("niney", ["monospaced.mousewheel"]).
                         $document.off("touchend", releaseHandler);
                         $document.off("touchcancel", releaseHandler);
                         
-                        tolerance = 100;
+                        // Stop emulated mouse event. Calling touchEvent.preventDefault() does not prevent mouse emulation in iOS.
+                        $element.off("mousedown");
+                        setTimeout(function() { $element.off("mousedown"); $element.on("mousedown", pressHandler); }, 1000);
                     }
                     
-                    panTimer.panEvent = null;
-                    
-                    if ($scope.releaseFunction != null) {
-                        $scope.$apply($scope.releaseFunction(worldX, worldY));
-                    }
-                    if (($scope.tapFunction != null) && (
-                        (pressX - releaseX) * (pressX - releaseX) + (pressY - releaseY) * (pressY - releaseY) <= tolerance * tolerance)
-                    ) {
-                        $scope.$apply($scope.tapFunction(worldX, worldY));
+                    if (($scope.releaseFunction != null) || (($scope.tapFunction != null) && tapped)) {
+                        var releaseX = event.clientX - $element[0].getBoundingClientRect().left;
+                        var releaseY = event.clientY - $element[0].getBoundingClientRect().top;
+                        
+                        var width = $scope.boundsModel.bounds.width;
+                        var height = $scope.boundsModel.bounds.height;
+                        
+                        var worldX = cs.getWorldX(width, releaseX);
+                        var worldY = cs.getWorldY(height, releaseY);
+                        
+                        if ($scope.releaseFunction != null) {
+                            $scope.$apply($scope.releaseFunction(worldX, worldY));
+                        }
+                        if (($scope.tapFunction != null) && tapped) {
+                            $scope.$apply($scope.tapFunction(worldX, worldY));
+                        }
                     }
                 }
             }
@@ -2609,7 +2632,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
                 $scope.tileModel.ctx = $element[0].getContext("2d");
                 
                 $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
-                $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
+                $parentCtrl.scope.$watch("focusModel", function(val) { if (val) { $scope.focusModel = val; $scope.tileModel.srs = val.srs; }});
                 
                 $scope.$watch("boundsModel.bounds", function(val) { $scope.tileModel.setBounds(val); });
                 $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.tileModel.setCenterScale(val); });
@@ -2633,7 +2656,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
                 $scope.utfGridModel.http = $http;
                 
                 $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
-                $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
+                $parentCtrl.scope.$watch("focusModel", function(val) { if (val){ $scope.focusModel = val; $scope.utfGridModel.srs = val.srs; }});
                 
                 $scope.$watch("layer", function(val) { $scope.utfGridModel.layer = val; });
                 $scope.$watch("boundsModel.bounds", function(val) { $scope.utfGridModel.setBounds(val); });
@@ -2673,7 +2696,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
                 $scope.wmsModel = new WMSModel();
                 
                 $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
-                $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
+                $parentCtrl.scope.$watch("focusModel", function(val) { if (val) { $scope.focusModel = val; $scope.wmsModel.srs = val.srs; }});
                 
                 $scope.$watch("layer", function(val) { $scope.wmsModel.layer = val; $scope.wmsModel.load(); }, true);
                 $scope.$watch("boundsModel.bounds", function(val) { $scope.wmsModel.setBounds(val); });

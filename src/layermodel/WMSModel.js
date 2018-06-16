@@ -1,6 +1,7 @@
 function WMSModel() {
     this.bounds = null;
     this.layer = null;
+    this.srs = null;
     this.centerScale = null;
     this.animationCenterScale = null;
     this.autoClassification = true;
@@ -46,14 +47,14 @@ WMSModel.prototype.load = function() {
     var maxX = envelope.getMaxX();
     var maxY = envelope.getMaxY();
     
-    if ((minX > 20000000) || (minY > 20000000) || (maxX < -20000000) || (maxY < -20000000)) {
+    if ((minX > this.srs.maxX) || (minY > this.srs.maxY) || (maxX < this.srs.minX) || (maxY < this.srs.minY)) {
         return;
     }
     
-    minX = Math.max(minX, -20000000);
-    minY = Math.max(minY, -20000000);
-    maxX = Math.min(maxX, 20000000);
-    maxY = Math.min(maxY, 20000000);
+    minX = Math.max(minX, this.srs.minX);
+    minY = Math.max(minY, this.srs.minY);
+    maxX = Math.min(maxX, this.srs.maxX);
+    maxY = Math.min(maxY, this.srs.maxY);
     
     var tileWidth = Math.round(this.centerScale.getNumPixs(maxX - minX));
     var tileHeight = Math.round(this.centerScale.getNumPixs(maxY - minY));
@@ -84,7 +85,7 @@ WMSModel.prototype.load = function() {
         url += "&SLD=" + encodeURIComponent(sldURL);
     }
     url += "&TRANSPARENT=true";
-    url += "&SRS=" + this.layer.srs;
+    url += "&SRS=EPSG:" + this.srs.srid;
     url += "&BBOX=" + minX + "," + minY + "," + maxX + "," + maxY;
     url += "&WIDTH=" + tileWidth;
     url += "&HEIGHT=" + tileHeight;

@@ -2,11 +2,10 @@ function UTFGridModel() {
     this.http = null;
     this.bounds = null;
     this.layer = null;
+    this.srs = null;
     this.centerScale = null;
     this.tileWidth = 256;
     this.tileHeight = 256;
-    this.minX = -20037508.3427892;
-    this.maxY = 20037508.3427892;
     this.tiles = [];
     this.tileIndex = {};
     
@@ -17,11 +16,11 @@ UTFGridModel.prototype = new TileModel();
 UTFGridModel.prototype.constructor = UTFGridModel;
 
 UTFGridModel.prototype.getFeature = function(pixX, pixY) {
-    var zoomLevel = getZoomLevel(this.centerScale.scale);
+    var zoomLevel = this.srs.getZoomLevel(this.centerScale.scale);
     var worldX = this.centerScale.getWorldX(this.bounds.width, pixX);
     var worldY = this.centerScale.getWorldY(this.bounds.height, pixY);
-    var tileX = Math.floor((worldX - this.minX) / zoomLevel.resolution / this.tileWidth);
-    var tileY = Math.max(Math.floor((this.maxY - worldY) / zoomLevel.resolution / this.tileHeight), 0);
+    var tileX = Math.floor((worldX - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
+    var tileY = Math.max(Math.floor((this.srs.maxY - worldY) / zoomLevel.resolution / this.tileHeight), 0);
     var tile = this.getTile(tileX, tileY, zoomLevel.scale);
     if (tile == null) {
         return null;

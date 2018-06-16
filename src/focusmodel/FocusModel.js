@@ -1,18 +1,26 @@
 function FocusModel() {
     this.animationTimer = new AnimationTimer(1000);
     this.incubationTimer = new Timer(1000, 1);
-    this.maxEnvelope = new Envelope(-20000000, -20000000, 20000000, 20000000);
+    this.srs = new SRS();
     this.minScale = 0;
     this.maxScale = 443744272.72414012;
     this.scaleToZoomLevels = false;
     this.centerScale = null;
-    this.animationBase = null;
+    this.animation = null;
     this.animationCenterScale = null;
     this.incubationCenterScale = null;
     
     var focusModel = this;
     this.animationTimer.timerHandler = function() {
-        focusModel.animationCenterScale = focusModel.getAnimationCenterScale();
+        var base = focusModel.animation.base;
+        var delta = focusModel.animation.target.subtract(base);
+        var progress = focusModel.animationTimer.currentCount / focusModel.animationTimer.duration;
+        
+        focusModel.animationCenterScale = new CenterScale(
+            base.centerX + (-delta.centerX * progress * progress + 2 * delta.centerX * progress),
+            base.centerY + (-delta.centerY * progress * progress + 2 * delta.centerY * progress),
+            base.scale + (-delta.scale * progress * progress + 2 * delta.scale * progress)
+        ).fromOffset(focusModel.animation.pixXOffset, focusModel.animation.pixYOffset);
     };
     this.incubationTimer.timerHandler = function() {
         focusModel.incubationCenterScale = focusModel.centerScale;
@@ -27,60 +35,72 @@ FocusModel.prototype.grab = function(x, y, pixXOffset, pixYOffset) {
             this.centerScale = this.animationCenterScale;
         } else {
             this.centerScale = this.centercon(new CenterScale(x, y, this.centerScale.scale).fromOffset(pixXOffset, pixYOffset));
-            this.animationBase = {
-                centerScale: new CenterScale(x, y, this.animationBase.centerScale.scale),
+            this.animation = {
+                base: new CenterScale(x, y, this.animation.base.scale),
+                target: this.centerScale.toOffset(pixXOffset, pixYOffset),
                 pixXOffset: pixXOffset,
                 pixYOffset: pixYOffset
             };
         }
         this.setIncubationCenterScale();
     }
-}
-
-// Pan with mouse move.
-FocusModel.prototype.pan = function(dx, dy, pixXOffset, pixYOffset) {
-    if (this.animationTimer.isRunning()) {
-        if (this.animationCenterScale.scale == this.centerScale.scale) {
-            this.animationTimer.reset();
-            this.centerScale = this.animationCenterScale = this.centercon(
-                new CenterScale(this.animationCenterScale.centerX + dx, this.animationCenterScale.centerY + dy, this.animationCenterScale.scale)
-            );
-        } else {
-            this.centerScale = this.centercon(
-                new CenterScale(this.centerScale.centerX + dx, this.centerScale.centerY + dy, this.centerScale.scale)
-            );
-            this.animationBase.pixXOffset = pixXOffset;
-            this.animationBase.pixYOffset = pixYOffset;
-        }
-    } else {
-        this.centerScale = this.animationCenterScale = this.centercon(
-            new CenterScale(this.centerScale.centerX + dx, this.centerScale.centerY + dy, this.centerScale.scale)
-        );
-    }
-    this.setIncubationCenterScale();
-}
-
-// Zoom with mouse wheel (animate == true) or pan/zoom with touch move/pinch (animate == false).
-FocusModel.prototype.zoom = function(centerScale, pixXOffset, pixYOffset, animate) {
-    centerScale = this.scalecon(centerScale, animate);
-    if (animate && (this.animationCenterScale.scale == centerScale.scale)) {
-        return;
-    }
-    if (!animate && (this.animationTimer.isRunning())) {
-        this.animationTimer.reset();
-    }
     
-    this.centerScale = this.centercon(centerScale.fromOffset(pixXOffset, pixYOffset));
-    if (animate) {
-        this.animationBase = {
-            centerScale: new CenterScale(centerScale.centerX, centerScale.centerY, this.animationCenterScale.scale),
+    if (!this.animationTimer.isRunning()) {
+        this.animation = {
+            base: new CenterScale(x, y, this.centerScale.scale),
+            target: this.centerScale.toOffset(pixXOffset, pixYOffset),
             pixXOffset: pixXOffset,
             pixYOffset: pixYOffset
         };
-        this.setAnimationCenterScale();
-    } else {
-        this.animationCenterScale = this.centerScale;
     }
+}
+
+// Pan with mouse move or one-finger touch.
+FocusModel.prototype.pan = function(pixXOffset, pixYOffset) {
+    this.animation.pixXOffset = pixXOffset;
+    this.animation.pixYOffset = pixYOffset;
+}
+
+// Pan/zoom with multi-finger touch.
+FocusModel.prototype.pinchPan = function(centerScale, pixXOffset, pixYOffset) {
+    centerScale = this.scalecon(centerScale, false);
+    if (this.animationTimer.isRunning()) {
+        this.animationTimer.reset();
+    }
+    
+    this.animation = {
+        base: centerScale,
+        target: centerScale,
+        pixXOffset: pixXOffset,
+        pixYOffset: pixYOffset
+    };
+}
+
+FocusModel.prototype.panimate = function() {
+    if (!this.animationTimer.isRunning()) {
+        var centerScale = this.centercon(this.animation.target.fromOffset(this.animation.pixXOffset, this.animation.pixYOffset));
+        if (!this.centerScale.equals(centerScale)) {
+            this.centerScale = this.animationCenterScale = centerScale;
+            this.setIncubationCenterScale();
+        }
+    }
+}
+
+// Zoom with mouse wheel.
+FocusModel.prototype.zoom = function(centerScale, pixXOffset, pixYOffset) {
+    centerScale = this.scalecon(centerScale, true);
+    if (this.animationCenterScale.scale == centerScale.scale) {
+        return;
+    }
+    
+    this.centerScale = this.centercon(centerScale.fromOffset(pixXOffset, pixYOffset));
+    this.animation = {
+        base: new CenterScale(centerScale.centerX, centerScale.centerY, this.animationCenterScale.scale),
+        target: this.centerScale.toOffset(pixXOffset, pixYOffset),
+        pixXOffset: pixXOffset,
+        pixYOffset: pixYOffset
+    };
+    this.setAnimationCenterScale();
     this.setIncubationCenterScale();
 }
 
@@ -95,7 +115,7 @@ FocusModel.prototype.setCenterScale = function(centerScale, roundToZoomLevels) {
     centerScale = this.centercon(this.scalecon(centerScale, roundToZoomLevels));
     if (this.centerScale == null) {
         this.centerScale = centerScale;
-        this.animationBase = {centerScale: centerScale, pixXOffset: 0, pixYOffset: 0};
+        this.animation = {base: centerScale, target: centerScale, pixXOffset: 0, pixYOffset: 0};
         this.animationCenterScale = centerScale;
         this.incubationCenterScale = centerScale;
         return;
@@ -105,7 +125,7 @@ FocusModel.prototype.setCenterScale = function(centerScale, roundToZoomLevels) {
     }
     
     this.centerScale = centerScale;
-    this.animationBase = {centerScale: this.animationCenterScale, pixXOffset: 0, pixYOffset: 0};
+    this.animation = {base: this.animationCenterScale, target: centerScale, pixXOffset: 0, pixYOffset: 0};
     this.setAnimationCenterScale();
     this.setIncubationCenterScale();
 }
@@ -120,24 +140,10 @@ FocusModel.prototype.setIncubationCenterScale = function() {
     this.incubationTimer.start();
 }
 
-FocusModel.prototype.getAnimationCenterScale = function() {
-    var pixXOffset = this.animationBase.pixXOffset;
-    var pixYOffset = this.animationBase.pixYOffset;
-    var base = this.animationBase.centerScale;
-    var delta = this.centerScale.toOffset(pixXOffset, pixYOffset).subtract(base);
-    var progress = this.animationTimer.currentCount / this.animationTimer.duration;
-    
-    return new CenterScale(
-        base.centerX + (-delta.centerX * progress * progress + 2 * delta.centerX * progress),
-        base.centerY + (-delta.centerY * progress * progress + 2 * delta.centerY * progress),
-        base.scale + (-delta.scale * progress * progress + 2 * delta.scale * progress)
-    ).fromOffset(pixXOffset, pixYOffset);
-}
-
 // Center-related conditions. Relevant for zooming and panning.
 FocusModel.prototype.centercon = function(centerScale) {
-    var centerX = Math.min(Math.max(centerScale.centerX, this.maxEnvelope.getMinX()), this.maxEnvelope.getMaxX());
-    var centerY = Math.min(Math.max(centerScale.centerY, this.maxEnvelope.getMinY()), this.maxEnvelope.getMaxY());
+    var centerX = Math.min(Math.max(centerScale.centerX, this.srs.minX), this.srs.maxX);
+    var centerY = Math.min(Math.max(centerScale.centerY, this.srs.minY), this.srs.maxY);
     return new CenterScale(centerX, centerY, centerScale.scale);
 }
 
@@ -150,7 +156,7 @@ FocusModel.prototype.scalecon = function(centerScale, roundToZoomLevels) {
         return this.scalecon(new CenterScale(centerScale.centerX, centerScale.centerY, this.maxScale), roundToZoomLevels);
     }
     if (this.scaleToZoomLevels) {
-        var zoomLevelScale = getZoomLevel(centerScale.scale, roundToZoomLevels).scale;
+        var zoomLevelScale = this.srs.getZoomLevel(centerScale.scale, roundToZoomLevels).scale;
         if (centerScale.scale != zoomLevelScale) {
             return new CenterScale(centerScale.centerX, centerScale.centerY, zoomLevelScale);
         }

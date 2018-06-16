@@ -87,7 +87,7 @@ AnimationTimer.prototype.start = function() {
         
         function preTick(currentTime) {
             timer.currentCount = currentTime - timer.startTime;
-            if (timer.currentCount > timer.duration) {
+            if ((timer.duration > -1) && (timer.currentCount > timer.duration)) {
                 timer.currentCount = timer.duration;
                 timer.tick();
                 timer.stop();
@@ -112,80 +112,71 @@ AnimationTimer.prototype.reset = function() {
     this.stop();
 };
 
-function PanSpeedTimer(delay, numRepeats) {
-    this.delay = delay;
-    this.numRepeats = numRepeats;
+function PanSpeedTimer() {
+    this.delay = -1;
+    this.numRepeats = -1;
     this.currentCount = 0;
     this.scope = null;
     this.interval = -1;
+    this.timerHandler = function() { };
     
-    this.panEvent = null;
-    this.lastPoint0 = null;
-    this.lastPoint1 = null;
-    this.lastPointWas0 = false;
-    this.speed = {h: -1, v: -1};
+    this.duration = -1;
+    this.startTime = -1;
     
-    var panSpeedTimer = this;
-    this.timerHandler = function() {
-        if (!panSpeedTimer.lastPointWas0) {
-            panSpeedTimer.lastPoint0 = {
-                x: panSpeedTimer.panEvent.clientX,
-                y: panSpeedTimer.panEvent.clientY,
-                numTouches: (panSpeedTimer.panEvent.touches? panSpeedTimer.panEvent.touches.length: 1),
-                time: (new Date()).getTime()
-            };
-            panSpeedTimer.lastPointWas0 = true;
-        } else {
-            panSpeedTimer.lastPoint1 = {
-                x: panSpeedTimer.panEvent.clientX,
-                y: panSpeedTimer.panEvent.clientY,
-                numTouches: (panSpeedTimer.panEvent.touches? panSpeedTimer.panEvent.touches.length: 1),
-                time: (new Date()).getTime()
-            };
-            panSpeedTimer.lastPointWas0 = false;
-        }
-    };
+    this.panEvents = [];
 }
 
-PanSpeedTimer.prototype = new Timer();
+PanSpeedTimer.prototype = new AnimationTimer();
 PanSpeedTimer.prototype.constructor = PanSpeedTimer;
 
-PanSpeedTimer.prototype.start = function() {
-    this.lastPoint0 = {
-        x: this.panEvent.clientX,
-        y: this.panEvent.clientY,
-        numTouches: (this.panEvent.touches? this.panEvent.touches.length: 1),
-        time: (new Date()).getTime()
-    };
-    this.lastPointWas0 = true;
+PanSpeedTimer.prototype.start = function(panEvent) {
+    this.push(panEvent);
     
-    Timer.prototype.start.call(this);
+    AnimationTimer.prototype.start.call(this);
 }
 
-PanSpeedTimer.prototype.resetAndGetSpeed = function() {
-    if (this.lastPoint1 == null) {
-        // timerHandler has not been called yet. Use the initial point, no other point is available.
-    } else if (this.lastPointWas0) {
-        // Then use point 1, else use point 0. Always use the oldest point available.
-        this.lastPoint0 = this.lastPoint1;
-    }
+PanSpeedTimer.prototype.resetAndGetSpeed = function(panEvent) {
+    var speed = {h: 0, v: 0, z: 1};
     
-    if ((this.panEvent.touches == null) || (this.panEvent.touches.length == this.lastPoint0.numTouches)) {
-        var timeSpan = (new Date()).getTime() - this.lastPoint0.time;
-        this.speed.h = (this.panEvent.clientX - this.lastPoint0.x) / timeSpan;
-        this.speed.v = (this.panEvent.clientY - this.lastPoint0.y) / timeSpan;
+    if (panEvent.touches == null) {
+        this.push(panEvent);
     } else {
-        this.speed.h = 0;
-        this.speed.v = 0;
+        // For touch events, make sure that only events with the same number of touches are included in the speed calculation.
+        var eventSeries = [];
+        for (var i = 0; i < this.panEvents.length; i++) {
+            // Group them in series of subsequent events with the same number of touches.
+            if ((i == 0) || (this.panEvents[i].touches.length != this.panEvents[i - 1].touches.length)) {
+                eventSeries.push([this.panEvents[i]]);
+            } else {
+                eventSeries[eventSeries.length - 1].push(this.panEvents[i]);
+            }
+        }
+        this.panEvents = eventSeries.sort(function(a, b) { return b.length - a.length; })[0];  // Select the event series with the most members.
+        panEvent = this.panEvents[this.panEvents.length - 1];
+    }
+    var previousEvent = this.panEvents[0];
+    var timeSpan = panEvent.time - previousEvent.time;
+    if (timeSpan > 0) {
+        speed.h = (panEvent.clientX - previousEvent.clientX) / timeSpan;
+        speed.v = (panEvent.clientY - previousEvent.clientY) / timeSpan;
+        if (panEvent.touches != null) {
+            speed.z = Math.pow(panEvent.radius / previousEvent.radius, 1 / timeSpan);
+        }
     }
     
-    this.lastPoint0 = null;
-    this.lastPoint1 = null;
-    this.lastPointWas0 = false;
+    this.panEvents = [];
     
-    Timer.prototype.reset.call(this);
+    AnimationTimer.prototype.reset.call(this);
     
-    return this.speed;
+    return speed;
+}
+
+PanSpeedTimer.prototype.push = function(panEvent) {
+    panEvent.time = performance.now();
+    this.panEvents.push(panEvent);
+    while (performance.now() - this.panEvents[0].time > 100) {
+        this.panEvents.shift();
+    }
 }
 
 function decorateTouchEvent(touchEvent, lastTouchOnly) {
@@ -194,7 +185,11 @@ function decorateTouchEvent(touchEvent, lastTouchOnly) {
     }
     
     var touch = touchEvent.touches[touchEvent.touches.length - 1];
-    if ((touchEvent.touches.length == 1) || lastTouchOnly)  {
+    if (touchEvent.touches.length == 0) {
+        touchEvent.clientX = touchEvent.changedTouches[0].clientX;
+        touchEvent.clientY = touchEvent.changedTouches[0].clientY;
+        touchEvent.radius = 1;
+    } else if ((touchEvent.touches.length == 1) || lastTouchOnly) {
         touchEvent.clientX = touch.clientX;
         touchEvent.clientY = touch.clientY;
         touchEvent.radius = 1;
