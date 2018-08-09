@@ -63,10 +63,14 @@ Point.prototype.getDistance = function(point) {
 Point.prototype.setXY = function(x, y) {
     this.x = x;
     this.y = y;
+    
+    this.invalidateEnvelope();
 }
 
 Point.prototype.move = function(dx, dy) {
     this.x += dx;
     this.y += dy;
+    
+    this.invalidateEnvelope();
 }
 

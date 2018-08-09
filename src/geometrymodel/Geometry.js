@@ -132,3 +132,10 @@ Geometry.prototype.clone = function() {
     return null;
 }
 
+Geometry.prototype.invalidateEnvelope = function() {
+    this.envelope = null;
+    if (this.$parent != null) {
+        this.$parent.invalidateEnvelope();
+    }
+}
+

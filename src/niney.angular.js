@@ -1,4 +1,5 @@
-angular.module("niney", ["monospaced.mousewheel"]).
+if (typeof angular !== "undefined") {
+    angular.module("niney", []).
     factory("heartbeatTimer", ["$rootScope", function($rootScope) {
         var timer = new Timer(2000, -1);
         timer.scope = $rootScope;
@@ -77,7 +78,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
     }).
     directive("map", ["$document", "heartbeatTimer", "defaultBoundsModel", "defaultFocusModel", "defaultAnimationEnvelopeModel", function($document, heartbeatTimer, defaultBoundsModel, defaultFocusModel, defaultAnimationEnvelopeModel) {
         return {
-            template: '<div ng-transclude msd-wheel="mouseWheelHandler($event, $delta, $deltaX, $deltaY)" class="mapviewer"></div>',
+            template: '<div ng-transclude class="mapviewer"></div>',
             restrict: "EA",
             replace: true,
             transclude: true,
@@ -89,12 +90,23 @@ angular.module("niney", ["monospaced.mousewheel"]).
                 tapFunction: "=nTap",
                 pressFunction: "=nPress",
                 releaseFunction: "=nRelease",
-                mouseMoveFunction: "=nMouseMove"
+                mouseMoveFunction: "=nMousemove"
             },
             controller: ["$scope", function($scope) {
                 this.scope = $scope;
             }],
             link: function($scope, $element, $attr) {
+                var env = {
+                    boundsModel: $scope.boundsModel,
+                    focusModel: $scope.focusModel,
+                    mouseWheelAction: $scope.mouseWheelAction,
+                    tapFunction: $scope.tapFunction,
+                    pressFunction: $scope.pressFunction,
+                    releaseFunction: $scope.releaseFunction,
+                    mouseMoveFunction: $scope.mouseMoveFunction
+                };
+                $scope.mapController = new MapController($element[0], env, $scope);
+                
                 $scope.$watch("boundsModel", function(val) {
                     if (val == null) {
                         $scope.boundsModel = defaultBoundsModel;
@@ -104,254 +116,34 @@ angular.module("niney", ["monospaced.mousewheel"]).
                             val.setBounds(new Bounds($element[0].offsetWidth, $element[0].offsetHeight));
                         });
                     }
+                    env.boundsModel = $scope.boundsModel;
                 });
                 $scope.$watch("focusModel", function(val) {
                     if (val == null) {
                         $scope.focusModel = defaultFocusModel;
                     }
+                    env.focusModel = $scope.focusModel;
                 });
                 $scope.$watch("envelopeModel", function(val) {
                     if (val == null) {
                         $scope.envelopeModel = defaultAnimationEnvelopeModel;
                     }
                 });
-                
-                var mouseWheelTime = performance.now();
-                var mouseWheelDelta = -1;
-                
-                $scope.mouseWheelHandler = function(mouseEvent, delta, deltaX, deltaY) {
-                    mouseEvent.preventDefault();
-                    
-                    var width = $scope.boundsModel.bounds.width;
-                    var height = $scope.boundsModel.bounds.height;
-                    
-                    var cs = $scope.focusModel.centerScale;
-                    var acs = $scope.focusModel.animationCenterScale;
-                    
-                    if ($scope.mouseWheelAction == "HORIZONTAL_PAN") {
-                        if (delta > 0) {
-                            $scope.focusModel.setCenterScale(new CenterScale(
-                                cs.centerX - acs.getNumWorldCoords(width / 2),
-                                cs.centerY,
-                                cs.scale
-                            ));
-                        } else {
-                            $scope.focusModel.setCenterScale(new CenterScale(
-                                cs.centerX + acs.getNumWorldCoords(width / 2),
-                                cs.centerY,
-                                cs.scale
-                            ));
-                        }
-                    } else if ($scope.mouseWheelAction == "VERTICAL_PAN") {
-                        if (delta > 0) {
-                            $scope.focusModel.setCenterScale(new CenterScale(
-                                cs.centerX,
-                                cs.centerY + acs.getNumWorldCoords(height / 2),
-                                cs.scale
-                            ));
-                        } else {
-                            $scope.focusModel.setCenterScale(new CenterScale(
-                                cs.centerX,
-                                cs.centerY - acs.getNumWorldCoords(height / 2),
-                                cs.scale
-                            ));
-                        }
-                    } else {  // ZOOM
-                        var now = performance.now();
-                        if (!$scope.focusModel.scaleToZoomLevels || (now - mouseWheelTime > 250) || (mouseWheelDelta * delta < 0)) {
-                            mouseWheelTime = now;
-                            mouseWheelDelta = delta;
-                            
-                            var mouseX = mouseEvent.originalEvent.clientX - $element[0].getBoundingClientRect().left;
-                            var mouseY = mouseEvent.originalEvent.clientY - $element[0].getBoundingClientRect().top;
-                            
-                            var worldX = acs.getWorldX(width, mouseX);
-                            var worldY = acs.getWorldY(height, mouseY);
-                            var scale = cs.scale;
-                            
-                            if (!$scope.focusModel.scaleToZoomLevels) {
-                                if (delta > 0) {
-                                    scale /= 1.3;
-                                } else {
-                                    scale *= 1.3;
-                                }
-                            } else {
-                                if (delta > 0) {
-                                    scale /= 2;
-                                } else {
-                                    scale *= 2;
-                                }
-                            }
-                            var pixXOffset = mouseX - (width / 2);
-                            var pixYOffset = mouseY - (height / 2);
-                            
-                            $scope.focusModel.zoom(new CenterScale(worldX, worldY, scale), pixXOffset, pixYOffset);
-                        }
-                    }
-                };
-                
-                $element.on("mousedown", pressHandler);
-                $element.on("touchstart", pressHandler);
-                
-                var panTimer = new PanSpeedTimer();  // Role of timer is 2-fold: measure pan speed, but also apply digest cycle every tick.
-                panTimer.scope = $scope;
-                panTimer.timerHandler = function() {
-                    $scope.focusModel.panimate();
-                };
-                
-                function pressHandler(event) {
-                    if (panTimer.isRunning()) {  // From 1 to 2 fingers is not a true press anymore.
-                        return;
-                    }
-                    
-                    event.preventDefault();
-                    decorateTouchEvent(event, false);
-                    
-                    var pressX = event.clientX - $element[0].getBoundingClientRect().left;
-                    var pressY = event.clientY - $element[0].getBoundingClientRect().top;
-                    
-                    var width = $scope.boundsModel.bounds.width;
-                    var height = $scope.boundsModel.bounds.height;
-                    
-                    var cs = $scope.focusModel.animationCenterScale;
-                    var worldX = cs.getWorldX(width, pressX);
-                    var worldY = cs.getWorldY(height, pressY);
-                    
-                    var pixXOffset = pressX - (width / 2);
-                    var pixYOffset = pressY - (height / 2);
-                    
-                    $scope.focusModel.grab(worldX, worldY, pixXOffset, pixYOffset);
-                    
-                    panTimer.start(event);
-                    
-                    if (event.type == "mousedown") {
-                        $document.on("mousemove", mouseMoveHandler);
-                        $document.on("mouseup", releaseHandler);
-                    } else {  // touchstart
-                        $document.on("touchmove", touchMoveHandler);
-                        $document.on("touchend", releaseHandler);
-                        $document.on("touchcancel", releaseHandler);
-                    }
-                    
-                    if ($scope.pressFunction != null) {
-                        $scope.$apply($scope.pressFunction(worldX, worldY));
-                    }
-                };
-                
-                function mouseMoveHandler(mouseEvent) {
-                    mouseEvent.preventDefault();
-                    
-                    var mouseX = mouseEvent.clientX - $element[0].getBoundingClientRect().left;
-                    var mouseY = mouseEvent.clientY - $element[0].getBoundingClientRect().top;
-                    
-                    var width = $scope.boundsModel.bounds.width;
-                    var height = $scope.boundsModel.bounds.height;
-                    
-                    if (panTimer.isRunning()) {
-                        var pixXOffset = mouseX - (width / 2);
-                        var pixYOffset = mouseY - (height / 2);
-                        
-                        $scope.focusModel.pan(pixXOffset, pixYOffset);
-                        
-                        panTimer.push(mouseEvent);
-                    } else {
-                        /*var cs = $scope.focusModel.animationCenterScale;
-                        var worldX = cs.getWorldX(width, mouseX);
-                        var worldY = cs.getWorldY(height, mouseY);
-                        
-                        if ($scope.mouseMoveFunction != null) {
-                            $scope.$apply($scope.mouseMoveFunction(worldX, worldY));
-                        }*/
-                    }
-                }
-                
-                function touchMoveHandler(touchEvent) {
-                    touchEvent.preventDefault();
-                    decorateTouchEvent(touchEvent, false);
-                    
-                    var pinchX = touchEvent.clientX - $element[0].getBoundingClientRect().left;
-                    var pinchY = touchEvent.clientY - $element[0].getBoundingClientRect().top;
-                    
-                    var width = $scope.boundsModel.bounds.width;
-                    var height = $scope.boundsModel.bounds.height;
-                    
-                    var pixXOffset = pinchX - (width / 2);
-                    var pixYOffset = pinchY - (height / 2);
-                    
-                    var previousEvent = panTimer.panEvents[panTimer.panEvents.length - 1];
-                    if ((touchEvent.touches.length == 1) && (previousEvent.touches.length == 1)) {
-                        $scope.focusModel.pan(pixXOffset, pixYOffset);
-                    } else {
-                        var cs = $scope.focusModel.animationCenterScale;
-                        var worldX = -1;
-                        var worldY = -1;
-                        var scale = cs.scale;
-                        
-                        if (touchEvent.touches.length != previousEvent.touches.length) {
-                            worldX = cs.getWorldX(width, pinchX);
-                            worldY = cs.getWorldY(height, pinchY);
-                        } else {
-                            worldX = $scope.focusModel.animation.target.centerX;
-                            worldY = $scope.focusModel.animation.target.centerY;
-                            scale = $scope.focusModel.animation.target.scale / (touchEvent.radius / previousEvent.radius);
-                        }
-                        
-                        $scope.focusModel.pinchPan(new CenterScale(worldX, worldY, scale), pixXOffset, pixYOffset);
-                    }
-                    
-                    panTimer.push(touchEvent);
-                }
-                
-                function releaseHandler(event) {
-                    if ((event.touches != null) && (event.touches.length > 0)) {  // From 2 to 1 fingers is not a true release yet.
-                        return;
-                    }
-                    
-                    decorateTouchEvent(event, false);
-                    
-                    var cs = $scope.focusModel.animationCenterScale;
-                    
-                    var tapped = ((panTimer.currentCount < 500) && (panTimer.panEvents.length == 1));
-                    var speed = panTimer.resetAndGetSpeed(event);
-                    if ((speed.h != 0) || (speed.v != 0) || (speed.z != 1)) {
-                        $scope.focusModel.setCenterScale(new CenterScale(
-                            cs.centerX - cs.getNumWorldCoords(speed.h) * 250,  // 250 = 1000 / 4 = animationDuration / deceleration
-                            cs.centerY + cs.getNumWorldCoords(speed.v) * 250,
-                            cs.scale / Math.pow(speed.z, 250)
-                        ), (event.type == "mouseup"));  // On touch devices, don't do the zoom level check.
-                    }
-                    
-                    if (event.type == "mouseup") {
-                        $document.off("mousemove", mouseMoveHandler);
-                        $document.off("mouseup", releaseHandler);
-                    } else {  // touchend || touchcancel
-                        $document.off("touchmove", touchMoveHandler);
-                        $document.off("touchend", releaseHandler);
-                        $document.off("touchcancel", releaseHandler);
-                        
-                        // Stop emulated mouse event. Calling touchEvent.preventDefault() does not prevent mouse emulation in iOS.
-                        $element.off("mousedown");
-                        setTimeout(function() { $element.off("mousedown"); $element.on("mousedown", pressHandler); }, 1000);
-                    }
-                    
-                    if (($scope.releaseFunction != null) || (($scope.tapFunction != null) && tapped)) {
-                        var releaseX = event.clientX - $element[0].getBoundingClientRect().left;
-                        var releaseY = event.clientY - $element[0].getBoundingClientRect().top;
-                        
-                        var width = $scope.boundsModel.bounds.width;
-                        var height = $scope.boundsModel.bounds.height;
-                        
-                        var worldX = cs.getWorldX(width, releaseX);
-                        var worldY = cs.getWorldY(height, releaseY);
-                        
-                        if ($scope.releaseFunction != null) {
-                            $scope.$apply($scope.releaseFunction(worldX, worldY));
-                        }
-                        if (($scope.tapFunction != null) && tapped) {
-                            $scope.$apply($scope.tapFunction(worldX, worldY));
-                        }
-                    }
-                }
+                $scope.$watch("mouseWheelAction", function(val) {
+                    env.mouseWheelAction = $scope.mouseWheelAction;
+                });
+                $scope.$watch("tapFunction", function(val) {
+                    env.tapFunction = $scope.tapFunction;
+                });
+                $scope.$watch("pressFunction", function(val) {
+                    env.pressFunction = $scope.pressFunction;
+                });
+                $scope.$watch("releaseFunction", function(val) {
+                    env.releaseFunction = $scope.releaseFunction;
+                });
+                $scope.$watch("mouseMoveFunction", function(val) {
+                    env.mouseMoveFunction = $scope.mouseMoveFunction;
+                });
             }
         };
     }]).
@@ -543,122 +335,77 @@ angular.module("niney", ["monospaced.mousewheel"]).
             replace: true,
             scope: {
                 maxScale: "=?maxscale",
-                propertyIndex: "=propertyindex",
-                deepWatch: "=?deepwatch",
                 envelopeCheck: "=?envelopecheck",
+                propertyIndex: "=?propertyindex",
+                deepWatch: "=?deepwatch",
                 inverseFill: "=?inversefill"
             },
             link: function($scope, $element, $attr, $parentCtrl) {
+                $scope.mapFeatureModel = new MapFeatureModel();
+                $scope.mapFeatureModel.ctx = $element[0].getContext("2d");
+                $scope.mapFeatureModel.css = getComputedStyle($element[0]);
+                
                 $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
                 $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
                 $parentCtrl.scope.$watch("envelopeModel", function(val) { $scope.envelopeModel = val; });
                 $parentCtrl.scope.$watch("featureModel", function(val) { $scope.featureModel = val; });
                 
-                $scope.$watch("maxScale", function(val) { if (!angular.isDefined(val)) { $scope.maxScale = Number.MAX_VALUE; }});
+                $scope.$watch("boundsModel.bounds", function(val) { $scope.mapFeatureModel.setBounds(val); });
+                $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.mapFeatureModel.setCenterScale(val); });
+                $scope.$watch("envelopeModel.envelope", function(val) { $scope.mapFeatureModel.setEnvelope(val); });
+                
+                $scope.$watch("maxScale", function(val) { if (angular.isDefined(val)) { $scope.mapFeatureModel.maxScale = val; }});
+                $scope.$watch("envelopeCheck", function(val) { if (angular.isDefined(val)) { $scope.mapFeatureModel.envelopeCheck = val; }});
+                $scope.$watch("propertyIndex", function(val) { if (angular.isDefined(val)) { $scope.mapFeatureModel.propertyIndex = val; }});
                 $scope.$watch("deepWatch", function(val) { if (!angular.isDefined(val) || val) {
-                    $scope.$watch("featureModel.features", watchHandler, true);
+                    $scope.$watch("featureModel.features", function(val) { $scope.mapFeatureModel.setFeatures(val); }, true);
                 } else {
-                    $scope.$watchCollection("featureModel.features", watchHandler);
+                    $scope.$watchCollection("featureModel.features", function(val) { $scope.mapFeatureModel.setFeatures(val); });
                 }});
-                $scope.$watch("envelopeCheck", function(val) { if (!angular.isDefined(val)) { $scope.envelopeCheck = true; }});
-                $scope.$watch("inverseFill", function(val) { if (!angular.isDefined(val)) { $scope.inverseFill = false; }});
-                $scope.$watch("envelopeModel.envelope", watchHandler);
+                $scope.$watch("inverseFill", function(val) { if (angular.isDefined(val)) { $scope.mapFeatureModel.inverseFill = val; }});
+            }
+        };
+    }).
+    directive("geometrylayer", function() {
+        return {
+            template: '<div class="mapfeaturelayer"><svg ng-if="mapFeatureModel.maxScale >= mapFeatureModel.centerScale.scale" xmlns="http://www.w3.org/2000/svg" version="1.1" class="mapfeature"><path ng-repeat="geometry in mapFeatureModel.nonPointGeometries" ng-attr-d="{{toSVGPath(mapFeatureModel.bounds, mapFeatureModel.centerScale, geometry)}}"/><circle ng-repeat="point in mapFeatureModel.points" ng-attr-cx="{{mapFeatureModel.centerScale.getPixX(mapFeatureModel.bounds.width, point.x)}}" ng-attr-cy="{{mapFeatureModel.centerScale.getPixY(mapFeatureModel.bounds.height, point.y)}}" ng-attr-r="{{circleRadius}}"/></svg></div>',
+            restrict: "EA",
+            require: "^map",
+            replace: true,
+            scope: {
+                maxScale: "=?maxscale",
+                envelopeCheck: "=?envelopecheck",
+                deepWatch: "=?deepwatch",
+                geometries: "=?geometries",
+                geometry: "=?geometry"
+            },
+            link: function($scope, $element, $attr, $parentCtrl) {
+                $scope.mapFeatureModel = new MapFeatureModel();
                 
-                // Not every envelope change is caused by a resize, so don't change width/height in the watch handler.
-                function watchHandler(val) {
-                    if ($scope.boundsModel == null) {
-                        return;
-                    }
-                    
-                    var ctx = $element[0].getContext("2d");
-                    var width = $scope.boundsModel.bounds.width;
-                    var height = $scope.boundsModel.bounds.height;
-                    ctx.setTransform(1, 0, 0, 1, 0, 0);  // ctx.resetTransform();
-                    ctx.clearRect(0, 0, width, height);
-                    
-                    if (($scope.focusModel == null) || ($scope.focusModel.animationCenterScale.scale > $scope.maxScale)) {
-                        return;
-                    }
-                    if ($scope.featureModel == null) {
-                        return;
-                    }
-                    
-                    var centerScale = $scope.focusModel.animationCenterScale;
-                    var scaling = centerScale.getNumPixs(1);
-                    var dx = -centerScale.centerX * scaling + width / 2;
-                    var dy = centerScale.centerY * scaling + height / 2;
-                    ctx.setTransform(scaling, 0, 0, -scaling, dx, dy);
-                    
-                    var css = getComputedStyle($element[0]);
-                    ctx.fillStyle = css.getPropertyValue("fill");
-                    ctx.strokeStyle = css.getPropertyValue("stroke");
-                    ctx.lineWidth = parseInt(css.getPropertyValue("stroke-width")) / scaling;
-                    
-                    for (var i = 0; i < $scope.featureModel.features.length; i++) {
-                        var geometry = $scope.featureModel.features[i].propertyValues[$scope.propertyIndex];
-                        if (geometry instanceof Geometry) {
-                            if (!$scope.envelopeCheck || (geometry.intersects($scope.envelopeModel.envelope))) {
-                                var geometries = getGeometries(geometry);
-                                for (var j = 0; j < geometries.length; j++) {
-                                    var geometry = geometries[j];
-                                    if (!$scope.envelopeCheck || (geometry.intersects($scope.envelopeModel.envelope))) {
-                                        var path = (new SVGConverter()).geometryToPath($scope.boundsModel.bounds, centerScale, geometry);
-                                        draw(ctx, path);
-                                    }
-                                }
-                            }
-                        } else {  // geometry is a path string.
-                            draw(ctx, geometry);
-                        }
-                    }
-                }
+                $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
+                $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
+                $parentCtrl.scope.$watch("envelopeModel", function(val) { $scope.envelopeModel = val; });
                 
-                function getGeometries(geometry) {
-                    var geometries = null;
-                    if (geometry instanceof Point) {
-                        geometries = [new LineString(geometry, geometry)];
-                    } else if ((geometry instanceof LineString) || (geometry instanceof Polygon) || (geometry instanceof Envelope)) {
-                        geometries = [geometry];
-                    } else {  // geometry is a multi-geometry or geometry collection.
-                        geometries = geometry.childGeometries;
-                    }
-                    return geometries;
-                }
+                $scope.$watch("boundsModel.bounds", function(val) { $scope.mapFeatureModel.setBounds(val); });
+                $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.mapFeatureModel.setCenterScale(val); });
+                $scope.$watch("envelopeModel.envelope", function(val) { $scope.mapFeatureModel.setEnvelope(val); });
                 
-                function draw(ctx, path) {
-                    if ($scope.inverseFill) {
-                        var envelope = $scope.envelopeModel.envelope;
-                        var minx = envelope.getMinX();
-                        var miny = envelope.getMinY();
-                        var maxx = envelope.getMaxX();
-                        var maxy = envelope.getMaxY();
-                        var path = "M " + minx + " " + miny + " " + " L " + maxx + " " + miny + " " + maxx + " " + maxy + " " + minx + " " + maxy + " Z " + path;
-                    }
-                    if (typeof Path2D === "function") {
-                        var p = new Path2D(path);
-                        ctx.fill(p, "evenodd");
-                        ctx.filter = getComputedStyle($element[0]).getPropertyValue("--stroke-filter");
-                        ctx.stroke(p);
-                        ctx.filter = "none";
-                    } else {  // Polyfill for IE11.
-                        ctx.beginPath();
-                        path = path.replace(/,/g, " ");
-                        var pathItems = path.split(" ");
-                        for (var i = 0; i < pathItems.length; i++) {
-                            if ((pathItems[i] == "") || (pathItems[i] == "Z") || (pathItems[i] == "L")) {
-                                continue;
-                            }
-                            if (pathItems[i] == "M") {
-                                ctx.moveTo(pathItems[++i], pathItems[++i]);
-                            } else {
-                                ctx.lineTo(pathItems[i], pathItems[++i]);
-                            }
-                        }
-                        ctx.fill("evenodd");
-                        ctx.filter = getComputedStyle($element[0]).getPropertyValue("--stroke-filter");
-                        ctx.stroke();
-                        ctx.filter = "none";
-                    }
+                $scope.$watch("maxScale", function(val) { if (angular.isDefined(val)) { $scope.mapFeatureModel.maxScale = val; }});
+                $scope.$watch("envelopeCheck", function(val) { if (angular.isDefined(val)) { $scope.mapFeatureModel.envelopeCheck = val; }});
+                $scope.$watch("deepWatch", function(val) { if (!angular.isDefined(val) || val) {
+                    $scope.$watch("geometries", function(val) { $scope.mapFeatureModel.setGeometries(val); }, true);
+                    $scope.$watch("geometry", function(val) { $scope.mapFeatureModel.setGeometry(val); }, true);
+                } else {
+                    $scope.$watch("geometries", function(val) { $scope.mapFeatureModel.setGeometries(val); });
+                    $scope.$watch("geometry", function(val) { $scope.mapFeatureModel.setGeometry(val); });
+                }});
+                
+                $scope.toSVGPath = (new SVGConverter()).geometryToPixPath;
+                
+                $scope.circleRadius = 8;
+                var circleRadius = getComputedStyle($element[0]).getPropertyValue("--circle-radius");
+                if (circleRadius != "") {
+                    $scope.circleRadius = parseFloat(circleRadius);
                 }
             }
         };
@@ -720,7 +467,7 @@ angular.module("niney", ["monospaced.mousewheel"]).
                         return geometryEnvelope.intersects($scope.envelopeModel.envelope);
                     });
                 };
-                $scope.toSVGPoints = (new SVGConverter()).geometryToPath;
+                $scope.toSVGPoints = (new SVGConverter()).geometryToPixPath;
                 $scope.mouseOverHandler = function(feature, event) {
                     $scope.featureCommands[0].perform(feature);
                 }
@@ -870,4 +617,4 @@ angular.module("niney", ["monospaced.mousewheel"]).
             }
         };
     });
-
+}

@@ -9,10 +9,7 @@ function WMSModel() {
 }
 
 WMSModel.prototype.setBounds = function(bounds) {
-    if (bounds == null) {
-        return;
-    }
-    if (bounds.equals(this.bounds)) {
+    if ((bounds == null) || (bounds.equals(this.bounds))) {
         return;
     }
     
@@ -37,7 +34,7 @@ WMSModel.prototype.load = function() {
     if (this.centerScale == null) {
         return;
     }
-    if (this.animationCenterScale == null) {
+    if (this.layer == null) {
         return;
     }
     
@@ -92,14 +89,16 @@ WMSModel.prototype.load = function() {
     url += "&FORMAT=" + this.layer.format;
     url += "&EXCEPTIONS=application/vnd.ogc.se_xml";
     
-    angular.forEach(this.layer.vendorSpecifics, function(value, key) {
-        url += "&" + key + "=" + value;
-    });
+    for (var key in this.layer.vendorSpecifics) {
+        url += "&" + key + "=" + this.layer.vendorSpecifics[key];
+    }
     
     if ((this.tile == null) || (this.tile.url != url)) {
         this.tile = new Tile(minX, maxY, this.centerScale.scale, 1, 1, tileWidth, tileHeight, url);
     }
-    this.tile.reset(this.bounds, this.animationCenterScale);
+    if (this.animationCenterScale != null) {
+        this.tile.reset(this.bounds, this.animationCenterScale);
+    }
 }
 
 WMSModel.prototype.resetLoaders = function() {

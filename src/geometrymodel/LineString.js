@@ -65,9 +65,19 @@ LineString.prototype.clone = function() {
 
 LineString.prototype.getLength = function() {
     var length = 0;
-    for (var i = 1; i < this.points.length; ++i) {
-        length += this.points[i].getDistance(points[i - 1]);
+    for (var i = 1; i < this.childGeometries.length; ++i) {
+        length += this.childGeometries[i].getDistance(this.childGeometries[i - 1]);
     }
     return length;
 }
-	
+
+LineString.prototype.getArea = function() {
+    var area = 0;
+    for (var i = 0; i < this.childGeometries.length; ++i) {
+        var j = (i + 1) % this.childGeometries.length;
+        area += this.childGeometries[i].x * this.childGeometries[j].y;
+        area -= this.childGeometries[i].y * this.childGeometries[j].x;
+    }
+    return Math.abs(area / 2);
+}	
+

@@ -35,14 +35,15 @@ EnvelopeCenterScale.prototype.equals = function(centerScale) {
         return false;
     }
     if (centerScale instanceof EnvelopeCenterScale) {
-        if ((this.centerX = centerScale.centerX) && (this.centerY == centerScale.centerY) &&
-            (this.scale == centerScale.scale) && (this.width == centerScale.width) && (this.height == centerScale.height)
-        ) {
-            return true;
-        } else {
-            return false;
-        }
+        return (
+            (this.centerX == centerScale.centerX) && (this.centerY == centerScale.centerY) &&
+            (this.scale == centerScale.scale) &&
+            (this.width == centerScale.width) && (this.height == centerScale.height)
+        );
     }
-    return this.equals(centerScale);
+    return (
+        (this.centerX == centerScale.centerX) && (this.centerY == centerScale.centerY) &&
+        (this.scale == centerScale.scale)
+    );
 }
 

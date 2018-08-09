@@ -142,7 +142,7 @@ WKTConverter.prototype.childCoordsToWKT = function(geometry) {
     return wkt + ")";
 }
 
-WKTConverter.prototype.wktToPath = function(wkt) {
+WKTConverter.prototype.wktToCoordPath = function(wkt) {
     return wkt.replace(/[^\d]+$/, "").replace(/^[^\d]+([\d.\s]+),\s*/g, "M $1 L ").replace(/\)+,\s*\(+([\d.\s]+),\s*/g, " M $1 L ");
 }
 

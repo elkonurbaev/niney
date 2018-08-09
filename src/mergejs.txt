@@ -25,10 +25,12 @@ focusmodel/EnvelopeCenterScale.js
 focusmodel/ZoomLevel.js
 focusmodel/SRS.js
 layermodel/Layer.js
+layermodel/MapController.js
 layermodel/Tile.js
 layermodel/TileModel.js
 layermodel/UTFGridModel.js
 layermodel/WMSModel.js
+layermodel/MapFeatureModel.js
 selectionmodel/SelectionModel.js
 service/file/CSVServiceConnector.js
 stylemodel/converters/URLClassificationConverter.js
