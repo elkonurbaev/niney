@@ -15,6 +15,9 @@ function MapController(element, env, scope) {
         mouseEvent.preventDefault();
         
         var delta = mouseEvent.deltaY;
+        if (delta == 0) {
+            return;
+        }
         
         var width = env.boundsModel.bounds.width;
         var height = env.boundsModel.bounds.height;
@@ -52,30 +55,23 @@ function MapController(element, env, scope) {
             }
         } else {  // ZOOM
             var now = performance.now();
-            if (!env.focusModel.scaleToZoomLevels || (now - mouseWheelTime > 250) || (mouseWheelDelta * delta < 0)) {
+            var reverseZoom = (mouseWheelDelta * delta < 0);
+            if (!env.focusModel.scaleToZoomLevels || (mouseWheelTime < now - 250) || reverseZoom) {
                 mouseWheelTime = now;
                 mouseWheelDelta = delta;
+                
+                var zoomFactor = env.focusModel.scaleToZoomLevels? 2: 1.3;
+                if (delta < 0) {
+                    zoomFactor = 1 / zoomFactor;
+                }
                 
                 var mouseX = mouseEvent.clientX - element.getBoundingClientRect().left;
                 var mouseY = mouseEvent.clientY - element.getBoundingClientRect().top;
                 
                 var worldX = acs.getWorldX(width, mouseX);
                 var worldY = acs.getWorldY(height, mouseY);
-                var scale = cs.scale;
+                var scale = (reverseZoom? acs.scale: cs.scale) * zoomFactor;
                 
-                if (!env.focusModel.scaleToZoomLevels) {
-                    if (delta < 0) {
-                        scale /= 1.3;
-                    } else {
-                        scale *= 1.3;
-                    }
-                } else {
-                    if (delta < 0) {
-                        scale /= 2;
-                    } else {
-                        scale *= 2;
-                    }
-                }
                 var pixXOffset = mouseX - (width / 2);
                 var pixYOffset = mouseY - (height / 2);
                 
@@ -208,11 +204,15 @@ function MapController(element, env, scope) {
         var tapped = ((panTimer.currentCount < 500) && (panTimer.panEvents.length == 1));
         var speed = panTimer.resetAndGetSpeed(event);
         if ((speed.h != 0) || (speed.v != 0) || (speed.z != 1)) {
+            var zoomLevelPolicy = FocusModel.NEVER;  // On touch devices, don't do the zoom level check.
+            if (event.type == "mouseup") {
+                zoomLevelPolicy = FocusModel.IF_REQUIRED;
+            }
             env.focusModel.setCenterScale(new CenterScale(
                 cs.centerX - cs.getNumWorldCoords(speed.h) * 250,  // 250 = 1000 / 4 = animationDuration / deceleration
                 cs.centerY + cs.getNumWorldCoords(speed.v) * 250,
                 cs.scale / Math.pow(speed.z, 250)
-            ), (event.type == "mouseup"));  // On touch devices, don't do the zoom level check.
+            ), zoomLevelPolicy);
         }
         
         if (event.type == "mouseup") {

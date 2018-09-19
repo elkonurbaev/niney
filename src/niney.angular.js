@@ -189,12 +189,15 @@ if (typeof angular !== "undefined") {
     }).
     directive("tileslayer", ["defaultTilesLayer", function(defaultTilesLayer) {
         return {
-            template: '<canvas ng-show="tileModel.layer.visible" width="{{boundsModel.bounds.width}}" height="{{boundsModel.bounds.height}}" class="tileslayer"></canvas>',
+            template: '<canvas width="{{boundsModel.bounds.width}}" height="{{boundsModel.bounds.height}}" class="tileslayer"></canvas>',
             restrict: "EA",
             require: "^map",
             replace: true,
             scope: {
-                layer: "=?layer"
+                layer: "=?layer",
+                protocol: "@protocol",
+                tileWidth: "@tilewidth",
+                tileHeight: "@tileheight"
             },
             link: function($scope, $element, $attr, $parentCtrl) {
                 $scope.tileModel = new TileModel();
@@ -205,8 +208,11 @@ if (typeof angular !== "undefined") {
                 
                 $scope.$watch("boundsModel.bounds", function(val) { $scope.tileModel.setBounds(val); });
                 $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.tileModel.setCenterScale(val); });
-                $scope.$watch("layer", function(val) { $scope.tileModel.setLayer(val || defaultTilesLayer); });
-                $scope.$watch("tileModel.layer.visible", function(val) { $scope.tileModel.resetLoaders(); });
+                $scope.$watch("layer", function(val) { if (angular.isDefined(val)) { $scope.tileModel.setLayer(val) } else { $scope.tileModel.setLayer(defaultTilesLayer); }});
+                $scope.$watch("layer.visible", function(val) { $scope.tileModel.resetLoaders(); });
+                $scope.$watch("protocol", function(val) { if (angular.isDefined(val)) { $scope.tileModel.protocol = val; }});
+                $scope.$watch("tileWidth", function(val) { if (angular.isDefined(val)) { $scope.tileModel.tileWidth = parseInt(val); }});
+                $scope.$watch("tileHeight", function(val) { if (angular.isDefined(val)) { $scope.tileModel.tileHeight = parseInt(val); }});
             }
         };
     }]).
@@ -227,9 +233,9 @@ if (typeof angular !== "undefined") {
                 $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
                 $parentCtrl.scope.$watch("focusModel", function(val) { if (val){ $scope.focusModel = val; $scope.utfGridModel.srs = val.srs; }});
                 
-                $scope.$watch("layer", function(val) { $scope.utfGridModel.layer = val; });
                 $scope.$watch("boundsModel.bounds", function(val) { $scope.utfGridModel.setBounds(val); });
                 $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.utfGridModel.setCenterScale(val); });
+                $scope.$watch("layer", function(val) { $scope.utfGridModel.setLayer(val); });
                 
                 $scope.mouseMoveHandler = function(mouseEvent) {
                     var mouseX = mouseEvent.clientX - $element[0].getBoundingClientRect().left;
@@ -254,7 +260,7 @@ if (typeof angular !== "undefined") {
     }]).
     directive("wmslayer", function() {
         return {
-            template: '<div class="wmslayer"><img maploader ng-if="layer.visible" ng-show="wmsModel.tile.completed" ng-src="{{wmsModel.tile.url}}" style="position: absolute" ng-style="wmsModel.tile.toCSS()"/></div>',
+            template: '<canvas width="{{boundsModel.bounds.width}}" height="{{boundsModel.bounds.height}}" class="wmslayer"></canvas>',
             restrict: "EA",
             require: "^map",
             replace: true,
@@ -263,23 +269,16 @@ if (typeof angular !== "undefined") {
             },
             link: function($scope, $element, $attr, $parentCtrl) {
                 $scope.wmsModel = new WMSModel();
+                $scope.wmsModel.ctx = $element[0].getContext("2d");
                 
                 $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
                 $parentCtrl.scope.$watch("focusModel", function(val) { if (val) { $scope.focusModel = val; $scope.wmsModel.srs = val.srs; }});
                 
-                $scope.$watch("layer", function(val) { $scope.wmsModel.layer = val; $scope.wmsModel.load(); }, true);
                 $scope.$watch("boundsModel.bounds", function(val) { $scope.wmsModel.setBounds(val); });
                 $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.wmsModel.setAnimationCenterScale(val); });
                 $scope.$watch("focusModel.incubationCenterScale", function(val) { $scope.wmsModel.setCenterScale(val); });
-            }
-        };
-    }).
-    directive("maploader", function() {
-        return {
-            restrict: "A",
-            link: function($scope, $element, $attr) {
-                $element.on("load", function() { $scope.$apply(function() { $scope.wmsModel.tile.completed = true; }); });
-                $element.on("error", function() { $scope.$apply(function() { $scope.wmsModel.tile.completed = true; }); });
+                $scope.$watch("layer", function(val) { $scope.wmsModel.setLayer(val); });
+                $scope.$watch("layer.visible", function(val) { $scope.wmsModel.load(); });
             }
         };
     }).

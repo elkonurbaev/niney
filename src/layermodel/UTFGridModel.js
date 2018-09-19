@@ -1,13 +1,14 @@
 function UTFGridModel() {
-    this.http = null;
     this.bounds = null;
-    this.layer = null;
     this.srs = null;
     this.centerScale = null;
+    this.layer = null;
     this.tileWidth = 256;
     this.tileHeight = 256;
     this.tiles = [];
     this.tileIndex = {};
+    this.ctx = null;  // Not used  for UTFGrid tile models.
+    this.http = null;
     
     this.resolution = 4;
 }

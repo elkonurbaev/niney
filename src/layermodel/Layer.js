@@ -1,6 +1,6 @@
 function Layer(name) {
     this.name = name;
-    this.baseURL = "http://b.tile.openstreetmap.org/";
+    this.baseURL = "https://tile.openstreetmap.org/";
     this.styleURL = null;
     this.urlExtension = "$Z/$X/$Y.png";
     this.format = "image/png";

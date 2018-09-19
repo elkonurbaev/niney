@@ -29,22 +29,30 @@ function SRS() {
     this.maxY = 20037508.3427892;
 }
 
-SRS.prototype.getZoomLevel = function(scale, round) {
-    if ((round === undefined) || (round === false) || (round == "DOWN")) {
+SRS.LOWER = 0;
+SRS.NEAREST = 1;
+SRS.UPPER = 2;
+
+SRS.prototype.getZoomLevel = function(scale, policy) {
+    if (policy == null) {
+        policy = SRS.NEAREST;
+    }
+    
+    if (policy == SRS.LOWER) {
         for (var i = 0; i < this.zoomLevels.length - 1; i++) {
             if (scale >= this.zoomLevels[i].scale) {
                 return this.zoomLevels[i];
             }
         }
         return this.zoomLevels[this.zoomLevels.length - 1];
-    } else if ((round === true) || (round == "ROUND")) {
+    } else if (policy == SRS.NEAREST) {
         for (var i = 0; i < this.zoomLevels.length - 1; i++) {
             if (scale >= (this.zoomLevels[i].scale + this.zoomLevels[i + 1].scale) / 2) {
                 return this.zoomLevels[i];
             }
         }
         return this.zoomLevels[this.zoomLevels.length - 1];
-    } else {  // round == "UP"
+    } else {  // policy == SRS.UPPER
         for (var i = this.zoomLevels.length - 1; i > 0; i--) {
             if (scale <= this.zoomLevels[i].scale) {
                 return this.zoomLevels[i];

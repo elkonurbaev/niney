@@ -5,7 +5,7 @@
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
-/* Last merge : Thu Aug 9 10:49:39 CEST 2018  */
+/* Last merge : Wed Sep 19 15:33:31 CEST 2018  */
 
 /* Merging order :
 
@@ -35,13 +35,14 @@
 - focusmodel/EnvelopeCenterScale.js
 - focusmodel/ZoomLevel.js
 - focusmodel/SRS.js
+- mapcontroller/MapController.js
 - layermodel/Layer.js
-- layermodel/MapController.js
 - layermodel/Tile.js
 - layermodel/TileModel.js
 - layermodel/UTFGridModel.js
 - layermodel/WMSModel.js
 - layermodel/MapFeatureModel.js
+- layermodel/protocols/WMSProtocol.js
 - selectionmodel/SelectionModel.js
 - service/file/CSVServiceConnector.js
 - stylemodel/converters/URLClassificationConverter.js
@@ -124,7 +125,7 @@ Timer.prototype.tick = function() {
 function AnimationTimer(duration) {
     this.delay = -1;
     this.numRepeats = -1;
-    this.currentCount = 0;  // currentTime - startTime
+    this.currentCount = 0;  // now - startTime
     this.scope = null;
     this.interval = -1;
     this.timerHandler = function() { };
@@ -142,8 +143,8 @@ AnimationTimer.prototype.start = function() {
         var timer = this;
         this.interval = window.requestAnimationFrame(preTick);
         
-        function preTick(currentTime) {
-            timer.currentCount = currentTime - timer.startTime;
+        function preTick() {
+            timer.currentCount = performance.now() - timer.startTime;
             if ((timer.duration > -1) && (timer.currentCount > timer.duration)) {
                 timer.currentCount = timer.duration;
                 timer.tick();
@@ -1413,7 +1414,7 @@ function FocusModel() {
     this.animationTimer = new AnimationTimer(1000);
     this.incubationTimer = new Timer(1000, 1);
     this.srs = new SRS();
-    this.minScale = 0;
+    this.minScale = 846.37503189876580;
     this.maxScale = 443744272.72414012;
     this.scaleToZoomLevels = false;
     this.centerScale = null;
@@ -1437,6 +1438,15 @@ function FocusModel() {
         focusModel.incubationCenterScale = focusModel.centerScale;
     };
 }
+
+FocusModel.ALWAYS_LOWER = 0;
+FocusModel.ALWAYS_NEAREST = 1;
+FocusModel.ALWAYS_UPPER = 2;
+FocusModel.IF_REQUIRED_LOWER = 3;
+FocusModel.IF_REQUIRED_NEAREST = 4;
+FocusModel.IF_REQUIRED_UPPER = 5;
+FocusModel.IF_REQUIRED = 6;
+FocusModel.NEVER = 7;
 
 // Click or touch while zooming/panning.
 FocusModel.prototype.grab = function(x, y, pixXOffset, pixYOffset) {
@@ -1474,7 +1484,7 @@ FocusModel.prototype.pan = function(pixXOffset, pixYOffset) {
 
 // Pan/zoom with multi-finger touch.
 FocusModel.prototype.pinchPan = function(centerScale, pixXOffset, pixYOffset) {
-    centerScale = this.scalecon(centerScale, false);
+    centerScale = this.scalecon(centerScale, FocusModel.NEVER);
     if (this.animationTimer.isRunning()) {
         this.animationTimer.reset();
     }
@@ -1499,7 +1509,7 @@ FocusModel.prototype.panimate = function() {
 
 // Zoom with mouse wheel.
 FocusModel.prototype.zoom = function(centerScale, pixXOffset, pixYOffset) {
-    centerScale = this.scalecon(centerScale, true);
+    centerScale = this.scalecon(centerScale, FocusModel.IF_REQUIRED);
     if (this.animationCenterScale.scale == centerScale.scale) {
         return;
     }
@@ -1515,15 +1525,15 @@ FocusModel.prototype.zoom = function(centerScale, pixXOffset, pixYOffset) {
     this.setIncubationCenterScale();
 }
 
-FocusModel.prototype.setCenterScale = function(centerScale, roundToZoomLevels) {
+FocusModel.prototype.setCenterScale = function(centerScale, zoomLevelPolicy) {
     if (centerScale == null) {
         return;
     }
-    if (roundToZoomLevels == null) {
-        roundToZoomLevels = true;
+    if (zoomLevelPolicy == null) {
+        zoomLevelPolicy = FocusModel.IF_REQUIRED;
     }
     
-    centerScale = this.centercon(this.scalecon(centerScale, roundToZoomLevels));
+    centerScale = this.centercon(this.scalecon(centerScale, zoomLevelPolicy));
     if (this.centerScale == null) {
         this.centerScale = centerScale;
         this.animation = {base: centerScale, target: centerScale, pixXOffset: 0, pixYOffset: 0};
@@ -1559,15 +1569,23 @@ FocusModel.prototype.centercon = function(centerScale) {
 }
 
 // Scale-related conditions. Relevant for zooming only.
-FocusModel.prototype.scalecon = function(centerScale, roundToZoomLevels) {
+FocusModel.prototype.scalecon = function(centerScale, zoomLevelPolicy) {
     if (centerScale.scale < this.minScale) {
-        return this.scalecon(new CenterScale(centerScale.centerX, centerScale.centerY, this.minScale), roundToZoomLevels);
+        return this.scalecon(new CenterScale(centerScale.centerX, centerScale.centerY, this.minScale), zoomLevelPolicy);
     }
     if (centerScale.scale > this.maxScale) {
-        return this.scalecon(new CenterScale(centerScale.centerX, centerScale.centerY, this.maxScale), roundToZoomLevels);
+        return this.scalecon(new CenterScale(centerScale.centerX, centerScale.centerY, this.maxScale), zoomLevelPolicy);
     }
-    if (this.scaleToZoomLevels) {
-        var zoomLevelScale = this.srs.getZoomLevel(centerScale.scale, roundToZoomLevels).scale;
+    if (
+        ((zoomLevelPolicy >= FocusModel.ALWAYS_LOWER) && (zoomLevelPolicy <= FocusModel.ALWAYS_UPPER)) ||
+        ((zoomLevelPolicy >= FocusModel.IF_REQUIRED_LOWER) && (zoomLevelPolicy <= FocusModel.IF_REQUIRED) && this.scaleToZoomLevels)
+    ) {
+        if (zoomLevelPolicy == FocusModel.IF_REQUIRED) {
+            zoomLevelPolicy = undefined;
+        } else {
+            zoomLevelPolicy = zoomLevelPolicy % 3;
+        }
+        var zoomLevelScale = this.srs.getZoomLevel(centerScale.scale, zoomLevelPolicy).scale;
         if (centerScale.scale != zoomLevelScale) {
             return new CenterScale(centerScale.centerX, centerScale.centerY, zoomLevelScale);
         }
@@ -1682,22 +1700,30 @@ function SRS() {
     this.maxY = 20037508.3427892;
 }
 
-SRS.prototype.getZoomLevel = function(scale, round) {
-    if ((round === undefined) || (round === false) || (round == "DOWN")) {
+SRS.LOWER = 0;
+SRS.NEAREST = 1;
+SRS.UPPER = 2;
+
+SRS.prototype.getZoomLevel = function(scale, policy) {
+    if (policy == null) {
+        policy = SRS.NEAREST;
+    }
+    
+    if (policy == SRS.LOWER) {
         for (var i = 0; i < this.zoomLevels.length - 1; i++) {
             if (scale >= this.zoomLevels[i].scale) {
                 return this.zoomLevels[i];
             }
         }
         return this.zoomLevels[this.zoomLevels.length - 1];
-    } else if ((round === true) || (round == "ROUND")) {
+    } else if (policy == SRS.NEAREST) {
         for (var i = 0; i < this.zoomLevels.length - 1; i++) {
             if (scale >= (this.zoomLevels[i].scale + this.zoomLevels[i + 1].scale) / 2) {
                 return this.zoomLevels[i];
             }
         }
         return this.zoomLevels[this.zoomLevels.length - 1];
-    } else {  // round == "UP"
+    } else {  // policy == SRS.UPPER
         for (var i = this.zoomLevels.length - 1; i > 0; i--) {
             if (scale <= this.zoomLevels[i].scale) {
                 return this.zoomLevels[i];
@@ -1710,30 +1736,7 @@ SRS.prototype.getZoomLevel = function(scale, round) {
 
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-/* Merging js: layermodel/Layer.js begins */
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-
-function Layer(name) {
-    this.name = name;
-    this.baseURL = "http://b.tile.openstreetmap.org/";
-    this.styleURL = null;
-    this.urlExtension = "$Z/$X/$Y.png";
-    this.format = "image/png";
-    this.visible = true;
-    this.title = name;
-    this.filterModels = [];
-    this.classification = null;
-    this.vendorSpecifics = {};
-}
-
-Layer.prototype.forceReload = function() {
-    this.vendorSpecifics.epochtime = performance.now();
-}
-
-
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-/* Merging js: layermodel/MapController.js begins */
+/* Merging js: mapcontroller/MapController.js begins */
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
@@ -1754,6 +1757,9 @@ function MapController(element, env, scope) {
         mouseEvent.preventDefault();
         
         var delta = mouseEvent.deltaY;
+        if (delta == 0) {
+            return;
+        }
         
         var width = env.boundsModel.bounds.width;
         var height = env.boundsModel.bounds.height;
@@ -1791,30 +1797,23 @@ function MapController(element, env, scope) {
             }
         } else {  // ZOOM
             var now = performance.now();
-            if (!env.focusModel.scaleToZoomLevels || (now - mouseWheelTime > 250) || (mouseWheelDelta * delta < 0)) {
+            var reverseZoom = (mouseWheelDelta * delta < 0);
+            if (!env.focusModel.scaleToZoomLevels || (mouseWheelTime < now - 250) || reverseZoom) {
                 mouseWheelTime = now;
                 mouseWheelDelta = delta;
+                
+                var zoomFactor = env.focusModel.scaleToZoomLevels? 2: 1.3;
+                if (delta < 0) {
+                    zoomFactor = 1 / zoomFactor;
+                }
                 
                 var mouseX = mouseEvent.clientX - element.getBoundingClientRect().left;
                 var mouseY = mouseEvent.clientY - element.getBoundingClientRect().top;
                 
                 var worldX = acs.getWorldX(width, mouseX);
                 var worldY = acs.getWorldY(height, mouseY);
-                var scale = cs.scale;
+                var scale = (reverseZoom? acs.scale: cs.scale) * zoomFactor;
                 
-                if (!env.focusModel.scaleToZoomLevels) {
-                    if (delta < 0) {
-                        scale /= 1.3;
-                    } else {
-                        scale *= 1.3;
-                    }
-                } else {
-                    if (delta < 0) {
-                        scale /= 2;
-                    } else {
-                        scale *= 2;
-                    }
-                }
                 var pixXOffset = mouseX - (width / 2);
                 var pixYOffset = mouseY - (height / 2);
                 
@@ -1947,11 +1946,15 @@ function MapController(element, env, scope) {
         var tapped = ((panTimer.currentCount < 500) && (panTimer.panEvents.length == 1));
         var speed = panTimer.resetAndGetSpeed(event);
         if ((speed.h != 0) || (speed.v != 0) || (speed.z != 1)) {
+            var zoomLevelPolicy = FocusModel.NEVER;  // On touch devices, don't do the zoom level check.
+            if (event.type == "mouseup") {
+                zoomLevelPolicy = FocusModel.IF_REQUIRED;
+            }
             env.focusModel.setCenterScale(new CenterScale(
                 cs.centerX - cs.getNumWorldCoords(speed.h) * 250,  // 250 = 1000 / 4 = animationDuration / deceleration
                 cs.centerY + cs.getNumWorldCoords(speed.v) * 250,
                 cs.scale / Math.pow(speed.z, 250)
-            ), (event.type == "mouseup"));  // On touch devices, don't do the zoom level check.
+            ), zoomLevelPolicy);
         }
         
         if (event.type == "mouseup") {
@@ -1994,6 +1997,29 @@ function MapController(element, env, scope) {
     }
 }
 
+
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* Merging js: layermodel/Layer.js begins */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+
+function Layer(name) {
+    this.name = name;
+    this.baseURL = "https://tile.openstreetmap.org/";
+    this.styleURL = null;
+    this.urlExtension = "$Z/$X/$Y.png";
+    this.format = "image/png";
+    this.visible = true;
+    this.title = name;
+    this.filterModels = [];
+    this.classification = null;
+    this.vendorSpecifics = {};
+}
+
+Layer.prototype.forceReload = function() {
+    this.vendorSpecifics.epochtime = performance.now();
+}
 
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -2052,9 +2078,10 @@ Tile.prototype.toCSS = function() {
 
 function TileModel() {
     this.bounds = null;
-    this.layer = null;
     this.srs = null;
     this.centerScale = null;
+    this.layer = null;
+    this.protocol = "TMS";
     this.tileWidth = 256;
     this.tileHeight = 256;
     this.tiles = [];
@@ -2072,15 +2099,15 @@ TileModel.prototype.setBounds = function(bounds) {
     this.resetLoaders();
 }
 
+TileModel.prototype.setCenterScale = function(centerScale) {
+    this.centerScale = centerScale;
+    this.resetLoaders();
+}
+
 TileModel.prototype.setLayer = function(layer) {
     this.layer = layer;
     this.tiles = [];
     this.tileIndex = {};
-    this.resetLoaders();
-}
-
-TileModel.prototype.setCenterScale = function(centerScale) {
-    this.centerScale = centerScale;
     this.resetLoaders();
 }
 
@@ -2091,9 +2118,6 @@ TileModel.prototype.resetLoaders = function() {
     if (this.centerScale == null) {
         return;
     }
-    if ((this.layer == null) || !this.layer.visible) {
-        return;
-    }
     
     if (this.ctx != null) {
         this.ctx.clearRect(0, 0, this.bounds.width, this.bounds.height);
@@ -2101,6 +2125,10 @@ TileModel.prototype.resetLoaders = function() {
         for (var i = 0; i < this.tiles.length; i++) {
             this.tiles[i].completed = false;
         }
+    }
+    
+    if ((this.layer == null) || (!this.layer.visible)) {
+        return;
     }
     
     var envelope = this.centerScale.toEnvelope(this.bounds.width, this.bounds.height);
@@ -2124,26 +2152,41 @@ TileModel.prototype.resetLoaders = function() {
                 }
                 
                 if (tile == null) {
-                    var url = this.layer.urlExtension;
-                    url = url.replace("$Z", zoomLevel.zoomLevel);
-                    url = url.replace("$X", ((tileX % tileLimit) + tileLimit) % tileLimit);
-                    url = url.replace("$Y", tileY);
+                    var url = null;
+                    if (this.protocol == "TMS") {
+                        url = this.layer.urlExtension;
+                        url = url.replace("$Z", zoomLevel.zoomLevel);
+                        url = url.replace("$X", ((tileX % tileLimit) + tileLimit) % tileLimit);
+                        url = url.replace("$Y", tileY);
+                        url = this.layer.baseURL + url;
+                    } else {  // WMTS
+                        var maxX = (tileX + 1) * this.tileWidth * zoomLevel.resolution + this.srs.minX;
+                        var minY = -((tileY + 1) * this.tileHeight * zoomLevel.resolution - this.srs.maxY);
+                        url = WMSProtocol.getMapURL(this.layer, this.srs, minX, minY, maxX, maxY, this.tileWidth, this.tileHeight, true);
+                    }
                     
-                    tile = new Tile(minX, maxY, zoomLevel.scale, tileX, tileY, this.tileWidth, this.tileHeight, this.layer.baseURL + url);
+                    tile = new Tile(minX, maxY, zoomLevel.scale, tileX, tileY, this.tileWidth, this.tileHeight, url);
                     this.addTile(zoomLevel.zoomLevel, tile);
                     
                     if (this.ctx != null) {
-                        var e = function(t, env) {
+                        var l = function(t, env) {
                             return function() {
                                 t.completed = true;
                                 if (env.srs.getZoomLevel(env.centerScale.scale) == env.srs.getZoomLevel(t.scale)) {
                                     t.reset(env.bounds, env.centerScale);
-                                    env.drawTile(t);
+                                    env.drawTile(t, true);
                                 }
                             }
                         }(tile, this);
+                        var e = function(t) {
+                            return function() {
+                                t.completed = true;
+                                console.log("Error loading tile: " + t.url);
+                            }
+                        }(tile);
                         tile.data = new Image();
-                        tile.data.addEventListener("load", e);
+                        tile.data.addEventListener("load", l);
+                        tile.data.addEventListener("error", e);
                         tile.data.src = tile.url;
                     }
                     
@@ -2163,7 +2206,7 @@ TileModel.prototype.resetLoaders = function() {
                 }
             } else {  // Completed tile exists. Only applies to tile models that draw on a canvas (ctx).
                 tile.reset(this.bounds, this.centerScale);
-                this.drawTile(tile);
+                this.drawTile(tile, true);
             }
         }
     }
@@ -2222,18 +2265,21 @@ TileModel.prototype.drawTilesAroundZoomLevel = function(zl, minX, maxY) {
             var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);
             if ((tile != null) && (tile.completed)) {
                 tile.reset(this.bounds, this.centerScale);
-                this.drawTile(tile);
+                this.drawTile(tile, false);
             }
         }
     }
 }
 
-TileModel.prototype.drawTile = function(tile) {
-    this.ctx.drawImage(
-        tile.data,
-        Math.round(tile.x), Math.round(tile.y),
-        Math.ceil(tile.scaling * this.tileWidth), Math.ceil(tile.scaling * this.tileHeight)
-    );
+TileModel.prototype.drawTile = function(tile, clear) {
+    var x = Math.round(tile.x);
+    var y = Math.round(tile.y);
+    var width = Math.round(tile.x + tile.scaling * this.tileWidth) - x;
+    var height = Math.round(tile.y + tile.scaling * this.tileHeight) - y;
+    if (clear) {
+        this.ctx.clearRect(x, y, width, height);
+    }
+    this.ctx.drawImage(tile.data, x, y, width, height);
 }
 
 
@@ -2244,15 +2290,16 @@ TileModel.prototype.drawTile = function(tile) {
 
 
 function UTFGridModel() {
-    this.http = null;
     this.bounds = null;
-    this.layer = null;
     this.srs = null;
     this.centerScale = null;
+    this.layer = null;
     this.tileWidth = 256;
     this.tileHeight = 256;
     this.tiles = [];
     this.tileIndex = {};
+    this.ctx = null;  // Not used  for UTFGrid tile models.
+    this.http = null;
     
     this.resolution = 4;
 }
@@ -2314,12 +2361,14 @@ function grid(utfGridString) {
 
 function WMSModel() {
     this.bounds = null;
-    this.layer = null;
     this.srs = null;
     this.centerScale = null;
     this.animationCenterScale = null;
+    this.layer = null;
     this.autoClassification = true;
     this.tile = null;
+    this.previousTile = null;
+    this.ctx = null;
 }
 
 WMSModel.prototype.setBounds = function(bounds) {
@@ -2341,6 +2390,13 @@ WMSModel.prototype.setAnimationCenterScale = function(animationCenterScale) {
     this.resetLoaders();
 }
 
+WMSModel.prototype.setLayer = function(layer) {
+    this.layer = layer;
+    this.tile = null;
+    this.previousTile = null;
+    this.load();
+}
+
 WMSModel.prototype.load = function() {
     if (this.bounds == null) {
         return;
@@ -2348,7 +2404,17 @@ WMSModel.prototype.load = function() {
     if (this.centerScale == null) {
         return;
     }
-    if (this.layer == null) {
+    
+    if ((this.tile != null) && this.tile.completed) {
+        this.previousTile = this.tile;
+    }
+    this.tile = null;
+    
+    if (this.ctx != null) {
+        this.ctx.clearRect(0, 0, this.bounds.width, this.bounds.height);
+    }
+    
+    if ((this.layer == null) || (!this.layer.visible)) {
         return;
     }
     
@@ -2370,48 +2436,43 @@ WMSModel.prototype.load = function() {
     var tileWidth = Math.round(this.centerScale.getNumPixs(maxX - minX));
     var tileHeight = Math.round(this.centerScale.getNumPixs(maxY - minY));
     
-    var url = this.layer.baseURL;
-    url += (url.indexOf("?") == -1 ? "?" : "&") + "SERVICE=WMS";
-    url += "&VERSION=1.1.1";
-    url += "&REQUEST=GetMap";
+    var url = WMSProtocol.getMapURL(this.layer, this.srs, minX, minY, maxX, maxY, tileWidth, tileHeight, this.autoClassification);
     
-    if (this.layer.styleURL == null) {
-        url += "&LAYERS=" + this.layer.name;
-        url += "&STYLES=";
-    } else {
-        var sldURL = this.layer.styleURL;
-        if (this.layer.name != null) {
-            sldURL += "?layer=" + this.layer.name;
-        }
-        var urlFilter = URLFilterConverter.filterModelsToURLFilter(this.layer.filterModels);
-        if (urlFilter.length > 0) {
-            sldURL += "&filter=" + urlFilter;
-        }
-        if (this.layer.classification != null) {
-            sldURL += "&classification=" + encodeURIComponent(URLClassificationConverter.classificationToURLClassification(this.layer.classification));
-            if ((urlFilter.length == 0) || (!this.autoClassification)) {
-                sldURL += "::noFilter";
-            }
-        }
-        url += "&SLD=" + encodeURIComponent(sldURL);
-    }
-    url += "&TRANSPARENT=true";
-    url += "&SRS=EPSG:" + this.srs.srid;
-    url += "&BBOX=" + minX + "," + minY + "," + maxX + "," + maxY;
-    url += "&WIDTH=" + tileWidth;
-    url += "&HEIGHT=" + tileHeight;
-    url += "&FORMAT=" + this.layer.format;
-    url += "&EXCEPTIONS=application/vnd.ogc.se_xml";
+    this.tile = new Tile(minX, maxY, this.centerScale.scale, 1, 1, tileWidth, tileHeight, url);
     
-    for (var key in this.layer.vendorSpecifics) {
-        url += "&" + key + "=" + this.layer.vendorSpecifics[key];
-    }
-    
-    if ((this.tile == null) || (this.tile.url != url)) {
-        this.tile = new Tile(minX, maxY, this.centerScale.scale, 1, 1, tileWidth, tileHeight, url);
-    }
     if (this.animationCenterScale != null) {
         this.tile.reset(this.bounds, this.animationCenterScale);
+        if (this.previousTile != null) {
+            this.previousTile.reset(this.bounds, this.animationCenterScale);
+        }
+    }
+    
+    if (this.ctx != null) {
+        if (this.previousTile != null) {
+            this.drawTile(this.previousTile);
+        }
+        var l = function(t, env) {
+            return function() {
+                if (env.tile == t) {
+                    env.completeLoader();
+                    if (env.animationCenterScale != null) {
+                        t.reset(env.bounds, env.animationCenterScale);
+                        env.ctx.clearRect(0, 0, env.bounds.width, env.bounds.height);
+                        env.drawTile(t);
+                    }
+                }
+            }
+        }(this.tile, this);
+        var e = function(t) {
+            return function() {
+                t.completed = true;
+                console.log("Error loading WMS: " + t.url);
+            }
+        }(this.tile);
+        this.tile.data = new Image();
+        this.tile.data.addEventListener("load", l);
+        this.tile.data.addEventListener("error", e);
+        this.tile.data.src = this.tile.url;
     }
 }
 
@@ -2422,11 +2483,37 @@ WMSModel.prototype.resetLoaders = function() {
     if (this.animationCenterScale == null) {
         return;
     }
-    if (this.tile == null) {
-        return;
+    
+    if (this.tile != null) {
+        this.tile.reset(this.bounds, this.animationCenterScale);
+        if (this.previousTile != null) {
+            this.previousTile.reset(this.bounds, this.animationCenterScale);
+        }
     }
     
-    this.tile.reset(this.bounds, this.animationCenterScale);
+    if (this.ctx != null) {
+        this.ctx.clearRect(0, 0, this.bounds.width, this.bounds.height);
+        if (this.tile != null) {
+            if (this.tile.completed) {
+                this.drawTile(this.tile);
+            } else if (this.previousTile != null) {
+                this.drawTile(this.previousTile);
+            }
+        }
+    }
+}
+
+WMSModel.prototype.completeLoader = function() {
+    this.tile.completed = true;
+    this.previousTile = null;
+}
+
+WMSModel.prototype.drawTile = function(tile) {
+    this.ctx.drawImage(
+        tile.data,
+        Math.round(tile.x), Math.round(tile.y),
+        Math.round(tile.scaling * tile.tileWidth), Math.round(tile.scaling * tile.tileHeight)
+    );
 }
 
 
@@ -2607,6 +2694,56 @@ MapFeatureModel.prototype.draw = function(path) {
         this.ctx.stroke();
         this.ctx.filter = "none";
     }
+}
+
+
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* Merging js: layermodel/protocols/WMSProtocol.js begins */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+
+function WMSProtocol() { }
+
+WMSProtocol.getMapURL = function(layer, srs, minX, minY, maxX, maxY, tileWidth, tileHeight, autoClassification) {
+    var url = layer.baseURL;
+    url += (url.indexOf("?") == -1 ? "?" : "&") + "SERVICE=WMS";
+    url += "&VERSION=1.1.1";
+    url += "&REQUEST=GetMap";
+    
+    if (layer.styleURL == null) {
+        url += "&LAYERS=" + layer.name;
+        url += "&STYLES=";
+    } else {
+        var sldURL = layer.styleURL;
+        if (layer.name != null) {
+            sldURL += "?layer=" + layer.name;
+        }
+        var urlFilter = URLFilterConverter.filterModelsToURLFilter(layer.filterModels);
+        if (urlFilter.length > 0) {
+            sldURL += "&filter=" + urlFilter;
+        }
+        if (layer.classification != null) {
+            sldURL += "&classification=" + encodeURIComponent(URLClassificationConverter.classificationToURLClassification(layer.classification));
+            if ((urlFilter.length == 0) || (!autoClassification)) {
+                sldURL += "::noFilter";
+            }
+        }
+        url += "&SLD=" + encodeURIComponent(sldURL);
+    }
+    url += "&TRANSPARENT=true";
+    url += "&SRS=EPSG:" + srs.srid;
+    url += "&BBOX=" + minX + "," + minY + "," + maxX + "," + maxY;
+    url += "&WIDTH=" + tileWidth;
+    url += "&HEIGHT=" + tileHeight;
+    url += "&FORMAT=" + layer.format;
+    url += "&EXCEPTIONS=application/vnd.ogc.se_xml";
+    
+    for (var key in layer.vendorSpecifics) {
+        url += "&" + key + "=" + layer.vendorSpecifics[key];
+    }
+    
+    return url;
 }
 
 
@@ -2895,12 +3032,15 @@ if (typeof angular !== "undefined") {
     }).
     directive("tileslayer", ["defaultTilesLayer", function(defaultTilesLayer) {
         return {
-            template: '<canvas ng-show="tileModel.layer.visible" width="{{boundsModel.bounds.width}}" height="{{boundsModel.bounds.height}}" class="tileslayer"></canvas>',
+            template: '<canvas width="{{boundsModel.bounds.width}}" height="{{boundsModel.bounds.height}}" class="tileslayer"></canvas>',
             restrict: "EA",
             require: "^map",
             replace: true,
             scope: {
-                layer: "=?layer"
+                layer: "=?layer",
+                protocol: "@protocol",
+                tileWidth: "@tilewidth",
+                tileHeight: "@tileheight"
             },
             link: function($scope, $element, $attr, $parentCtrl) {
                 $scope.tileModel = new TileModel();
@@ -2911,8 +3051,11 @@ if (typeof angular !== "undefined") {
                 
                 $scope.$watch("boundsModel.bounds", function(val) { $scope.tileModel.setBounds(val); });
                 $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.tileModel.setCenterScale(val); });
-                $scope.$watch("layer", function(val) { $scope.tileModel.setLayer(val || defaultTilesLayer); });
-                $scope.$watch("tileModel.layer.visible", function(val) { $scope.tileModel.resetLoaders(); });
+                $scope.$watch("layer", function(val) { if (angular.isDefined(val)) { $scope.tileModel.setLayer(val) } else { $scope.tileModel.setLayer(defaultTilesLayer); }});
+                $scope.$watch("layer.visible", function(val) { $scope.tileModel.resetLoaders(); });
+                $scope.$watch("protocol", function(val) { if (angular.isDefined(val)) { $scope.tileModel.protocol = val; }});
+                $scope.$watch("tileWidth", function(val) { if (angular.isDefined(val)) { $scope.tileModel.tileWidth = parseInt(val); }});
+                $scope.$watch("tileHeight", function(val) { if (angular.isDefined(val)) { $scope.tileModel.tileHeight = parseInt(val); }});
             }
         };
     }]).
@@ -2933,9 +3076,9 @@ if (typeof angular !== "undefined") {
                 $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
                 $parentCtrl.scope.$watch("focusModel", function(val) { if (val){ $scope.focusModel = val; $scope.utfGridModel.srs = val.srs; }});
                 
-                $scope.$watch("layer", function(val) { $scope.utfGridModel.layer = val; });
                 $scope.$watch("boundsModel.bounds", function(val) { $scope.utfGridModel.setBounds(val); });
                 $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.utfGridModel.setCenterScale(val); });
+                $scope.$watch("layer", function(val) { $scope.utfGridModel.setLayer(val); });
                 
                 $scope.mouseMoveHandler = function(mouseEvent) {
                     var mouseX = mouseEvent.clientX - $element[0].getBoundingClientRect().left;
@@ -2960,7 +3103,7 @@ if (typeof angular !== "undefined") {
     }]).
     directive("wmslayer", function() {
         return {
-            template: '<div class="wmslayer"><img maploader ng-if="layer.visible" ng-show="wmsModel.tile.completed" ng-src="{{wmsModel.tile.url}}" style="position: absolute" ng-style="wmsModel.tile.toCSS()"/></div>',
+            template: '<canvas width="{{boundsModel.bounds.width}}" height="{{boundsModel.bounds.height}}" class="wmslayer"></canvas>',
             restrict: "EA",
             require: "^map",
             replace: true,
@@ -2969,23 +3112,16 @@ if (typeof angular !== "undefined") {
             },
             link: function($scope, $element, $attr, $parentCtrl) {
                 $scope.wmsModel = new WMSModel();
+                $scope.wmsModel.ctx = $element[0].getContext("2d");
                 
                 $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
                 $parentCtrl.scope.$watch("focusModel", function(val) { if (val) { $scope.focusModel = val; $scope.wmsModel.srs = val.srs; }});
                 
-                $scope.$watch("layer", function(val) { $scope.wmsModel.layer = val; $scope.wmsModel.load(); }, true);
                 $scope.$watch("boundsModel.bounds", function(val) { $scope.wmsModel.setBounds(val); });
                 $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.wmsModel.setAnimationCenterScale(val); });
                 $scope.$watch("focusModel.incubationCenterScale", function(val) { $scope.wmsModel.setCenterScale(val); });
-            }
-        };
-    }).
-    directive("maploader", function() {
-        return {
-            restrict: "A",
-            link: function($scope, $element, $attr) {
-                $element.on("load", function() { $scope.$apply(function() { $scope.wmsModel.tile.completed = true; }); });
-                $element.on("error", function() { $scope.$apply(function() { $scope.wmsModel.tile.completed = true; }); });
+                $scope.$watch("layer", function(val) { $scope.wmsModel.setLayer(val); });
+                $scope.$watch("layer.visible", function(val) { $scope.wmsModel.load(); });
             }
         };
     }).

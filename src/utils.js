@@ -67,7 +67,7 @@ Timer.prototype.tick = function() {
 function AnimationTimer(duration) {
     this.delay = -1;
     this.numRepeats = -1;
-    this.currentCount = 0;  // currentTime - startTime
+    this.currentCount = 0;  // now - startTime
     this.scope = null;
     this.interval = -1;
     this.timerHandler = function() { };
@@ -85,8 +85,8 @@ AnimationTimer.prototype.start = function() {
         var timer = this;
         this.interval = window.requestAnimationFrame(preTick);
         
-        function preTick(currentTime) {
-            timer.currentCount = currentTime - timer.startTime;
+        function preTick() {
+            timer.currentCount = performance.now() - timer.startTime;
             if ((timer.duration > -1) && (timer.currentCount > timer.duration)) {
                 timer.currentCount = timer.duration;
                 timer.tick();

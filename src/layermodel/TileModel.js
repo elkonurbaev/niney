@@ -1,8 +1,9 @@
 function TileModel() {
     this.bounds = null;
-    this.layer = null;
     this.srs = null;
     this.centerScale = null;
+    this.layer = null;
+    this.protocol = "TMS";
     this.tileWidth = 256;
     this.tileHeight = 256;
     this.tiles = [];
@@ -20,15 +21,15 @@ TileModel.prototype.setBounds = function(bounds) {
     this.resetLoaders();
 }
 
+TileModel.prototype.setCenterScale = function(centerScale) {
+    this.centerScale = centerScale;
+    this.resetLoaders();
+}
+
 TileModel.prototype.setLayer = function(layer) {
     this.layer = layer;
     this.tiles = [];
     this.tileIndex = {};
-    this.resetLoaders();
-}
-
-TileModel.prototype.setCenterScale = function(centerScale) {
-    this.centerScale = centerScale;
     this.resetLoaders();
 }
 
@@ -39,9 +40,6 @@ TileModel.prototype.resetLoaders = function() {
     if (this.centerScale == null) {
         return;
     }
-    if ((this.layer == null) || !this.layer.visible) {
-        return;
-    }
     
     if (this.ctx != null) {
         this.ctx.clearRect(0, 0, this.bounds.width, this.bounds.height);
@@ -49,6 +47,10 @@ TileModel.prototype.resetLoaders = function() {
         for (var i = 0; i < this.tiles.length; i++) {
             this.tiles[i].completed = false;
         }
+    }
+    
+    if ((this.layer == null) || (!this.layer.visible)) {
+        return;
     }
     
     var envelope = this.centerScale.toEnvelope(this.bounds.width, this.bounds.height);
@@ -72,26 +74,41 @@ TileModel.prototype.resetLoaders = function() {
                 }
                 
                 if (tile == null) {
-                    var url = this.layer.urlExtension;
-                    url = url.replace("$Z", zoomLevel.zoomLevel);
-                    url = url.replace("$X", ((tileX % tileLimit) + tileLimit) % tileLimit);
-                    url = url.replace("$Y", tileY);
+                    var url = null;
+                    if (this.protocol == "TMS") {
+                        url = this.layer.urlExtension;
+                        url = url.replace("$Z", zoomLevel.zoomLevel);
+                        url = url.replace("$X", ((tileX % tileLimit) + tileLimit) % tileLimit);
+                        url = url.replace("$Y", tileY);
+                        url = this.layer.baseURL + url;
+                    } else {  // WMTS
+                        var maxX = (tileX + 1) * this.tileWidth * zoomLevel.resolution + this.srs.minX;
+                        var minY = -((tileY + 1) * this.tileHeight * zoomLevel.resolution - this.srs.maxY);
+                        url = WMSProtocol.getMapURL(this.layer, this.srs, minX, minY, maxX, maxY, this.tileWidth, this.tileHeight, true);
+                    }
                     
-                    tile = new Tile(minX, maxY, zoomLevel.scale, tileX, tileY, this.tileWidth, this.tileHeight, this.layer.baseURL + url);
+                    tile = new Tile(minX, maxY, zoomLevel.scale, tileX, tileY, this.tileWidth, this.tileHeight, url);
                     this.addTile(zoomLevel.zoomLevel, tile);
                     
                     if (this.ctx != null) {
-                        var e = function(t, env) {
+                        var l = function(t, env) {
                             return function() {
                                 t.completed = true;
                                 if (env.srs.getZoomLevel(env.centerScale.scale) == env.srs.getZoomLevel(t.scale)) {
                                     t.reset(env.bounds, env.centerScale);
-                                    env.drawTile(t);
+                                    env.drawTile(t, true);
                                 }
                             }
                         }(tile, this);
+                        var e = function(t) {
+                            return function() {
+                                t.completed = true;
+                                console.log("Error loading tile: " + t.url);
+                            }
+                        }(tile);
                         tile.data = new Image();
-                        tile.data.addEventListener("load", e);
+                        tile.data.addEventListener("load", l);
+                        tile.data.addEventListener("error", e);
                         tile.data.src = tile.url;
                     }
                     
@@ -111,7 +128,7 @@ TileModel.prototype.resetLoaders = function() {
                 }
             } else {  // Completed tile exists. Only applies to tile models that draw on a canvas (ctx).
                 tile.reset(this.bounds, this.centerScale);
-                this.drawTile(tile);
+                this.drawTile(tile, true);
             }
         }
     }
@@ -170,17 +187,20 @@ TileModel.prototype.drawTilesAroundZoomLevel = function(zl, minX, maxY) {
             var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);
             if ((tile != null) && (tile.completed)) {
                 tile.reset(this.bounds, this.centerScale);
-                this.drawTile(tile);
+                this.drawTile(tile, false);
             }
         }
     }
 }
 
-TileModel.prototype.drawTile = function(tile) {
-    this.ctx.drawImage(
-        tile.data,
-        Math.round(tile.x), Math.round(tile.y),
-        Math.ceil(tile.scaling * this.tileWidth), Math.ceil(tile.scaling * this.tileHeight)
-    );
+TileModel.prototype.drawTile = function(tile, clear) {
+    var x = Math.round(tile.x);
+    var y = Math.round(tile.y);
+    var width = Math.round(tile.x + tile.scaling * this.tileWidth) - x;
+    var height = Math.round(tile.y + tile.scaling * this.tileHeight) - y;
+    if (clear) {
+        this.ctx.clearRect(x, y, width, height);
+    }
+    this.ctx.drawImage(tile.data, x, y, width, height);
 }
 

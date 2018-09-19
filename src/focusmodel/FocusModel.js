@@ -2,7 +2,7 @@ function FocusModel() {
     this.animationTimer = new AnimationTimer(1000);
     this.incubationTimer = new Timer(1000, 1);
     this.srs = new SRS();
-    this.minScale = 0;
+    this.minScale = 846.37503189876580;
     this.maxScale = 443744272.72414012;
     this.scaleToZoomLevels = false;
     this.centerScale = null;
@@ -26,6 +26,15 @@ function FocusModel() {
         focusModel.incubationCenterScale = focusModel.centerScale;
     };
 }
+
+FocusModel.ALWAYS_LOWER = 0;
+FocusModel.ALWAYS_NEAREST = 1;
+FocusModel.ALWAYS_UPPER = 2;
+FocusModel.IF_REQUIRED_LOWER = 3;
+FocusModel.IF_REQUIRED_NEAREST = 4;
+FocusModel.IF_REQUIRED_UPPER = 5;
+FocusModel.IF_REQUIRED = 6;
+FocusModel.NEVER = 7;
 
 // Click or touch while zooming/panning.
 FocusModel.prototype.grab = function(x, y, pixXOffset, pixYOffset) {
@@ -63,7 +72,7 @@ FocusModel.prototype.pan = function(pixXOffset, pixYOffset) {
 
 // Pan/zoom with multi-finger touch.
 FocusModel.prototype.pinchPan = function(centerScale, pixXOffset, pixYOffset) {
-    centerScale = this.scalecon(centerScale, false);
+    centerScale = this.scalecon(centerScale, FocusModel.NEVER);
     if (this.animationTimer.isRunning()) {
         this.animationTimer.reset();
     }
@@ -88,7 +97,7 @@ FocusModel.prototype.panimate = function() {
 
 // Zoom with mouse wheel.
 FocusModel.prototype.zoom = function(centerScale, pixXOffset, pixYOffset) {
-    centerScale = this.scalecon(centerScale, true);
+    centerScale = this.scalecon(centerScale, FocusModel.IF_REQUIRED);
     if (this.animationCenterScale.scale == centerScale.scale) {
         return;
     }
@@ -104,15 +113,15 @@ FocusModel.prototype.zoom = function(centerScale, pixXOffset, pixYOffset) {
     this.setIncubationCenterScale();
 }
 
-FocusModel.prototype.setCenterScale = function(centerScale, roundToZoomLevels) {
+FocusModel.prototype.setCenterScale = function(centerScale, zoomLevelPolicy) {
     if (centerScale == null) {
         return;
     }
-    if (roundToZoomLevels == null) {
-        roundToZoomLevels = true;
+    if (zoomLevelPolicy == null) {
+        zoomLevelPolicy = FocusModel.IF_REQUIRED;
     }
     
-    centerScale = this.centercon(this.scalecon(centerScale, roundToZoomLevels));
+    centerScale = this.centercon(this.scalecon(centerScale, zoomLevelPolicy));
     if (this.centerScale == null) {
         this.centerScale = centerScale;
         this.animation = {base: centerScale, target: centerScale, pixXOffset: 0, pixYOffset: 0};
@@ -148,15 +157,23 @@ FocusModel.prototype.centercon = function(centerScale) {
 }
 
 // Scale-related conditions. Relevant for zooming only.
-FocusModel.prototype.scalecon = function(centerScale, roundToZoomLevels) {
+FocusModel.prototype.scalecon = function(centerScale, zoomLevelPolicy) {
     if (centerScale.scale < this.minScale) {
-        return this.scalecon(new CenterScale(centerScale.centerX, centerScale.centerY, this.minScale), roundToZoomLevels);
+        return this.scalecon(new CenterScale(centerScale.centerX, centerScale.centerY, this.minScale), zoomLevelPolicy);
     }
     if (centerScale.scale > this.maxScale) {
-        return this.scalecon(new CenterScale(centerScale.centerX, centerScale.centerY, this.maxScale), roundToZoomLevels);
+        return this.scalecon(new CenterScale(centerScale.centerX, centerScale.centerY, this.maxScale), zoomLevelPolicy);
     }
-    if (this.scaleToZoomLevels) {
-        var zoomLevelScale = this.srs.getZoomLevel(centerScale.scale, roundToZoomLevels).scale;
+    if (
+        ((zoomLevelPolicy >= FocusModel.ALWAYS_LOWER) && (zoomLevelPolicy <= FocusModel.ALWAYS_UPPER)) ||
+        ((zoomLevelPolicy >= FocusModel.IF_REQUIRED_LOWER) && (zoomLevelPolicy <= FocusModel.IF_REQUIRED) && this.scaleToZoomLevels)
+    ) {
+        if (zoomLevelPolicy == FocusModel.IF_REQUIRED) {
+            zoomLevelPolicy = undefined;
+        } else {
+            zoomLevelPolicy = zoomLevelPolicy % 3;
+        }
+        var zoomLevelScale = this.srs.getZoomLevel(centerScale.scale, zoomLevelPolicy).scale;
         if (centerScale.scale != zoomLevelScale) {
             return new CenterScale(centerScale.centerX, centerScale.centerY, zoomLevelScale);
         }

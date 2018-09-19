@@ -1,11 +1,13 @@
 function WMSModel() {
     this.bounds = null;
-    this.layer = null;
     this.srs = null;
     this.centerScale = null;
     this.animationCenterScale = null;
+    this.layer = null;
     this.autoClassification = true;
     this.tile = null;
+    this.previousTile = null;
+    this.ctx = null;
 }
 
 WMSModel.prototype.setBounds = function(bounds) {
@@ -27,6 +29,13 @@ WMSModel.prototype.setAnimationCenterScale = function(animationCenterScale) {
     this.resetLoaders();
 }
 
+WMSModel.prototype.setLayer = function(layer) {
+    this.layer = layer;
+    this.tile = null;
+    this.previousTile = null;
+    this.load();
+}
+
 WMSModel.prototype.load = function() {
     if (this.bounds == null) {
         return;
@@ -34,7 +43,17 @@ WMSModel.prototype.load = function() {
     if (this.centerScale == null) {
         return;
     }
-    if (this.layer == null) {
+    
+    if ((this.tile != null) && this.tile.completed) {
+        this.previousTile = this.tile;
+    }
+    this.tile = null;
+    
+    if (this.ctx != null) {
+        this.ctx.clearRect(0, 0, this.bounds.width, this.bounds.height);
+    }
+    
+    if ((this.layer == null) || (!this.layer.visible)) {
         return;
     }
     
@@ -56,48 +75,43 @@ WMSModel.prototype.load = function() {
     var tileWidth = Math.round(this.centerScale.getNumPixs(maxX - minX));
     var tileHeight = Math.round(this.centerScale.getNumPixs(maxY - minY));
     
-    var url = this.layer.baseURL;
-    url += (url.indexOf("?") == -1 ? "?" : "&") + "SERVICE=WMS";
-    url += "&VERSION=1.1.1";
-    url += "&REQUEST=GetMap";
+    var url = WMSProtocol.getMapURL(this.layer, this.srs, minX, minY, maxX, maxY, tileWidth, tileHeight, this.autoClassification);
     
-    if (this.layer.styleURL == null) {
-        url += "&LAYERS=" + this.layer.name;
-        url += "&STYLES=";
-    } else {
-        var sldURL = this.layer.styleURL;
-        if (this.layer.name != null) {
-            sldURL += "?layer=" + this.layer.name;
-        }
-        var urlFilter = URLFilterConverter.filterModelsToURLFilter(this.layer.filterModels);
-        if (urlFilter.length > 0) {
-            sldURL += "&filter=" + urlFilter;
-        }
-        if (this.layer.classification != null) {
-            sldURL += "&classification=" + encodeURIComponent(URLClassificationConverter.classificationToURLClassification(this.layer.classification));
-            if ((urlFilter.length == 0) || (!this.autoClassification)) {
-                sldURL += "::noFilter";
-            }
-        }
-        url += "&SLD=" + encodeURIComponent(sldURL);
-    }
-    url += "&TRANSPARENT=true";
-    url += "&SRS=EPSG:" + this.srs.srid;
-    url += "&BBOX=" + minX + "," + minY + "," + maxX + "," + maxY;
-    url += "&WIDTH=" + tileWidth;
-    url += "&HEIGHT=" + tileHeight;
-    url += "&FORMAT=" + this.layer.format;
-    url += "&EXCEPTIONS=application/vnd.ogc.se_xml";
+    this.tile = new Tile(minX, maxY, this.centerScale.scale, 1, 1, tileWidth, tileHeight, url);
     
-    for (var key in this.layer.vendorSpecifics) {
-        url += "&" + key + "=" + this.layer.vendorSpecifics[key];
-    }
-    
-    if ((this.tile == null) || (this.tile.url != url)) {
-        this.tile = new Tile(minX, maxY, this.centerScale.scale, 1, 1, tileWidth, tileHeight, url);
-    }
     if (this.animationCenterScale != null) {
         this.tile.reset(this.bounds, this.animationCenterScale);
+        if (this.previousTile != null) {
+            this.previousTile.reset(this.bounds, this.animationCenterScale);
+        }
+    }
+    
+    if (this.ctx != null) {
+        if (this.previousTile != null) {
+            this.drawTile(this.previousTile);
+        }
+        var l = function(t, env) {
+            return function() {
+                if (env.tile == t) {
+                    env.completeLoader();
+                    if (env.animationCenterScale != null) {
+                        t.reset(env.bounds, env.animationCenterScale);
+                        env.ctx.clearRect(0, 0, env.bounds.width, env.bounds.height);
+                        env.drawTile(t);
+                    }
+                }
+            }
+        }(this.tile, this);
+        var e = function(t) {
+            return function() {
+                t.completed = true;
+                console.log("Error loading WMS: " + t.url);
+            }
+        }(this.tile);
+        this.tile.data = new Image();
+        this.tile.data.addEventListener("load", l);
+        this.tile.data.addEventListener("error", e);
+        this.tile.data.src = this.tile.url;
     }
 }
 
@@ -108,10 +122,36 @@ WMSModel.prototype.resetLoaders = function() {
     if (this.animationCenterScale == null) {
         return;
     }
-    if (this.tile == null) {
-        return;
+    
+    if (this.tile != null) {
+        this.tile.reset(this.bounds, this.animationCenterScale);
+        if (this.previousTile != null) {
+            this.previousTile.reset(this.bounds, this.animationCenterScale);
+        }
     }
     
-    this.tile.reset(this.bounds, this.animationCenterScale);
+    if (this.ctx != null) {
+        this.ctx.clearRect(0, 0, this.bounds.width, this.bounds.height);
+        if (this.tile != null) {
+            if (this.tile.completed) {
+                this.drawTile(this.tile);
+            } else if (this.previousTile != null) {
+                this.drawTile(this.previousTile);
+            }
+        }
+    }
+}
+
+WMSModel.prototype.completeLoader = function() {
+    this.tile.completed = true;
+    this.previousTile = null;
+}
+
+WMSModel.prototype.drawTile = function(tile) {
+    this.ctx.drawImage(
+        tile.data,
+        Math.round(tile.x), Math.round(tile.y),
+        Math.round(tile.scaling * tile.tileWidth), Math.round(tile.scaling * tile.tileHeight)
+    );
 }
 
