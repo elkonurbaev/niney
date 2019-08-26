@@ -18,10 +18,10 @@ GeometryTools.getGeometryClass = function(geometryType) {
 
 GeometryTools.transform = function(geometry, srid) {
     if (geometry == null) {
-        alert("No geometry given.");
+        throw new Error("No geometry given.");
     }
     if (!(geometry instanceof Point)) {
-        alert("Given geometry is not a point. Only point geometries are currently supported.");
+        throw new Error("Given geometry is not a point. Only point geometries are currently supported.");
     }
     var point = geometry;
     
@@ -41,5 +41,5 @@ GeometryTools.transform = function(geometry, srid) {
         return point;
     }
     
-    alert("Given SRID transformation is currently not supported.");
+    throw new Error("Given SRID transformation is currently not supported.");
 }

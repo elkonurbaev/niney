@@ -1,9 +1,11 @@
 function WMSModel() {
     this.bounds = null;
+    this.incubationBounds = null;
     this.srs = null;
     this.centerScale = null;
     this.animationCenterScale = null;
     this.layer = null;
+    this.loader = null;
     this.autoClassification = true;
     this.tile = null;
     this.previousTile = null;
@@ -16,6 +18,11 @@ WMSModel.prototype.setBounds = function(bounds) {
     }
     
     this.bounds = bounds;
+    this.resetTiles();
+}
+
+WMSModel.prototype.setIncubationBounds = function(incubationBounds) {
+    this.incubationBounds = incubationBounds;
     this.load();
 }
 
@@ -26,10 +33,16 @@ WMSModel.prototype.setCenterScale = function(centerScale) {
 
 WMSModel.prototype.setAnimationCenterScale = function(animationCenterScale) {
     this.animationCenterScale = animationCenterScale;
-    this.resetLoaders();
+    this.resetTiles();
 }
 
 WMSModel.prototype.setLayer = function(layer) {
+    if ((this.loader != null) && (this.layer != null)) {
+        this.loader.remove(this.layer.name);
+    }
+    if ((this.loader != null) && (layer != null)) {
+        this.loader.reset(layer.name);
+    }
     this.layer = layer;
     this.tile = null;
     this.previousTile = null;
@@ -44,7 +57,7 @@ WMSModel.prototype.load = function() {
         return;
     }
     
-    if ((this.tile != null) && this.tile.completed) {
+    if ((this.tile != null) && this.tile.completed && !this.tile.corrupted) {
         this.previousTile = this.tile;
     }
     this.tile = null;
@@ -58,10 +71,10 @@ WMSModel.prototype.load = function() {
     }
     
     var envelope = this.centerScale.toEnvelope(this.bounds.width, this.bounds.height);
-    var minX = envelope.getMinX();
-    var minY = envelope.getMinY();
-    var maxX = envelope.getMaxX();
-    var maxY = envelope.getMaxY();
+    var minX = envelope.minX;
+    var minY = envelope.minY;
+    var maxX = envelope.maxX;
+    var maxY = envelope.maxY;
     
     if ((minX > this.srs.maxX) || (minY > this.srs.maxY) || (maxX < this.srs.minX) || (maxY < this.srs.minY)) {
         return;
@@ -77,6 +90,9 @@ WMSModel.prototype.load = function() {
     
     var url = WMSProtocol.getMapURL(this.layer, this.srs, minX, minY, maxX, maxY, tileWidth, tileHeight, this.autoClassification);
     
+    if (this.loader != null) {
+        this.loader.set(this.layer.name);
+    }
     this.tile = new Tile(minX, maxY, this.centerScale.scale, 1, 1, tileWidth, tileHeight, url);
     
     if (this.animationCenterScale != null) {
@@ -90,32 +106,15 @@ WMSModel.prototype.load = function() {
         if (this.previousTile != null) {
             this.drawTile(this.previousTile);
         }
-        var l = function(t, env) {
-            return function() {
-                if (env.tile == t) {
-                    env.completeLoader();
-                    if (env.animationCenterScale != null) {
-                        t.reset(env.bounds, env.animationCenterScale);
-                        env.ctx.clearRect(0, 0, env.bounds.width, env.bounds.height);
-                        env.drawTile(t);
-                    }
-                }
-            }
-        }(this.tile, this);
-        var e = function(t) {
-            return function() {
-                t.completed = true;
-                console.log("Error loading WMS: " + t.url);
-            }
-        }(this.tile);
+        var f = function(t, env, success) { return function() { env.completeTile(t, success); }};
         this.tile.data = new Image();
-        this.tile.data.addEventListener("load", l);
-        this.tile.data.addEventListener("error", e);
+        this.tile.data.addEventListener("load", f(this.tile, this, true));
+        this.tile.data.addEventListener("error", f(this.tile, this, false));
         this.tile.data.src = this.tile.url;
     }
 }
 
-WMSModel.prototype.resetLoaders = function() {
+WMSModel.prototype.resetTiles = function() {
     if (this.bounds == null) {
         return;
     }
@@ -133,7 +132,7 @@ WMSModel.prototype.resetLoaders = function() {
     if (this.ctx != null) {
         this.ctx.clearRect(0, 0, this.bounds.width, this.bounds.height);
         if (this.tile != null) {
-            if (this.tile.completed) {
+            if (this.tile.completed && !this.tile.corrupted) {
                 this.drawTile(this.tile);
             } else if (this.previousTile != null) {
                 this.drawTile(this.previousTile);
@@ -142,9 +141,33 @@ WMSModel.prototype.resetLoaders = function() {
     }
 }
 
-WMSModel.prototype.completeLoader = function() {
-    this.tile.completed = true;
-    this.previousTile = null;
+WMSModel.prototype.completeTile = function(tile, success) {
+    if (this.tile != tile) {
+        return;
+    }
+    
+    if (this.loader != null) {
+        this.loader.reset(this.layer.name);
+    }
+    tile.completed = true;
+    
+    if (success) {
+        tile.corrupted = false;
+        
+        this.previousTile = null;
+        
+        if (this.animationCenterScale != null) {
+            tile.reset(this.bounds, this.animationCenterScale);
+            if (this.ctx != null) {
+                this.ctx.clearRect(0, 0, this.bounds.width, this.bounds.height);
+                this.drawTile(tile);
+            }
+        }
+    } else {
+        tile.corrupted = performance.now();
+        
+        console.log("Error loading WMS: " + tile.url);
+    }
 }
 
 WMSModel.prototype.drawTile = function(tile) {

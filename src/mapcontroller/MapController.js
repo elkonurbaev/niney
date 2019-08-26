@@ -11,6 +11,10 @@ function MapController(element, env, scope) {
     element.addEventListener("touchstart", pressHandler);
     document.addEventListener("mousemove", mouseMoveHandler);
     
+    this.destroy = function() {
+        document.removeEventListener("mousemove", mouseMoveHandler);
+    }
+    
     function mouseWheelHandler(mouseEvent) {
         mouseEvent.preventDefault();
         
@@ -101,9 +105,10 @@ function MapController(element, env, scope) {
         var pixXOffset = pressX - (width / 2);
         var pixYOffset = pressY - (height / 2);
         
-        env.focusModel.grab(worldX, worldY, pixXOffset, pixYOffset);
+        var grabbedAnimation = env.focusModel.grab(worldX, worldY, pixXOffset, pixYOffset);
         
         panTimer.start(event);
+        panTimer.panned = grabbedAnimation;
         
         if (event.type == "mousedown") {
             document.addEventListener("mouseup", releaseHandler);
@@ -136,12 +141,15 @@ function MapController(element, env, scope) {
         var height = env.boundsModel.bounds.height;
         
         if (panTimer.isRunning()) {
-            var pixXOffset = mouseX - (width / 2);
-            var pixYOffset = mouseY - (height / 2);
-            
-            env.focusModel.pan(pixXOffset, pixYOffset);
-            
-            panTimer.push(mouseEvent);
+            var previousEvent = panTimer.panEvents[panTimer.panEvents.length - 1];
+            if ((previousEvent.clientX != mouseEvent.clientX) || (previousEvent.clientY != mouseEvent.clientY)) {
+                var pixXOffset = mouseX - (width / 2);
+                var pixYOffset = mouseY - (height / 2);
+                
+                env.focusModel.pan(pixXOffset, pixYOffset);
+                
+                panTimer.push(mouseEvent);
+            }
         } else {  // (env.mouseMoveFunction != null)
             var cs = env.focusModel.animationCenterScale;
             var worldX = cs.getWorldX(width, mouseX);
@@ -201,7 +209,7 @@ function MapController(element, env, scope) {
         
         var cs = env.focusModel.animationCenterScale;
         
-        var tapped = ((panTimer.currentCount < 500) && (panTimer.panEvents.length == 1));
+        var tapped = (!panTimer.panned)? panTimer.currentCount: false;
         var speed = panTimer.resetAndGetSpeed(event);
         if ((speed.h != 0) || (speed.v != 0) || (speed.z != 1)) {
             var zoomLevelPolicy = FocusModel.NEVER;  // On touch devices, don't do the zoom level check.
@@ -244,11 +252,11 @@ function MapController(element, env, scope) {
                     env.releaseFunction(worldX, worldY);
                 }
             }
-            if ((env.tapFunction != null) && tapped) {
+            if ((env.tapFunction != null) && tapped) {  // tapped contains the tap duration.
                 if (scope != null) {
-                    scope.$apply(env.tapFunction(worldX, worldY));
+                    scope.$apply(env.tapFunction(worldX, worldY, tapped, event.ctrlKey, event.shiftKey));
                 } else {
-                    env.tapFunction(worldX, worldY);
+                    env.tapFunction(worldX, worldY, tapped, event.ctrlKey, event.shiftKey);
                 }
             }
         }

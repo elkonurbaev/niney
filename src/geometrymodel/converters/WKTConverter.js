@@ -29,7 +29,7 @@ WKTConverter.prototype.wktToGeometry = function(wkt) {
     
     if ((geometry != null) && (sridString != null) && (sridString != "") && (sridString != "900913")) {
         geometry.srid = parseInt(sridString);
-        geometry = GeometryTools.prototype.transform(geometry, 900913);
+        geometry = GeometryTools.transform(geometry, 900913);
     }
     
     return geometry;

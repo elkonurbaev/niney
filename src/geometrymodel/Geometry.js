@@ -1,6 +1,6 @@
 function Geometry() {
     this.$parent = null;  // Starts with $ to prevent recursion in angular.equals (geometry.childGeometries[0].$parent == geometry and so on).
-    this.childGeometries = new Array();
+    this.childGeometries = [];
     this.envelope = null;
 }
 
@@ -52,7 +52,7 @@ Geometry.prototype.isChild = function(child) {
 }
 
 Geometry.prototype.getPoints = function() {
-    var points = new Array();
+    var points = [];
     for (var i = 0; i < this.childGeometries.length; ++i) {
         points = points.concat(this.childGeometries[i].getPoints());
     }
@@ -109,8 +109,8 @@ Geometry.prototype.getEnvelope = function() {
     return this.envelope;
 }
 
-Geometry.prototype.intersects = function(intersectingEnvelope) {
-    return this.getEnvelope().intersects(intersectingEnvelope);
+Geometry.prototype.intersects = function(geometry) {
+    return this.getEnvelope().intersects(geometry);
 }
 
 Geometry.prototype.equals = function(geometry) {

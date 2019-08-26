@@ -8,6 +8,7 @@ geometrymodel/LineString.js
 geometrymodel/Polygon.js
 geometrymodel/converters/WKTConverter.js
 geometrymodel/converters/SVGConverter.js
+geometrymodel/converters/CSSConverter.js
 featuremodel/Feature.js
 featuremodel/FeatureModel.js
 featuremodel/FeatureType.js
@@ -18,14 +19,16 @@ featuremodel/commands/SelectFeatureCommand.js
 featuremodel/commands/ToggleSelectFeatureCommand.js
 featuremodel/commands/ToURLFeatureCommand.js
 featuremodel/converters/CSVConverter.js
+filtermodel/Filter.js
 filtermodel/converters/URLFilterConverter.js
 focusmodel/CenterScale.js
 focusmodel/FocusModel.js
-focusmodel/EnvelopeCenterScale.js
+focusmodel/EnvelopeModel.js
 focusmodel/ZoomLevel.js
 focusmodel/SRS.js
 mapcontroller/MapController.js
 layermodel/Layer.js
+layermodel/Loader.js
 layermodel/Tile.js
 layermodel/TileModel.js
 layermodel/UTFGridModel.js
@@ -33,6 +36,5 @@ layermodel/WMSModel.js
 layermodel/MapFeatureModel.js
 layermodel/protocols/WMSProtocol.js
 selectionmodel/SelectionModel.js
-service/file/CSVServiceConnector.js
 stylemodel/converters/URLClassificationConverter.js
 niney.angular.js

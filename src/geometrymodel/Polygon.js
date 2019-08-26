@@ -1,6 +1,6 @@
 function Polygon(lineStrings) {
     this.$parent = null;
-    this.childGeometries = new Array();
+    this.childGeometries = [];
     this.envelope = null;
     
     if ((lineStrings == null) || (lineStrings.length < 1)) {
@@ -19,8 +19,16 @@ Polygon.prototype.getPoints = function() {
     return this.childGeometries[0].getPoints();
 }
 
+Polygon.prototype.intersects = function(geometry) {
+    if (geometry instanceof Point) {
+        return geometry.intersects(this);
+    }
+    
+    return this.getEnvelope().intersects(geometry);
+}
+
 Polygon.prototype.clone = function() {
-    var clonedLineStrings = new Array();
+    var clonedLineStrings = [];
     for (var i = 0; i < this.childGeometries.length; ++i) {
         clonedLineStrings.push(this.childGeometries[i].clone());
     }

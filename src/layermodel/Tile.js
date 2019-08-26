@@ -11,6 +11,7 @@ function Tile(minX, maxY, scale, tileX, tileY, tileWidth, tileHeight, url) {
     this.y = 0;
     this.scaling = 1;
     this.completed = false;
+    this.corrupted = false;
 }
 
 Tile.prototype.reset = function(bounds, centerScale) {
@@ -26,10 +27,10 @@ Tile.prototype.resetWithPoint = function(bounds, centerScale, minX, maxY) {
 }
 
 Tile.prototype.resetWithEnvelope = function(bounds, centerScale, envelope) {
-    var minPixX = centerScale.getPixX(bounds.width, envelope.getMinX());
-    var minPixY = centerScale.getPixY(bounds.height, envelope.getMaxY());
-    var maxPixX = centerScale.getPixX(bounds.width, envelope.getMaxX());
-    //var maxPixY = centerScale.getPixY(bounds.height, envelope.getMinY());
+    var minPixX = centerScale.getPixX(bounds.width, envelope.minX);
+    var minPixY = centerScale.getPixY(bounds.height, envelope.maxY);
+    var maxPixX = centerScale.getPixX(bounds.width, envelope.maxX);
+    //var maxPixY = centerScale.getPixY(bounds.height, envelope.minY);
     
     this.x = minPixX;
     this.y = minPixY;

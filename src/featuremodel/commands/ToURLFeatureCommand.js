@@ -7,8 +7,8 @@ ToURLFeatureCommand.prototype.perform = function(feature) {
     
     var urlString = this.getURL(feature.propertyValues);
     if (urlString != null) {
-   		window.open(this.getURL(feature.propertyValues));
-   	}
+        window.open(this.getURL(feature.propertyValues));
+    }
 }
 
 ToURLFeatureCommand.prototype.getURL = function(propertyValues) {
@@ -16,9 +16,9 @@ ToURLFeatureCommand.prototype.getURL = function(propertyValues) {
         return null;
     }
     for (var i = 0; i < propertyValues.length; ++i) {
-    	if (this.isURL(propertyValues[i])) {
-    		return propertyValues[i];
-    	}
+        if (this.isURL(propertyValues[i])) {
+            return propertyValues[i];
+        }
     }
     return null;
 }

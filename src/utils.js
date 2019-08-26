@@ -1,12 +1,31 @@
 function BoundsModel() {
+    this.incubationTimer = new Timer(1000, 1);
     this.bounds = null;
+    this.incubationBounds = null;
+    
+    var boundsModel = this;
+    this.incubationTimer.timerHandler = function() {
+        boundsModel.incubationBounds = boundsModel.bounds;
+    };
 }
 
 BoundsModel.prototype.setBounds = function(bounds) {
-    if (bounds.equals(this.bounds)) {
+    if (this.bounds == null) {
+        this.bounds = bounds;
+        this.incubationBounds = bounds;
         return;
     }
+    if (this.bounds.equals(bounds)) {
+        return;
+    }
+    
     this.bounds = bounds;
+    this.setIncubationBounds();
+}
+
+BoundsModel.prototype.setIncubationBounds = function() {
+    this.incubationTimer.reset();
+    this.incubationTimer.start();
 }
 
 function Bounds(width, height) {
@@ -123,6 +142,7 @@ function PanSpeedTimer() {
     this.duration = -1;
     this.startTime = -1;
     
+    this.panned = false;
     this.panEvents = [];
 }
 
@@ -130,7 +150,8 @@ PanSpeedTimer.prototype = new AnimationTimer();
 PanSpeedTimer.prototype.constructor = PanSpeedTimer;
 
 PanSpeedTimer.prototype.start = function(panEvent) {
-    this.push(panEvent);
+    panEvent.time = performance.now();
+    this.panEvents.push(panEvent);
     
     AnimationTimer.prototype.start.call(this);
 }
@@ -164,6 +185,7 @@ PanSpeedTimer.prototype.resetAndGetSpeed = function(panEvent) {
         }
     }
     
+    this.panned = false;
     this.panEvents = [];
     
     AnimationTimer.prototype.reset.call(this);
@@ -173,8 +195,9 @@ PanSpeedTimer.prototype.resetAndGetSpeed = function(panEvent) {
 
 PanSpeedTimer.prototype.push = function(panEvent) {
     panEvent.time = performance.now();
+    this.panned = true;
     this.panEvents.push(panEvent);
-    while (performance.now() - this.panEvents[0].time > 100) {
+    while (panEvent.time - this.panEvents[0].time > 100) {
         this.panEvents.shift();
     }
 }

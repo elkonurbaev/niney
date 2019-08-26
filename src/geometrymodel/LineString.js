@@ -1,6 +1,6 @@
 function LineString(points) {
     this.$parent = null;
-    this.childGeometries = new Array();
+    this.childGeometries = [];
     this.envelope = null;
     
     if ((points == null) || (points.length < 2)) {
@@ -56,7 +56,7 @@ LineString.prototype.getLineStrings = function() {
 }
 
 LineString.prototype.clone = function() {
-    var clonedPoints = new Array();
+    var clonedPoints = [];
     for (var i = 0; i < this.childGeometries.length; ++i) {
         clonedPoints.push(this.childGeometries[i].clone());
     }
@@ -79,5 +79,5 @@ LineString.prototype.getArea = function() {
         area -= this.childGeometries[i].y * this.childGeometries[j].x;
     }
     return Math.abs(area / 2);
-}	
+}
 

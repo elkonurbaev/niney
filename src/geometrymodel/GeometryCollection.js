@@ -1,6 +1,6 @@
 function GeometryCollection(geometries) {
     this.$parent = null;
-    this.childGeometries = new Array();
+    this.childGeometries = [];
     this.envelope = null;
     
     if ((geometries == null) || (geometries.length == 0)) {
@@ -16,7 +16,7 @@ GeometryCollection.prototype = new Geometry();
 GeometryCollection.prototype.constructor = GeometryCollection;
 
 GeometryCollection.prototype.clone = function() {
-    var clonedGeometries = new Array();
+    var clonedGeometries = [];
     for (var i = 0; i < this.childGeometries.length; ++i) {
         clonedGeometries.push(this.childGeometries[i].clone());
     }

@@ -25,6 +25,7 @@ if (typeof angular !== "undefined") {
     }]).
     factory("windowBoundsModel", ["$rootScope", "$window", function($rootScope, $window) {
         var model = new BoundsModel();
+        model.incubationTimer.scope = $rootScope;
         model.setBounds(new Bounds($window.innerWidth, $window.innerHeight));
         $window.addEventListener("resize", function(resizeEvent) {
             $rootScope.$apply(function() {
@@ -33,38 +34,22 @@ if (typeof angular !== "undefined") {
         });
         return model;
     }]).
-    factory("defaultBoundsModel", function() {
-        return new BoundsModel();
-    }).
+    factory("defaultBoundsModel", ["$rootScope", function($rootScope) {
+        var model = new BoundsModel();
+        model.incubationTimer.scope = $rootScope;
+        return model;
+    }]).
     factory("defaultFocusModel", ["$rootScope", function($rootScope) {
         var model = new FocusModel();
         model.animationTimer.scope = $rootScope;
         model.incubationTimer.scope = $rootScope;
         return model;
     }]).
-    factory("defaultEnvelopeModel", function() {
-        return new EnvelopeCenterScale();
-    }).
-    factory("defaultAnimationEnvelopeModel", function() {
-        return new EnvelopeCenterScale();
-    }).
+    factory("defaultEnvelopeModel", ["defaultBoundsModel", "defaultFocusModel", function(defaultBoundsModel, defaultFocusModel) {
+        return new EnvelopeModel(defaultBoundsModel, defaultFocusModel);
+    }]).
     factory("defaultTilesLayer", function() {
         return new Layer("Tiles");
-    }).
-    run(function($rootScope, defaultBoundsModel, defaultFocusModel, defaultEnvelopeModel, defaultAnimationEnvelopeModel) {
-        $rootScope.defaultBoundsModel = defaultBoundsModel;
-        $rootScope.defaultFocusModel = defaultFocusModel;
-        
-        $rootScope.$watch("defaultBoundsModel.bounds", function(val) {
-            defaultEnvelopeModel.setBounds(val);
-            defaultAnimationEnvelopeModel.setBounds(val);
-        });
-        $rootScope.$watch("defaultFocusModel.centerScale", function(val) {
-            defaultEnvelopeModel.setCenterScale(val);
-        });
-        $rootScope.$watch("defaultFocusModel.animationCenterScale", function(val) {
-            defaultAnimationEnvelopeModel.setCenterScale(val);
-        });
     }).
     directive("legend", function() {
         return {
@@ -76,7 +61,7 @@ if (typeof angular !== "undefined") {
             }
         };
     }).
-    directive("map", ["$document", "heartbeatTimer", "defaultBoundsModel", "defaultFocusModel", "defaultAnimationEnvelopeModel", function($document, heartbeatTimer, defaultBoundsModel, defaultFocusModel, defaultAnimationEnvelopeModel) {
+    directive("map", ["$document", "heartbeatTimer", "defaultBoundsModel", "defaultFocusModel", "defaultEnvelopeModel", function($document, heartbeatTimer, defaultBoundsModel, defaultFocusModel, defaultEnvelopeModel) {
         return {
             template: '<div ng-transclude class="mapviewer"></div>',
             restrict: "EA",
@@ -110,12 +95,11 @@ if (typeof angular !== "undefined") {
                 $scope.$watch("boundsModel", function(val) {
                     if (val == null) {
                         $scope.boundsModel = defaultBoundsModel;
-                    } else {
-                        val.setBounds(new Bounds($element[0].offsetWidth, $element[0].offsetHeight));
-                        heartbeatTimer.addSubTimerHandler(function() {
-                            val.setBounds(new Bounds($element[0].offsetWidth, $element[0].offsetHeight));
-                        });
                     }
+                    $scope.boundsModel.setBounds(new Bounds($element[0].offsetWidth, $element[0].offsetHeight));
+                    heartbeatTimer.addSubTimerHandler(function() {
+                        $scope.boundsModel.setBounds(new Bounds($element[0].offsetWidth, $element[0].offsetHeight));
+                    });
                     env.boundsModel = $scope.boundsModel;
                 });
                 $scope.$watch("focusModel", function(val) {
@@ -126,24 +110,16 @@ if (typeof angular !== "undefined") {
                 });
                 $scope.$watch("envelopeModel", function(val) {
                     if (val == null) {
-                        $scope.envelopeModel = defaultAnimationEnvelopeModel;
+                        $scope.envelopeModel = defaultEnvelopeModel;
                     }
                 });
-                $scope.$watch("mouseWheelAction", function(val) {
-                    env.mouseWheelAction = $scope.mouseWheelAction;
-                });
-                $scope.$watch("tapFunction", function(val) {
-                    env.tapFunction = $scope.tapFunction;
-                });
-                $scope.$watch("pressFunction", function(val) {
-                    env.pressFunction = $scope.pressFunction;
-                });
-                $scope.$watch("releaseFunction", function(val) {
-                    env.releaseFunction = $scope.releaseFunction;
-                });
-                $scope.$watch("mouseMoveFunction", function(val) {
-                    env.mouseMoveFunction = $scope.mouseMoveFunction;
-                });
+                $scope.$watch("mouseWheelAction", function(val) { env.mouseWheelAction = val; });
+                $scope.$watch("tapFunction", function(val) { env.tapFunction = val; });
+                $scope.$watch("pressFunction", function(val) { env.pressFunction = val; });
+                $scope.$watch("releaseFunction", function(val) { env.releaseFunction = val; });
+                $scope.$watch("mouseMoveFunction", function(val) { env.mouseMoveFunction = val; });
+                
+                $scope.$on("$destroy", function() { $scope.mapController.destroy(); });
             }
         };
     }]).
@@ -195,6 +171,7 @@ if (typeof angular !== "undefined") {
             replace: true,
             scope: {
                 layer: "=?layer",
+                loader: "=?loader",
                 protocol: "@protocol",
                 tileWidth: "@tilewidth",
                 tileHeight: "@tileheight"
@@ -204,12 +181,15 @@ if (typeof angular !== "undefined") {
                 $scope.tileModel.ctx = $element[0].getContext("2d");
                 
                 $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
-                $parentCtrl.scope.$watch("focusModel", function(val) { if (val) { $scope.focusModel = val; $scope.tileModel.srs = val.srs; }});
+                $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; $scope.tileModel.srs = (val? val.srs: null); });
+                $parentCtrl.scope.$watch("envelopeModel", function(val) { $scope.envelopeModel = val; });
                 
-                $scope.$watch("boundsModel.bounds", function(val) { $scope.tileModel.setBounds(val); });
-                $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.tileModel.setCenterScale(val); });
-                $scope.$watch("layer", function(val) { if (angular.isDefined(val)) { $scope.tileModel.setLayer(val) } else { $scope.tileModel.setLayer(defaultTilesLayer); }});
-                $scope.$watch("layer.visible", function(val) { $scope.tileModel.resetLoaders(); });
+                $scope.$watch("boundsModel.bounds", function(val) { $scope.tileModel.setBounds(val, $scope.envelopeModel? $scope.envelopeModel.getEnvelope(): null, $scope.envelopeModel? $scope.envelopeModel.getAnimationEnvelope(): null); });
+                $scope.$watch("focusModel.centerScale", function(val) { $scope.tileModel.setCenterScale(val, $scope.envelopeModel? $scope.envelopeModel.getEnvelope(): null); });
+                $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.tileModel.setAnimationCenterScale(val, $scope.envelopeModel? $scope.envelopeModel.getAnimationEnvelope(): null); });
+                $scope.$watch("layer", function(val) { if (angular.isDefined(val)) { $scope.tileModel.setLayer(val); } else { $scope.tileModel.setLayer(defaultTilesLayer); }});
+                $scope.$watch("layer.visible", function(val) { $scope.tileModel.resetTiles(); });
+                $scope.$watch("loader", function(val) { $scope.tileModel.loader = val; });
                 $scope.$watch("protocol", function(val) { if (angular.isDefined(val)) { $scope.tileModel.protocol = val; }});
                 $scope.$watch("tileWidth", function(val) { if (angular.isDefined(val)) { $scope.tileModel.tileWidth = parseInt(val); }});
                 $scope.$watch("tileHeight", function(val) { if (angular.isDefined(val)) { $scope.tileModel.tileHeight = parseInt(val); }});
@@ -224,6 +204,7 @@ if (typeof angular !== "undefined") {
             replace: true,
             scope: {
                 layer: "=layer",
+                loader: "=?loader",
                 featureCommands: "=featurecommands"
             },
             link: function($scope, $element, $attr, $parentCtrl) {
@@ -231,11 +212,14 @@ if (typeof angular !== "undefined") {
                 $scope.utfGridModel.http = $http;
                 
                 $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
-                $parentCtrl.scope.$watch("focusModel", function(val) { if (val){ $scope.focusModel = val; $scope.utfGridModel.srs = val.srs; }});
+                $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; $scope.utfGridModel.srs = (val? val.srs: null); });
+                $parentCtrl.scope.$watch("envelopeModel", function(val) { $scope.envelopeModel = val; });
                 
-                $scope.$watch("boundsModel.bounds", function(val) { $scope.utfGridModel.setBounds(val); });
-                $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.utfGridModel.setCenterScale(val); });
+                $scope.$watch("boundsModel.bounds", function(val) { $scope.utfGridModel.setBounds(val, $scope.envelopeModel? $scope.envelopeModel.getEnvelope(): null, $scope.envelopeModel? $scope.envelopeModel.getAnimationEnvelope(): null); });
+                $scope.$watch("focusModel.centerScale", function(val) { $scope.utfGridModel.setCenterScale(val, $scope.envelopeModel? $scope.envelopeModel.getEnvelope(): null); });
+                $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.utfGridModel.setAnimationCenterScale(val, $scope.envelopeModel? $scope.envelopeModel.getAnimationEnvelope(): null); });
                 $scope.$watch("layer", function(val) { $scope.utfGridModel.setLayer(val); });
+                $scope.$watch("loader", function(val) { $scope.utfGridModel.loader = val; });
                 
                 $scope.mouseMoveHandler = function(mouseEvent) {
                     var mouseX = mouseEvent.clientX - $element[0].getBoundingClientRect().left;
@@ -265,20 +249,23 @@ if (typeof angular !== "undefined") {
             require: "^map",
             replace: true,
             scope: {
-                layer: "=layer"
+                layer: "=layer",
+                loader: "=?loader"
             },
             link: function($scope, $element, $attr, $parentCtrl) {
                 $scope.wmsModel = new WMSModel();
                 $scope.wmsModel.ctx = $element[0].getContext("2d");
                 
                 $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
-                $parentCtrl.scope.$watch("focusModel", function(val) { if (val) { $scope.focusModel = val; $scope.wmsModel.srs = val.srs; }});
+                $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; $scope.wmsModel.srs = (val? val.srs: null); });
                 
                 $scope.$watch("boundsModel.bounds", function(val) { $scope.wmsModel.setBounds(val); });
+                $scope.$watch("boundsModel.incubationBounds", function(val) { $scope.wmsModel.setIncubationBounds(val); });
                 $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.wmsModel.setAnimationCenterScale(val); });
                 $scope.$watch("focusModel.incubationCenterScale", function(val) { $scope.wmsModel.setCenterScale(val); });
                 $scope.$watch("layer", function(val) { $scope.wmsModel.setLayer(val); });
                 $scope.$watch("layer.visible", function(val) { $scope.wmsModel.load(); });
+                $scope.$watch("loader", function(val) { $scope.wmsModel.loader = val; });
             }
         };
     }).
@@ -349,9 +336,8 @@ if (typeof angular !== "undefined") {
                 $parentCtrl.scope.$watch("envelopeModel", function(val) { $scope.envelopeModel = val; });
                 $parentCtrl.scope.$watch("featureModel", function(val) { $scope.featureModel = val; });
                 
-                $scope.$watch("boundsModel.bounds", function(val) { $scope.mapFeatureModel.setBounds(val); });
-                $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.mapFeatureModel.setCenterScale(val); });
-                $scope.$watch("envelopeModel.envelope", function(val) { $scope.mapFeatureModel.setEnvelope(val); });
+                $scope.$watch("boundsModel.bounds", function(val) { if ($scope.envelopeModel && ($scope.envelopeCheck || $scope.inverseFill)) { $scope.mapFeatureModel.envelope = $scope.envelopeModel.getAnimationEnvelope(); } $scope.mapFeatureModel.setBounds(val); });
+                $scope.$watch("focusModel.animationCenterScale", function(val) { if ($scope.envelopeModel && ($scope.envelopeCheck || $scope.inverseFill)) { $scope.mapFeatureModel.envelope = $scope.envelopeModel.getAnimationEnvelope(); } $scope.mapFeatureModel.setCenterScale(val); });
                 
                 $scope.$watch("maxScale", function(val) { if (angular.isDefined(val)) { $scope.mapFeatureModel.maxScale = val; }});
                 $scope.$watch("envelopeCheck", function(val) { if (angular.isDefined(val)) { $scope.mapFeatureModel.envelopeCheck = val; }});
@@ -385,9 +371,8 @@ if (typeof angular !== "undefined") {
                 $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
                 $parentCtrl.scope.$watch("envelopeModel", function(val) { $scope.envelopeModel = val; });
                 
-                $scope.$watch("boundsModel.bounds", function(val) { $scope.mapFeatureModel.setBounds(val); });
-                $scope.$watch("focusModel.animationCenterScale", function(val) { $scope.mapFeatureModel.setCenterScale(val); });
-                $scope.$watch("envelopeModel.envelope", function(val) { $scope.mapFeatureModel.setEnvelope(val); });
+                $scope.$watch("boundsModel.bounds", function(val) { if ($scope.envelopeModel && $scope.envelopeCheck) { $scope.mapFeatureModel.envelope = $scope.envelopeModel.getAnimationEnvelope(); } $scope.mapFeatureModel.setBounds(val); });
+                $scope.$watch("focusModel.animationCenterScale", function(val) { if ($scope.envelopeModel && $scope.envelopeCheck) { $scope.mapFeatureModel.envelope = $scope.envelopeModel.getAnimationEnvelope(); } $scope.mapFeatureModel.setCenterScale(val); });
                 
                 $scope.$watch("maxScale", function(val) { if (angular.isDefined(val)) { $scope.mapFeatureModel.maxScale = val; }});
                 $scope.$watch("envelopeCheck", function(val) { if (angular.isDefined(val)) { $scope.mapFeatureModel.envelopeCheck = val; }});
@@ -409,9 +394,9 @@ if (typeof angular !== "undefined") {
             }
         };
     }).
-    directive("geometrysymbolizer", ["$filter", function($filter) {
+    directive("geometrysymbolizer", function() {
         return {
-            template: '<div class="mapfeaturelayer"><div ng-if="maxScale >= focusModel.animationCenterScale.scale" class="mapfeaturelayer"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" ng-repeat="feature in filteredFeatures" class="mapfeature"><path ng-repeat="geometry in getFilteredGeometries(feature)" d="{{toSVGPoints(boundsModel.bounds, focusModel.animationCenterScale, geometry)}}" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="isSelected(feature)? \'mapgeometry\' + \' \' + highClass: \'mapgeometry\'"/></svg></div></div>',
+            template: '<div class="mapfeaturelayer"><div ng-if="maxScale >= focusModel.animationCenterScale.scale" class="mapfeaturelayer"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" ng-repeat="feature in featureModel.features" class="mapfeature"><path ng-repeat="geometry in getFeatureGeometries(feature) | filter:intersectsEnvelope" d="{{toSVGPoints(boundsModel.bounds, focusModel.animationCenterScale, geometry)}}" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="isSelected(feature)? \'mapgeometry\' + \' \' + highClass: \'mapgeometry\'"/></svg></div></div>',
             restrict: "EA",
             require: "^mapfeaturelayer",
             replace: true,
@@ -428,121 +413,33 @@ if (typeof angular !== "undefined") {
                 $parentCtrl.scope.$watch("selectionModel", function(val) { $scope.selectionModel = val; });
                 $parentCtrl.scope.$watch("featureCommands", function(val) { $scope.featureCommands = val || defaultFeatureCommands; });
                 
-                $scope.filteredFeatures = [];
-                
                 $scope.$watch("MAX_SCALE", function(val) { $scope.maxScale = angular.isDefined(val) ? Number(val) : Number.MAX_VALUE; });
-                $scope.$watch("envelopeModel.envelope", watchHandler);
-                $scope.$watch("featureModel.features", watchHandler, true);
                 
-                function watchHandler(val) {
-                    if (($scope.focusModel == null) || ($scope.focusModel.animationCenterScale.scale > $scope.maxScale)) {
-                        return;
-                    }
-                    if (($scope.envelopeModel == null) || ($scope.envelopeModel.envelope == null)) {
-                        return;
-                    }
-                    if ($scope.featureModel == null) {
-                        return;
-                    }
-                    
-                    $scope.filteredFeatures = $filter("filter")($scope.featureModel.features, function(item) {
-                        var featureEnvelope = item.propertyValues[$scope.propertyIndex].getEnvelope();
-                        return featureEnvelope.intersects($scope.envelopeModel.envelope);
-                    });
-                };
-                
-                $scope.getFilteredGeometries = function(feature) {
+                $scope.getFeatureGeometries = function(feature) {
                     var geometry = feature.propertyValues[$scope.propertyIndex];
-                    var geometries = null;
-                    if (geometry instanceof Point) {
-                        geometries = [new LineString(geometry, geometry)];
+                    if (geometry == null) {
+                        return null;
+                    } else if (geometry instanceof Point) {
+                        return [new LineString(geometry, geometry)];
                     } else if ((geometry instanceof LineString) || (geometry instanceof Polygon) || (geometry instanceof Envelope)) {
-                        geometries = [geometry];
-                    } else {  // Multi-geometry or geometry collection.
-                        geometries = geometry.childGeometries;
+                        return [geometry];
                     }
-                    return $filter("filter")(geometries, function(item) {
-                        var geometryEnvelope = item.getEnvelope();
-                        return geometryEnvelope.intersects($scope.envelopeModel.envelope);
-                    });
+                    return geometry.childGeometries;  // Multi-geometry or geometry collection.
+                };
+                $scope.intersectsEnvelope = function(item) {
+                    var itemEnvelope = item.getEnvelope();
+                    return itemEnvelope.intersects($scope.envelopeModel.getAnimationEnvelope());
                 };
                 $scope.toSVGPoints = (new SVGConverter()).geometryToPixPath;
                 $scope.mouseOverHandler = function(feature, event) {
                     $scope.featureCommands[0].perform(feature);
-                }
-                $scope.mouseOutHandler = function(feature, event) {
-                    $scope.featureCommands[1].perform(feature);
-                }
-                $scope.clickHandler = function(feature, event) {
-                    $scope.featureCommands[2].perform(feature);
-                }
-                $scope.isSelected = function(feature) {
-                    if ($scope.selectionModel == null) {
-                        return false;
-                    }
-                    for (var i = 0; i < $scope.selectionModel.selectedFeatures.length; i++) {
-                        if ($scope.selectionModel.selectedFeatures[i] == feature) {
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-            }
-        };
-    }]).
-    directive("imagesymbolizer", ["$filter", function($filter) {
-        return {
-            template: '<div><div ng-if="maxScale >= focusModel.animationCenterScale.scale"><img ng-repeat="feature in filteredFeatures" ng-src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="isSelected(feature)? \'mapimage\' + \' \' + highClass: \'mapimage\'" ng-style="getCSS(feature.propertyValues[propertyIndex])"/></div></div>',
-            restrict: "EA",
-            require: "^mapfeaturelayer",
-            replace: true,
-            scope: {
-                MAX_SCALE: "@maxscale",
-                propertyIndex: "@propertyindex",
-                assetPropertyIndex: "@assetpropertyindex",
-                asset: "@asset",
-                highClass: "@highclass"
-            },
-            link: function($scope, $element, $attr, $parentCtrl) {
-                $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
-                $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
-                $parentCtrl.scope.$watch("envelopeModel", function(val) { $scope.envelopeModel = val; });
-                $parentCtrl.scope.$watch("featureModel", function(val) { $scope.featureModel = val; });
-                $parentCtrl.scope.$watch("selectionModel", function(val) { $scope.selectionModel = val; });
-                $parentCtrl.scope.$watch("featureCommands", function(val) { $scope.featureCommands = val || defaultFeatureCommands; });
-                
-                $scope.filteredFeatures = [];
-                
-                $scope.$watch("MAX_SCALE", function(val) { $scope.maxScale = angular.isDefined(val) ? Number(val) : Number.MAX_VALUE; });
-                $scope.$watch("envelopeModel.envelope", watchHandler);
-                $scope.$watch("featureModel.features", watchHandler, true);
-                
-                function watchHandler(val) {
-                    if (($scope.focusModel == null) || ($scope.focusModel.animationCenterScale.scale > $scope.maxScale)) {
-                        return;
-                    }
-                    if (($scope.envelopeModel == null) || ($scope.envelopeModel.envelope == null)) {
-                        return;
-                    }
-                    if ($scope.featureModel == null) {
-                        return;
-                    }
-                    
-                    $scope.filteredFeatures = $filter("filter")($scope.featureModel.features, function(item) {
-                        var featureEnvelope = item.propertyValues[$scope.propertyIndex].getEnvelope();
-                        return featureEnvelope.intersects($scope.envelopeModel.envelope);
-                    });
                 };
-                
-                $scope.mouseOverHandler = function(feature, event) {
-                    $scope.featureCommands[0].perform(feature);
-                }
                 $scope.mouseOutHandler = function(feature, event) {
                     $scope.featureCommands[1].perform(feature);
-                }
+                };
                 $scope.clickHandler = function(feature, event) {
                     $scope.featureCommands[2].perform(feature);
-                }
+                };
                 $scope.isSelected = function(feature) {
                     if ($scope.selectionModel == null) {
                         return false;
@@ -553,19 +450,13 @@ if (typeof angular !== "undefined") {
                         }
                     }
                     return false;
-                }
-                $scope.getCSS = function(geometry) {
-                    var css = {};
-                    css.left = $scope.focusModel.animationCenterScale.getPixX($scope.boundsModel.bounds.width, geometry.x) + "px";
-                    css.top = $scope.focusModel.animationCenterScale.getPixY($scope.boundsModel.bounds.height, geometry.y) + "px";
-                    return css;
-                }
+                };
             }
         };
-    }]).
-    directive("geometryimagesymbolizer", function() {
+    }).
+    directive("imagesymbolizer", function() {
         return {
-            template: '<div><div ng-if="maxScale >= focusModel.animationCenterScale.scale" ng-repeat="feature in featureModel.features"><img ng-repeat="geometry in feature.propertyValues[propertyIndex].geometries | filter:intersectsEnvelope track by $index" ng-src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="isSelected(feature)? \'mapimage\' + \' \' + highClass: \'mapimage\'" ng-style="getCSS(geometry)"/></div></div>',
+            template: '<div><div ng-if="maxScale >= focusModel.animationCenterScale.scale"><img ng-repeat="feature in featureModel.features | filter:intersectsEnvelope" ng-src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="isSelected(feature)? \'mapimage\' + \' \' + highClass: \'mapimage\'" ng-style="getCSS(boundsModel.bounds, focusModel.animationCenterScale, feature.propertyValues[propertyIndex])"/></div></div>',
             restrict: "EA",
             require: "^mapfeaturelayer",
             replace: true,
@@ -587,32 +478,85 @@ if (typeof angular !== "undefined") {
                 $scope.$watch("MAX_SCALE", function(val) { $scope.maxScale = angular.isDefined(val) ? Number(val) : Number.MAX_VALUE; });
                 
                 $scope.intersectsEnvelope = function(item) {
-                    var itemEnvelope = item.getEnvelope();
-                    return itemEnvelope.intersects($scope.envelopeModel.envelope);
+                    var itemEnvelope = item.propertyValues[$scope.propertyIndex].getEnvelope();
+                    return itemEnvelope.intersects($scope.envelopeModel.getAnimationEnvelope());
                 };
+                
                 $scope.mouseOverHandler = function(feature, event) {
                     $scope.featureCommands[0].perform(feature);
-                }
+                };
                 $scope.mouseOutHandler = function(feature, event) {
                     $scope.featureCommands[1].perform(feature);
-                }
+                };
                 $scope.clickHandler = function(feature, event) {
                     $scope.featureCommands[2].perform(feature);
-                }
+                };
                 $scope.isSelected = function(feature) {
+                    if ($scope.selectionModel == null) {
+                        return false;
+                    }
                     for (var i = 0; i < $scope.selectionModel.selectedFeatures.length; i++) {
                         if ($scope.selectionModel.selectedFeatures[i] == feature) {
                             return true;
                         }
                     }
                     return false;
-                }
-                $scope.getCSS = function(geometry) {
-                    var css = {};
-                    css.left = $scope.focusModel.animationCenterScale.getPixX($scope.boundsModel.bounds.width, geometry.x) + "px";
-                    css.top = $scope.focusModel.animationCenterScale.getPixY($scope.boundsModel.bounds.height, geometry.y) + "px";
-                    return css;
-                }
+                };
+                
+                $scope.getCSS = (new CSSConverter()).pointToPixCSS;
+            }
+        };
+    }).
+    directive("geometryimagesymbolizer", function() {
+        return {
+            template: '<div><div ng-if="maxScale >= focusModel.animationCenterScale.scale" ng-repeat="feature in featureModel.features | filter:intersectsEnvelope"><img ng-repeat="geometry in feature.propertyValues[propertyIndex].childGeometries" ng-src="{{asset.replace(\'$\', feature.propertyValues[assetPropertyIndex])}}" ng-mouseover="mouseOverHandler(feature, $event)" ng-mouseout="mouseOutHandler(feature, $event)" ng-click="clickHandler(feature, $event)" ng-class="isSelected(feature)? \'mapimage\' + \' \' + highClass: \'mapimage\'" ng-style="getCSS(boundsModel.bounds, focusModel.animationCenterScale, geometry)"/></div></div>',
+            restrict: "EA",
+            require: "^mapfeaturelayer",
+            replace: true,
+            scope: {
+                MAX_SCALE: "@maxscale",
+                propertyIndex: "@propertyindex",
+                assetPropertyIndex: "@assetpropertyindex",
+                asset: "@asset",
+                highClass: "@highclass"
+            },
+            link: function($scope, $element, $attr, $parentCtrl) {
+                $parentCtrl.scope.$watch("boundsModel", function(val) { $scope.boundsModel = val; });
+                $parentCtrl.scope.$watch("focusModel", function(val) { $scope.focusModel = val; });
+                $parentCtrl.scope.$watch("envelopeModel", function(val) { $scope.envelopeModel = val; });
+                $parentCtrl.scope.$watch("featureModel", function(val) { $scope.featureModel = val; });
+                $parentCtrl.scope.$watch("selectionModel", function(val) { $scope.selectionModel = val; });
+                $parentCtrl.scope.$watch("featureCommands", function(val) { $scope.featureCommands = val || defaultFeatureCommands; });
+                
+                $scope.$watch("MAX_SCALE", function(val) { $scope.maxScale = angular.isDefined(val) ? Number(val) : Number.MAX_VALUE; });
+                
+                $scope.intersectsEnvelope = function(item) {
+                    var itemEnvelope = item.propertyValues[$scope.propertyIndex].getEnvelope();
+                    return itemEnvelope.intersects($scope.envelopeModel.getAnimationEnvelope());
+                };
+                
+                $scope.mouseOverHandler = function(feature, event) {
+                    $scope.featureCommands[0].perform(feature);
+                };
+                $scope.mouseOutHandler = function(feature, event) {
+                    $scope.featureCommands[1].perform(feature);
+                };
+                $scope.clickHandler = function(feature, event) {
+                    $scope.featureCommands[2].perform(feature);
+                };
+                $scope.isSelected = function(feature) {
+                    if ($scope.selectionModel == null) {
+                        return false;
+                    }
+                    for (var i = 0; i < $scope.selectionModel.selectedFeatures.length; i++) {
+                        if ($scope.selectionModel.selectedFeatures[i] == feature) {
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+                
+                $scope.getCSS = (new CSSConverter()).pointToPixCSS;
             }
         };
     });
