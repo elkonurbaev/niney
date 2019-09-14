@@ -1,22 +1,17 @@
-function URLFilterConverter() { }
+export function URLFilterConverter() { }
 
-URLFilterConverter.filterModelsToURLFilter = function(filterModels) {
-    var urlFilter = "";
+URLFilterConverter.prototype.filterModelsToURLFilter = function(filterModels) {
+    var urlFilters = [];
     for (var i = 0; i < filterModels.length; i++) {
-        if (filterModels[i] != null) {
-            if (urlFilter.length > 0) {
-                urlFilter += ":::";
-            }
-            urlFilter += URLFilterConverter.filterToURLFilter(filterModels[i].filter);
+        if (filterModels[i].filter != null) {
+            urlFilters.push(this.filterToURLFilter(filterModels[i].filter));
         }
     }
     
-    return urlFilter;
+    return urlFilters.join(":::");
 }
 
-URLFilterConverter.filterToURLFilter = function(filter) {
-    var urlFilter = filter.propertyName + "::EQ::" + filter.value;
-    
-    return urlFilter;
+URLFilterConverter.prototype.filterToURLFilter = function(filter) {
+    return filter.propertyName + "::EQ::" + filter.value;
 }
 

@@ -1,4 +1,4 @@
-function Point(x, y) {
+export function Point(x, y) {
     this.$parent = null;
     this.childGeometries = [];
     this.envelope = null;

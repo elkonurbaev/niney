@@ -1,4 +1,4 @@
-function GeometryTools() { }
+export function GeometryTools() { }
 
 GeometryTools.getGeometryClass = function(geometryType) {
     geometryType = geometryType.toUpperCase();

@@ -1,4 +1,4 @@
-function Envelope(minX, minY, maxX, maxY) {
+export function Envelope(minX, minY, maxX, maxY) {
     this.$parent = null;
     this.childGeometries = [];
     this.envelope = null;

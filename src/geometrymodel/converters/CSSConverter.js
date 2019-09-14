@@ -1,4 +1,4 @@
-function CSSConverter() { }
+export function CSSConverter() { }
 
 CSSConverter.prototype.pointToPixCSS = function(bounds, centerScale, point) {
     return css = {

@@ -1,4 +1,4 @@
-function UTFGridModel() {
+export function UTFGridModel() {
     this.bounds = null;
     this.srs = null;
     this.centerScale = null;

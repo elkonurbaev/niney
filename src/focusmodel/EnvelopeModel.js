@@ -1,4 +1,4 @@
-function EnvelopeModel(boundsModel, focusModel) {
+export function EnvelopeModel(boundsModel, focusModel) {
     this.boundsModel = boundsModel;
     this.focusModel = focusModel;
     

@@ -1,4 +1,4 @@
-function CenterScale(centerX, centerY, scale) {
+export function CenterScale(centerX, centerY, scale) {
     this.coordPixFactor = 0.000352778;
     
     this.centerX = centerX;

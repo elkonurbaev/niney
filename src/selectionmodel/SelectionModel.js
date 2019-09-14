@@ -1,3 +1,3 @@
-function SelectionModel() {
+export function SelectionModel() {
     this.selectedFeatures = null;
 }

@@ -1,4 +1,4 @@
-function Loader() {
+export function Loader() {
     this.layers = {};
     this.numLoading = 0;
 }
@@ -33,7 +33,7 @@ Loader.prototype.remove = function(key) {
 
 Loader.prototype.setNumLoading = function() {
     this.numLoading = 0;
-    for (key in this.layers) {
+    for (var key in this.layers) {
         this.numLoading += this.layers[key];
     }
 }

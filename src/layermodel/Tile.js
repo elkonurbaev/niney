@@ -1,4 +1,4 @@
-function Tile(minX, maxY, scale, tileX, tileY, tileWidth, tileHeight, url) {
+export function Tile(minX, maxY, scale, tileX, tileY, tileWidth, tileHeight, url) {
     this.minX = minX;
     this.maxY = maxY;
     this.scale = scale;

@@ -1,4 +1,4 @@
-function FocusModel() {
+export function FocusModel() {
     this.animationTimer = new AnimationTimer(1000);
     this.incubationTimer = new Timer(1000, 1);
     this.srs = new SRS();

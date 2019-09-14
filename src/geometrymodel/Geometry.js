@@ -1,4 +1,4 @@
-function Geometry() {
+export function Geometry() {
     this.$parent = null;  // Starts with $ to prevent recursion in angular.equals (geometry.childGeometries[0].$parent == geometry and so on).
     this.childGeometries = [];
     this.envelope = null;

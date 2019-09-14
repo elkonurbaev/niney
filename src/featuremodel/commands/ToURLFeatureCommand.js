@@ -1,4 +1,4 @@
-function ToURLFeatureCommand() { }
+export function ToURLFeatureCommand() { }
 
 ToURLFeatureCommand.prototype.perform = function(feature) {
     if (feature == null) {

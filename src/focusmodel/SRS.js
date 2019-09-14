@@ -1,4 +1,4 @@
-function SRS() {
+export function SRS() {
     this.srid = 900913;
     this.zoomLevels = [
         new ZoomLevel(0, 443744272.72414012, 156543.0339),

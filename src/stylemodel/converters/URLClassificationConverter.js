@@ -1,9 +1,13 @@
-function URLClassificationConverter() { }
+export function URLClassificationConverter() { }
 
 URLClassificationConverter.classificationToURLClassification = function(classification) {
     var urlClassification = classification.propertyName + "::";
     
-    urlClassification += classification.numClasses + "::";
+    if (classification.numClasses != null) {
+        urlClassification += classification.numClasses + "::";
+    } else if (classification.thresholds != null) {
+        urlClassification += classification.thresholds.join(":") + "::";
+    }
     
     if (classification.colors != null) {
         var colorString = null;

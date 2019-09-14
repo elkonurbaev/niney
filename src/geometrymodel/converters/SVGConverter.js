@@ -1,4 +1,4 @@
-function SVGConverter() { }
+export function SVGConverter() { }
 
 SVGConverter.prototype.geometryToPixPath = function(bounds, centerScale, geometry) {
     var path = "";

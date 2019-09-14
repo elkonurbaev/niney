@@ -1,4 +1,4 @@
-function Polygon(lineStrings) {
+export function Polygon(lineStrings) {
     this.$parent = null;
     this.childGeometries = [];
     this.envelope = null;

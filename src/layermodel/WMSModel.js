@@ -1,4 +1,4 @@
-function WMSModel() {
+export function WMSModel() {
     this.bounds = null;
     this.incubationBounds = null;
     this.srs = null;

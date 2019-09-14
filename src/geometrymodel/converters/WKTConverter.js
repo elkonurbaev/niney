@@ -1,4 +1,4 @@
-function WKTConverter() {
+export function WKTConverter() {
     this.sridRegExp = /^"?SRID=(\d+);(.*)/;
     this.geometryCollectionRegExp = /^"?GEOMETRYCOLLECTION\s?\((.*?)\)"?$/;
     this.multiGeometryRegExp = /^"?MULTI(POINT|LINESTRING|POLYGON)\s?\((.*?)\)"?$/;

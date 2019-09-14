@@ -1,4 +1,4 @@
-function MapController(element, env, scope) {
+export function MapController(element, env, scope) {
     var mouseWheelTime = performance.now();
     var mouseWheelDelta = -1;
     

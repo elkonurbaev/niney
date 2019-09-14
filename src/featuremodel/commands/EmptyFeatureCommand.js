@@ -1,8 +1,6 @@
-function EmptyFeatureCommand() {
-}
+export function EmptyFeatureCommand() { }
 
-EmptyFeatureCommand.prototype.perform = function() {
-}
+EmptyFeatureCommand.prototype.perform = function() { }
 
-var defaultFeatureCommands = [new EmptyFeatureCommand(), new EmptyFeatureCommand(), new EmptyFeatureCommand()];
+export var defaultFeatureCommands = [new EmptyFeatureCommand(), new EmptyFeatureCommand(), new EmptyFeatureCommand()];
 

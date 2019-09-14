@@ -1,4 +1,4 @@
-function MapFeatureModel() {
+export function MapFeatureModel() {
     this.bounds = null;
     this.centerScale = null;
     this.envelope = null;

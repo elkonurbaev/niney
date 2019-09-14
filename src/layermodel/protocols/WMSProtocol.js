@@ -1,4 +1,4 @@
-function WMSProtocol() { }
+export function WMSProtocol() { }
 
 WMSProtocol.getMapURL = function(layer, srs, minX, minY, maxX, maxY, tileWidth, tileHeight, autoClassification) {
     var url = layer.baseURL;
@@ -14,7 +14,7 @@ WMSProtocol.getMapURL = function(layer, srs, minX, minY, maxX, maxY, tileWidth, 
         if (layer.name != null) {
             sldURL += "?layer=" + layer.name;
         }
-        var urlFilter = URLFilterConverter.filterModelsToURLFilter(layer.filterModels);
+        var urlFilter = (new URLFilterConverter()).filterModelsToURLFilter(layer.filterModels);
         if (urlFilter.length > 0) {
             sldURL += "&filter=" + urlFilter;
         }

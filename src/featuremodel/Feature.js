@@ -1,4 +1,4 @@
-function Feature(featureType, propertyValues) {
+export function Feature(featureType, propertyValues) {
     this.featureType = featureType;
     this.propertyValues = propertyValues;
 }

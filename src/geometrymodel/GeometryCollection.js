@@ -1,4 +1,4 @@
-function GeometryCollection(geometries) {
+export function GeometryCollection(geometries) {
     this.$parent = null;
     this.childGeometries = [];
     this.envelope = null;

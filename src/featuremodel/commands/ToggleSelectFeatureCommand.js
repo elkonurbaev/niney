@@ -1,4 +1,4 @@
-function ToggleSelectFeatureCommand(selectionModel, index) {
+export function ToggleSelectFeatureCommand(selectionModel, index) {
     this.selectionModel = selectionModel;
     this.index = index;
     this.idPropertyName = null;

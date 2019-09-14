@@ -1,4 +1,4 @@
-function Layer(name) {
+export function Layer(name) {
     this.name = name;
     this.baseURL = "https://tile.openstreetmap.org/";
     this.styleURL = null;

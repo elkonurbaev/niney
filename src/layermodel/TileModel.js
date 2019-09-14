@@ -1,4 +1,4 @@
-function TileModel() {
+export function TileModel() {
     this.bounds = null;
     this.srs = null;
     this.centerScale = null;

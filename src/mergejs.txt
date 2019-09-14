@@ -1,4 +1,8 @@
-utils.js
+utils/BoundsModel.js
+utils/Bounds.js
+utils/Timer.js
+utils/AnimationTimer.js
+utils/PanSpeedTimer.js
 geometrymodel/Geometry.js
 geometrymodel/GeometryCollection.js
 geometrymodel/Point.js
@@ -16,9 +20,11 @@ featuremodel/Property.js
 featuremodel/PropertyType.js
 featuremodel/commands/EmptyFeatureCommand.js
 featuremodel/commands/SelectFeatureCommand.js
+featuremodel/commands/AggressiveSelectFeatureCommand.js
 featuremodel/commands/ToggleSelectFeatureCommand.js
 featuremodel/commands/ToURLFeatureCommand.js
 featuremodel/converters/CSVConverter.js
+filtermodel/FilterModel.js
 filtermodel/Filter.js
 filtermodel/converters/URLFilterConverter.js
 focusmodel/CenterScale.js
@@ -37,4 +43,4 @@ layermodel/MapFeatureModel.js
 layermodel/protocols/WMSProtocol.js
 selectionmodel/SelectionModel.js
 stylemodel/converters/URLClassificationConverter.js
-niney.angular.js
+niney.es2015.js

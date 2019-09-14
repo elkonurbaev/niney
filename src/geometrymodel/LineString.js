@@ -1,4 +1,4 @@
-function LineString(points) {
+export function LineString(points) {
     this.$parent = null;
     this.childGeometries = [];
     this.envelope = null;
