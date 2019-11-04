@@ -95,7 +95,7 @@ TileModel.prototype.loadTiles = function() {
                     } else {  // WMTS
                         var maxX = (tileX + 1) * this.tileWidth * zoomLevel.resolution + this.srs.minX;
                         var minY = -((tileY + 1) * this.tileHeight * zoomLevel.resolution - this.srs.maxY);
-                        url = WMSProtocol.getMapURL(this.layer, this.srs, minX, minY, maxX, maxY, this.tileWidth, this.tileHeight, true);
+                        url = WMSProtocol.getMapURL(this.layer, this.srs, minX, minY, maxX, maxY, this.tileWidth, this.tileHeight, true, null);
                     }
                     
                     tile = new Tile(minX, maxY, zoomLevel.scale, tileX, tileY, this.tileWidth, this.tileHeight, url);

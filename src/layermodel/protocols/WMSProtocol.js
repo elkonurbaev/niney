@@ -1,10 +1,10 @@
 export function WMSProtocol() { }
 
-WMSProtocol.getMapURL = function(layer, srs, minX, minY, maxX, maxY, tileWidth, tileHeight, autoClassification) {
+WMSProtocol.getMapURL = function(layer, srs, minX, minY, maxX, maxY, tileWidth, tileHeight, autoClassification, infoPoint) {
     var url = layer.baseURL;
-    url += (url.indexOf("?") == -1 ? "?" : "&") + "SERVICE=WMS";
+    url += (url.indexOf("?") == -1? "?": "&") + "SERVICE=WMS";
     url += "&VERSION=1.1.1";
-    url += "&REQUEST=GetMap";
+    url += "&REQUEST=" + (infoPoint == null? "GetMap": "GetFeatureInfo");
     
     if (layer.styleURL == null) {
         url += "&LAYERS=" + layer.name;
@@ -33,6 +33,11 @@ WMSProtocol.getMapURL = function(layer, srs, minX, minY, maxX, maxY, tileWidth, 
     url += "&HEIGHT=" + tileHeight;
     url += "&FORMAT=" + layer.format;
     url += "&EXCEPTIONS=application/vnd.ogc.se_xml";
+    
+    if (infoPoint != null) {
+        url += "&X=" + infoPoint.x;
+        url += "&Y=" + infoPoint.y;
+    }
     
     for (var key in layer.vendorSpecifics) {
         url += "&" + key + "=" + layer.vendorSpecifics[key];

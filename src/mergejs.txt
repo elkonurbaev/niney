@@ -38,6 +38,7 @@ layermodel/Loader.js
 layermodel/Tile.js
 layermodel/TileModel.js
 layermodel/UTFGridModel.js
+layermodel/WMSInfo.js
 layermodel/WMSModel.js
 layermodel/MapFeatureModel.js
 layermodel/protocols/WMSProtocol.js

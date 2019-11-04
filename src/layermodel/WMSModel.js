@@ -7,6 +7,7 @@ export function WMSModel() {
     this.layer = null;
     this.loader = null;
     this.autoClassification = true;
+    this.info = null;
     this.tile = null;
     this.previousTile = null;
     this.ctx = null;
@@ -49,7 +50,7 @@ WMSModel.prototype.setLayer = function(layer) {
     this.load();
 }
 
-WMSModel.prototype.load = function() {
+WMSModel.prototype.load = function(infoOnly) {
     if (this.bounds == null) {
         return;
     }
@@ -57,13 +58,19 @@ WMSModel.prototype.load = function() {
         return;
     }
     
-    if ((this.tile != null) && this.tile.completed && !this.tile.corrupted) {
-        this.previousTile = this.tile;
+    if (this.info != null) {
+        this.info.value = null;
     }
-    this.tile = null;
     
-    if (this.ctx != null) {
-        this.ctx.clearRect(0, 0, this.bounds.width, this.bounds.height);
+    if (!infoOnly) {
+        if ((this.tile != null) && this.tile.completed && !this.tile.corrupted) {
+            this.previousTile = this.tile;
+        }
+        this.tile = null;
+        
+        if (this.ctx != null) {
+            this.ctx.clearRect(0, 0, this.bounds.width, this.bounds.height);
+        }
     }
     
     if ((this.layer == null) || (!this.layer.visible)) {
@@ -88,29 +95,48 @@ WMSModel.prototype.load = function() {
     var tileWidth = Math.round(this.centerScale.getNumPixs(maxX - minX));
     var tileHeight = Math.round(this.centerScale.getNumPixs(maxY - minY));
     
-    var url = WMSProtocol.getMapURL(this.layer, this.srs, minX, minY, maxX, maxY, tileWidth, tileHeight, this.autoClassification);
-    
-    if (this.loader != null) {
-        this.loader.set(this.layer.name);
+    if (this.info != null) {
+        var f = function(info) {
+            return function() {
+                if ((xhr.readyState == 4) && (xhr.status == 200)) {
+                    info.value = xhr.responseText;
+                }
+            };
+        }(this.info);
+        var x = Math.round(this.info.x - this.centerScale.getPixX(this.bounds.width, minX));
+        var y = Math.round(this.info.y - this.centerScale.getPixY(this.bounds.height, maxY));
+        var url = WMSProtocol.getMapURL(this.layer, this.srs, minX, minY, maxX, maxY, tileWidth, tileHeight, this.autoClassification, { x: x, y: y });
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", url);
+        xhr.onreadystatechange = f;
+        xhr.send();
     }
-    this.tile = new Tile(minX, maxY, this.centerScale.scale, 1, 1, tileWidth, tileHeight, url);
     
-    if (this.animationCenterScale != null) {
-        this.tile.reset(this.bounds, this.animationCenterScale);
-        if (this.previousTile != null) {
-            this.previousTile.reset(this.bounds, this.animationCenterScale);
+    if (!infoOnly) {
+        var url = WMSProtocol.getMapURL(this.layer, this.srs, minX, minY, maxX, maxY, tileWidth, tileHeight, this.autoClassification, null);
+        
+        if (this.loader != null) {
+            this.loader.set(this.layer.name);
         }
-    }
-    
-    if (this.ctx != null) {
-        if (this.previousTile != null) {
-            this.drawTile(this.previousTile);
+        this.tile = new Tile(minX, maxY, this.centerScale.scale, 1, 1, tileWidth, tileHeight, url);
+        
+        if (this.animationCenterScale != null) {
+            this.tile.reset(this.bounds, this.animationCenterScale);
+            if (this.previousTile != null) {
+                this.previousTile.reset(this.bounds, this.animationCenterScale);
+            }
         }
-        var f = function(t, env, success) { return function() { env.completeTile(t, success); }};
-        this.tile.data = new Image();
-        this.tile.data.addEventListener("load", f(this.tile, this, true));
-        this.tile.data.addEventListener("error", f(this.tile, this, false));
-        this.tile.data.src = this.tile.url;
+        
+        if (this.ctx != null) {
+            if (this.previousTile != null) {
+                this.drawTile(this.previousTile);
+            }
+            var f = function(t, env, success) { return function() { env.completeTile(t, success); }};
+            this.tile.data = new Image();
+            this.tile.data.addEventListener("load", f(this.tile, this, true));
+            this.tile.data.addEventListener("error", f(this.tile, this, false));
+            this.tile.data.src = this.tile.url;
+        }
     }
 }
 

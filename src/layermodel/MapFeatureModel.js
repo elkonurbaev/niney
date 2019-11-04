@@ -16,6 +16,8 @@ export function MapFeatureModel() {
     this.idPropertyName = "id";
     this.geometryPropertyName = "geometry";
     this.inverseFill = false;
+    this.includePoints = false;
+    this.cssFunction = null;
     
     this.ctx = null;
     this.css = null;
@@ -58,18 +60,18 @@ MapFeatureModel.prototype.setFeatures = function(features) {
     
     for (var i = 0; i < features.length; i++) {
         var feature = features[i];
-        if (feature.propertyValues != null) {
+        if (feature.propertyValues != null) {  // Feature from a feature model.
             var id = i;
             var geometry = feature.propertyValues[
                 (feature.propertyValues.length + this.propertyIndex) % feature.propertyValues.length
             ];
             if ((geometry != null) && (
-                (this.filter == null) ||
+                (this.filter == null) || (this.filter.propertyIndex == null) ||
                 (feature.propertyValues[this.filter.propertyIndex] == this.filter.value)
             )) {
                 this.filterFeatures.push({id: id, geometry: geometry, feature: feature});
             }
-        } else {
+        } else {  // POJO feature.
             var geometries = getFeatureValues(feature, this.geometryPropertyName);
             if (geometries[0] == null) {
                 continue;
@@ -79,7 +81,7 @@ MapFeatureModel.prototype.setFeatures = function(features) {
                 ids = null;
             }
             var filterValues = null;
-            if ((this.filter != null) && (this.filter.propertyName != "")) {
+            if ((this.filter != null) && (this.filter.propertyName != null) && (this.filter.propertyName != "")) {
                 filterValues = getFeatureValues(feature, this.filter.propertyName);
                 if (filterValues.length != geometries.length) {
                     continue;
@@ -87,9 +89,9 @@ MapFeatureModel.prototype.setFeatures = function(features) {
             }
             
             for (var j = 0; j < geometries.length; j++) {
-                if ((this.filter != null) && (
-                    ((this.filter.propertyName == "") && (this.filter.value != i)) ||
-                    ((this.filter.propertyName != "") && (this.filter.value != filterValues[j]))
+                if ((this.filter != null) && (this.filter.propertyName != null) && (
+                    ((this.filter.propertyName == "") && (this.filter.value != i)) ||             // e.g. "== 0", the first feature
+                    ((this.filter.propertyName != "") && (this.filter.value != filterValues[j]))  // e.g. "foo == bar"
                 )) {
                     continue;
                 }
@@ -174,39 +176,51 @@ MapFeatureModel.prototype.setMapFeatures = function() {
         return;
     }
     
+    var css = { };
     if (this.ctx != null) {
         var scaling = this.centerScale.getNumPixs(1);
         var dx = -this.centerScale.centerX * scaling + this.bounds.width / 2;
         var dy = this.centerScale.centerY * scaling + this.bounds.height / 2;
         this.ctx.setTransform(scaling, 0, 0, -scaling, dx, dy);
         
-        this.ctx.fillStyle = this.css.getPropertyValue("fill");
-        this.ctx.strokeStyle = this.css.getPropertyValue("stroke");
-        this.ctx.lineWidth = parseInt(this.css.getPropertyValue("stroke-width")) / scaling;
+        this.ctx.fillStyle = css.fill = this.css.getPropertyValue("fill");
+        this.ctx.strokeStyle = css.stroke = this.css.getPropertyValue("stroke");
+        this.ctx.lineWidth = css.scaledStrokeWidth = (css.strokeWidth = parseFloat(this.css.getPropertyValue("stroke-width") || 1)) / scaling;
         
-        var strokeFilter = this.css.getPropertyValue("--stroke-filter") || "none";
-        var graphicSize = (parseInt(this.css.getPropertyValue("--circle-radius") || 8) + 1) / 2 / scaling;
+        css.strokeFilter = this.css.getPropertyValue("--stroke-filter") || "none";
+        css.scaledGraphicSize = (css.graphicSize = parseFloat(this.css.getPropertyValue("--circle-radius") || 8) + 1) / scaling;
     }
     
     if (this.features != null) {
         for (var i = 0; i < this.filterFeatures.length; i++) {
+            if (this.cssFunction != null) {  // Implies a canvas.
+                this.cssFunction(css, this.filterFeatures[i]);
+                var scaling = this.centerScale.getNumPixs(1);
+                
+                this.ctx.fillStyle = css.fill;
+                this.ctx.strokeStyle = css.stroke;
+                this.ctx.lineWidth = css.scaledStrokeWidth = parseFloat(css.strokeWidth) / scaling;
+                
+                css.scaledGraphicSize = parseFloat(css.graphicSize) / scaling;
+            }
+            
             var geometry = this.filterFeatures[i].geometry;
             if (geometry instanceof Geometry) {
-                this.assignGeometry(this.filterFeatures[i], geometry, strokeFilter, graphicSize);
+                this.assignGeometry(this.filterFeatures[i], geometry, css);
             } else {  // geometry is a path string that renders on a (transformed) canvas.
-                this.drawPath(geometry, strokeFilter);
+                this.drawPath(geometry, css.strokeFilter);
             }
         }
     } else if (this.geometries != null) {
         for (var i = 0; i < this.geometries.length; i++) {
-            this.assignGeometry(null, this.geometries[i], strokeFilter, graphicSize);
+            this.assignGeometry(null, this.geometries[i], css);
         }
     } else {  // this.geometry != null
-        this.assignGeometry(null, this.geometry, strokeFilter, graphicSize);
+        this.assignGeometry(null, this.geometry, css);
     }
 }
 
-MapFeatureModel.prototype.assignGeometry = function(mapFeature, geometry, strokeFilter, graphicSize) {
+MapFeatureModel.prototype.assignGeometry = function(mapFeature, geometry, css) {
     if (this.envelopeCheck && !geometry.intersects(this.envelope)) {
         return;
     }
@@ -218,9 +232,9 @@ MapFeatureModel.prototype.assignGeometry = function(mapFeature, geometry, stroke
     if (geometry instanceof Point) {
         if (this.ctx != null) {
             this.ctx.beginPath();
-            this.ctx.arc(geometry.x, geometry.y, graphicSize, 0, 2 * Math.PI);
+            this.ctx.arc(geometry.x, geometry.y, css.scaledGraphicSize / 2, 0, 2 * Math.PI);
             this.ctx.fill();
-            this.ctx.filter = strokeFilter;
+            this.ctx.filter = css.strokeFilter;
             this.ctx.stroke();
             this.ctx.filter = "none";
         } else {
@@ -229,13 +243,16 @@ MapFeatureModel.prototype.assignGeometry = function(mapFeature, geometry, stroke
     } else if ((geometry instanceof LineString) || (geometry instanceof Polygon) || (geometry instanceof Envelope)) {
         if (this.ctx != null) {
             var path = (new SVGConverter()).geometryToCoordPath(geometry);
-            this.drawPath(path, strokeFilter);
+            this.drawPath(path, css.strokeFilter);
         } else {
             this.nonPointGeometries.push(geometry);
+            if (this.includePoints) {
+                Array.prototype.push.apply(this.points, geometry.getPoints());
+            }
         }
     } else {  // Multi-geometry or geometry collection.
         for (var i = 0; i < geometry.childGeometries.length; i++) {
-            this.assignGeometry(null, geometry.childGeometries[i], strokeFilter, graphicSize);
+            this.assignGeometry(null, geometry.childGeometries[i], css);
         }
     }
 }
