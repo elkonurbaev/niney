@@ -22,7 +22,11 @@ export function MapFeatureModel() {
     this.ctx = null;
     this.css = null;
     
+    this.glShaderCenter = null;
+    this.glShaderScale = null;
+    
     this.filterFeatures = [];
+    this.vertices = [];
     this.mapFeatures = [];
     this.nonPointGeometries = [];
     this.points = [];
@@ -31,11 +35,11 @@ export function MapFeatureModel() {
 MapFeatureModel.prototype.setFilter = function(filterExpression) {
     this.filter = null;
     if (filterExpression != null) {
-        var match = filterExpression.match(/(\[(\d+)\]|[\w\.]*)\s*==\s*(.*)/);
+        var match = filterExpression.match(/(\[(\d+)\]|[\w\.]*)\s*([=<>]=)\s*(.*)/);
         if (match[2] != null) {
-            this.filter = new Filter(parseInt(match[2]), match[3]);  // propertyIndex
+            this.filter = new Filter(parseInt(match[2]), match[4], match[3]);  // propertyIndex
         } else {
-            this.filter = new Filter(match[1], match[3]);  // propertyName
+            this.filter = new Filter(match[1], match[4], match[3]);  // propertyName
         }
     }
 }
@@ -90,8 +94,12 @@ MapFeatureModel.prototype.setFeatures = function(features) {
             
             for (var j = 0; j < geometries.length; j++) {
                 if ((this.filter != null) && (this.filter.propertyName != null) && (
-                    ((this.filter.propertyName == "") && (this.filter.value != i)) ||             // e.g. "== 0", the first feature
-                    ((this.filter.propertyName != "") && (this.filter.value != filterValues[j]))  // e.g. "foo == bar"
+                    ((this.filter.propertyName == "") && (this.filter.operator == FilterModel.EQUALS)            && (i != this.filter.value)) ||                 // e.g. "== 0", the first feature
+                    ((this.filter.propertyName == "") && (this.filter.operator == FilterModel.LESS_OR_EQUALS)    && !(i <= this.filter.value)) ||                // e.g. "<= 2", the first 3 features
+                    ((this.filter.propertyName == "") && (this.filter.operator == FilterModel.GREATER_OR_EQUALS) && !(i >= this.filter.value)) ||                // e.g. ">= 6", all features, except first 5
+                    ((this.filter.propertyName != "") && (this.filter.operator == FilterModel.EQUALS)            && (filterValues[j] != this.filter.value)) ||   // e.g. "foo == bar"
+                    ((this.filter.propertyName != "") && (this.filter.operator == FilterModel.LESS_OR_EQUALS)    && !(filterValues[j] <= this.filter.value)) ||  // e.g. "foo <= bar"
+                    ((this.filter.propertyName != "") && (this.filter.operator == FilterModel.GREATER_OR_EQUALS) && !(filterValues[j] >= this.filter.value))     // e.g. "foo >= bar"
                 )) {
                     continue;
                 }
@@ -126,16 +134,27 @@ MapFeatureModel.prototype.setFeatures = function(features) {
         return featureBranches;
     }
     
+    if (this.ctx instanceof WebGLRenderingContext) {
+        this.setVertices();
+    }
     this.setMapFeatures();
 }
 
 MapFeatureModel.prototype.setGeometries = function(geometries) {
     this.geometries = geometries;
+    
+    if (this.ctx instanceof WebGLRenderingContext) {
+        this.setVertices();
+    }
     this.setMapFeatures();
 }
 
 MapFeatureModel.prototype.setGeometry = function(geometry) {
     this.geometry = geometry;
+    
+    if (this.ctx instanceof WebGLRenderingContext) {
+        this.setVertices();
+    }
     this.setMapFeatures();
 }
 
@@ -144,6 +163,43 @@ MapFeatureModel.prototype.setAnimating = function(animating) {
     if (!this.animate) {
         this.setMapFeatures();
     }
+}
+
+MapFeatureModel.prototype.setVertices = function() {  // Only works with point geometries.
+    this.vertices = [];
+    var graphicSize = parseFloat(this.css.getPropertyValue("--graphic-size") || 8);
+    
+    if (this.features != null) {
+        for (var i = 0; i < this.filterFeatures.length; i++) {
+            this.vertices.push(this.filterFeatures[i].geometry.x);
+            this.vertices.push(this.filterFeatures[i].geometry.y);
+            
+            if (this.cssFunction != null) {
+                var css = {};
+                this.cssFunction(css, this.filterFeatures[i]);
+                if (css.graphicSize != null) {
+                    this.vertices.push(Math.min(css.graphicSize, graphicSize) / graphicSize);
+                } else {
+                    this.vertices.push(1);
+                }
+            } else {
+                this.vertices.push(1);
+            }
+        }
+    } else if (this.geometries != null) {
+        for (var i = 0; i < this.geometries.length; i++) {
+            this.vertices.push(this.geometries[i].x);
+            this.vertices.push(this.geometries[i].y);
+            this.vertices.push(1);
+        }
+    } else {  // this.geometry != null
+        this.vertices.push(this.geometry.x);
+        this.vertices.push(this.geometry.y);
+        this.vertices.push(1);
+    }
+    
+    //console.log("Number of points: " + (this.vertices.length / 3));
+    this.ctx.bufferData(this.ctx.ARRAY_BUFFER, new Float32Array(this.vertices), this.ctx.STATIC_DRAW);
 }
 
 MapFeatureModel.prototype.setMapFeatures = function() {
@@ -157,7 +213,11 @@ MapFeatureModel.prototype.setMapFeatures = function() {
         return;
     }
     
-    if (this.ctx != null) {
+    if (this.ctx instanceof WebGLRenderingContext) {
+        this.ctx.viewport(0, 0, this.bounds.width, this.bounds.height);
+        //this.ctx.clearColor(0, 0, 0, 0);
+        //this.ctx.clear(this.ctx.COLOR_BUFFER_BIT);
+    } else if (this.ctx != null) {
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);  // ctx.resetTransform();
         this.ctx.clearRect(0, 0, this.bounds.width, this.bounds.height);
     } else {
@@ -176,6 +236,14 @@ MapFeatureModel.prototype.setMapFeatures = function() {
         return;
     }
     
+    if (this.ctx instanceof WebGLRenderingContext) {
+        this.ctx.uniform4f(this.glShaderCenter, this.centerScale.centerX, this.centerScale.centerY, 0, 0);
+        this.ctx.uniform4f(this.glShaderScale, this.centerScale.getNumWorldCoords(this.bounds.width) / 2, this.centerScale.getNumWorldCoords(this.bounds.height) / 2, 1, 1);
+        
+        this.ctx.drawArrays(this.ctx.POINTS, 0, this.vertices.length / 3);
+        return;
+    }
+    
     var css = { };
     if (this.ctx != null) {
         var scaling = this.centerScale.getNumPixs(1);
@@ -188,7 +256,7 @@ MapFeatureModel.prototype.setMapFeatures = function() {
         this.ctx.lineWidth = css.scaledStrokeWidth = (css.strokeWidth = parseFloat(this.css.getPropertyValue("stroke-width") || 1)) / scaling;
         
         css.strokeFilter = this.css.getPropertyValue("--stroke-filter") || "none";
-        css.scaledGraphicSize = (css.graphicSize = parseFloat(this.css.getPropertyValue("--circle-radius") || 8) + 1) / scaling;
+        css.scaledGraphicSize = (css.graphicSize = parseFloat(this.css.getPropertyValue("--graphic-size") || 8) + 1) / scaling;
     }
     
     if (this.features != null) {
