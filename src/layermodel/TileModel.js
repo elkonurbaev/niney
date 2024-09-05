@@ -1,6 +1,8 @@
 export function TileModel() {
     this.bounds = null;
     this.srs = null;
+    this.maxZoomLevel = null;
+    this.maxEnvelope = null;
     this.centerScale = null;
     this.animationCenterScale = null;
     this.envelope = null;
@@ -13,7 +15,6 @@ export function TileModel() {
     this.tiles = [];
     this.tileIndex = {};
     this.ctx = null;  // Used only for tile models that draw on a canvas.
-    this.http = null;  // Used only for UTFGrid tile models.
 }
 
 TileModel.prototype.setBounds = function(bounds, envelope, animationEnvelope) {
@@ -69,7 +70,14 @@ TileModel.prototype.loadTiles = function() {
     if (envelope == null) {
         envelope = this.centerScale.toEnvelope(this.bounds.width, this.bounds.height);
     }
-    var zoomLevel = this.srs.getZoomLevel(this.centerScale.scale);
+    if (this.maxEnvelope != null) {
+        envelope = envelope.intersection(this.maxEnvelope);
+    }
+    if (envelope == null) {
+        return;
+    }
+    
+    var zoomLevel = this.srs.getZoomLevel(this.centerScale.scale, this.maxZoomLevel);
     var tileLimit = Math.pow(2, zoomLevel.zoomLevel);
     var leftTileX = Math.floor((envelope.minX - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
     var topTileY = Math.max(Math.floor((this.srs.maxY - envelope.maxY) / zoomLevel.resolution / this.tileHeight), 0);
@@ -80,25 +88,25 @@ TileModel.prototype.loadTiles = function() {
         for (var tileX = leftTileX; tileX <= rightTileX; tileX++) {
             var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);
             
-            if ((tile == null) || (tile.corrupted && (tile.corrupted + 7000 < performance.now()))) {
+            if ((tile == null) || (tile.corrupted && (tile.corrupted + 7000 < performance.now())) || this.tileNeedsReload(tile)) {
                 if (tile == null) {
                     var minX = tileX * this.tileWidth * zoomLevel.resolution + this.srs.minX;
                     var maxY = -(tileY * this.tileHeight * zoomLevel.resolution - this.srs.maxY);
                     
                     var url = null;
-                    if (this.protocol == "TMS") {
+                    if (this.protocol != "WMTS") {
                         url = this.layer.urlExtension;
                         url = url.replace("$Z", zoomLevel.zoomLevel);
                         url = url.replace("$X", ((tileX % tileLimit) + tileLimit) % tileLimit);
                         url = url.replace("$Y", tileY);
                         url = this.layer.baseURL + url;
-                    } else {  // WMTS
+                    } else {
                         var maxX = (tileX + 1) * this.tileWidth * zoomLevel.resolution + this.srs.minX;
                         var minY = -((tileY + 1) * this.tileHeight * zoomLevel.resolution - this.srs.maxY);
                         url = WMSProtocol.getMapURL(this.layer, this.srs, minX, minY, maxX, maxY, this.tileWidth, this.tileHeight, true, null);
                     }
                     
-                    tile = new Tile(minX, maxY, zoomLevel.scale, tileX, tileY, this.tileWidth, this.tileHeight, url);
+                    tile = this.createTile(minX, maxY, zoomLevel.scale, tileX, tileY, this.tileWidth, this.tileHeight, url);
                     this.addTile(zoomLevel.zoomLevel, tile);
                 } else {
                     tile.completed = false;
@@ -109,23 +117,7 @@ TileModel.prototype.loadTiles = function() {
                     this.loader.add(this.layer.name);
                 }
                 
-                if (this.ctx != null) {
-                    var f = function(t, env, success) { return function() { env.completeTile(t, success); }};
-                    
-                    tile.data = new Image();
-                    tile.data.addEventListener("load", f(tile, this, true));
-                    tile.data.addEventListener("error", f(tile, this, false));
-                    tile.data.src = tile.url;
-                }
-                
-                if (this.http != null) {
-                    var f = function(t) {
-                        return function(data, status, headers, config) {
-                            t.utfGrid = eval(data);
-                        }
-                    }(tile);
-                    this.http({ method: "GET", url: tile.url, cache: true }).success(f);
-                }
+                this.loadTileData(tile);
             }
         }
     }
@@ -155,7 +147,14 @@ TileModel.prototype.resetTiles = function() {
     if (envelope == null) {
         envelope = this.animationCenterScale.toEnvelope(this.bounds.width, this.bounds.height);
     }
-    var zoomLevel = this.srs.getZoomLevel(this.animationCenterScale.scale);
+    if (this.maxEnvelope != null) {
+        envelope = envelope.intersection(this.maxEnvelope);
+    }
+    if (envelope == null) {
+        return;
+    }
+
+    var zoomLevel = this.srs.getZoomLevel(this.animationCenterScale.scale, this.maxZoomLevel);
     var tileLimit = Math.pow(2, zoomLevel.zoomLevel);
     var leftTileX = Math.floor((envelope.minX - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
     var topTileY = Math.max(Math.floor((this.srs.maxY - envelope.maxY) / zoomLevel.resolution / this.tileHeight), 0);
@@ -173,7 +172,7 @@ TileModel.prototype.resetTiles = function() {
                 } else {
                     var minX = tileX * this.tileWidth * zoomLevel.resolution + this.srs.minX;
                     var maxY = -(tileY * this.tileHeight * zoomLevel.resolution - this.srs.maxY);
-                    this.drawTilesAroundZoomLevel(zoomLevel.zoomLevel, minX, maxY);
+                    this.drawTilesAroundZoomLevel(zoomLevel.zoomLevel, zoomLevel.resolution, minX, maxY);
                 }
             } else {
                 if (tile != null) {
@@ -183,6 +182,10 @@ TileModel.prototype.resetTiles = function() {
             }
         }
     }
+}
+
+TileModel.prototype.createTile = function(minX, maxY, scale, tileX, tileY, tileWidth, tileHeight, url) {
+    return new Tile(minX, maxY, scale, tileX, tileY, tileWidth, tileHeight, url);
 }
 
 TileModel.prototype.addTile = function(zoomLevel, tile) {
@@ -203,8 +206,23 @@ TileModel.prototype.getTile = function(zoomLevel, tileX, tileY) {
     return this.tiles[this.tileIndex[zoomLevel][tileX][tileY]];
 }
 
+TileModel.prototype.tileNeedsReload = function(tile) {
+    return false;
+}
+
+TileModel.prototype.loadTileData = function(tile) {
+    if (this.ctx != null) {
+        var f = function(t, env, success) { return function() { env.completeTile(t, success); }};
+        
+        tile.data = new Image();
+        tile.data.addEventListener("load", f(tile, this, true));
+        tile.data.addEventListener("error", f(tile, this, false));
+        tile.data.src = tile.url;
+    }
+}
+
 TileModel.prototype.completeTile = function(tile, success) {
-    var zoomLevel = this.srs.getZoomLevel(tile.scale);
+    var zoomLevel = this.srs.getZoomLevel(tile.scale, this.maxZoomLevel);
     if (this.getTile(zoomLevel.zoomLevel, tile.tileX, tile.tileY) != tile) {
         return;
     }
@@ -217,7 +235,10 @@ TileModel.prototype.completeTile = function(tile, success) {
     if (success) {
         tile.corrupted = false;
         
-        if ((this.animationCenterScale != null) && (this.srs.getZoomLevel(this.animationCenterScale.scale) == zoomLevel)) {
+        if (
+            (this.layer != null) && this.layer.visible &&
+            (this.animationCenterScale != null) && (this.srs.getZoomLevel(this.animationCenterScale.scale, this.maxZoomLevel).zoomLevel == zoomLevel.zoomLevel)
+        ) {
             tile.reset(this.bounds, this.animationCenterScale);
             if (this.ctx != null) {
                 this.drawTile(tile, true);
@@ -230,39 +251,39 @@ TileModel.prototype.completeTile = function(tile, success) {
     }
 }
 
-TileModel.prototype.drawTilesAroundZoomLevel = function(zl, minX, maxY) {
+TileModel.prototype.drawTilesAroundZoomLevel = function(zl, rs, minX, maxY) {
     // Find any completed tile in the zoom levels above the given zoom level.
-    for (var i = zl - 1; i >= 0; i--) {
-        var zoomLevel = this.srs.zoomLevels[i];
-        var zoomFactor = Math.pow(2, zl - i);
-        var subTileX = Math.round((minX - this.srs.minX) / zoomLevel.resolution / this.tileWidth * zoomFactor) / zoomFactor;
+    for (var zoomLevel = zl - 1, resolution = rs * 2; zoomLevel >= 0; zoomLevel--, resolution *= 2) {
+        var zoomFactor = Math.pow(2, zl - zoomLevel);
+        var subTileX = Math.round((minX - this.srs.minX) / resolution / this.tileWidth * zoomFactor) / zoomFactor;
         var tileX = Math.floor(subTileX);
-        var subTileY = Math.round((this.srs.maxY - maxY) / zoomLevel.resolution / this.tileHeight * zoomFactor) / zoomFactor;
+        var subTileY = Math.round((this.srs.maxY - maxY) / resolution / this.tileHeight * zoomFactor) / zoomFactor;
         var tileY = Math.max(Math.floor(subTileY), 0);
-        var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);
+        var tile = this.getTile(zoomLevel, tileX, tileY);
         if ((tile != null) && tile.completed && !tile.corrupted) {
             tile.resetWithPoint(this.bounds, this.animationCenterScale, minX, maxY);
+            
+            var width = tile.tileWidth / zoomFactor;
+            var height = tile.tileHeight / zoomFactor;
             this.ctx.drawImage(
                 tile.data,
-                (subTileX % 1) * this.tileWidth, (subTileY % 1) * this.tileHeight,
-                this.tileWidth / zoomFactor, this.tileHeight / zoomFactor,
+                (subTileX % 1) * tile.tileWidth, (subTileY % 1) * tile.tileHeight,
+                width, height,
                 Math.round(tile.x), Math.round(tile.y),
-                Math.ceil(tile.scaling * this.tileWidth / zoomFactor), Math.ceil(tile.scaling * this.tileHeight / zoomFactor)
+                Math.ceil(tile.scaling * width), Math.ceil(tile.scaling * height)
             );
             break;
         }
     }
 
     // Find completed tiles in the (single one) zoom level below the given zoom level.
-    if (zl == this.srs.zoomLevels.length - 1) {
-        return;
-    }
-    var zoomLevel = this.srs.zoomLevels[zl + 1];
-    var leftTileX = Math.round((minX - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
-    var topTileY = Math.max(Math.round((this.srs.maxY - maxY) / zoomLevel.resolution / this.tileHeight), 0);
+    var zoomLevel = zl + 1;
+    var resolution = rs / 2;
+    var leftTileX = Math.round((minX - this.srs.minX) / resolution / this.tileWidth);
+    var topTileY = Math.max(Math.round((this.srs.maxY - maxY) / resolution / this.tileHeight), 0);
     for (var tileY = topTileY; tileY <= topTileY + 1; tileY++) {
         for (var tileX = leftTileX; tileX <= leftTileX + 1; tileX++) {
-            var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);
+            var tile = this.getTile(zoomLevel, tileX, tileY);
             if ((tile != null) && tile.completed && !tile.corrupted) {
                 tile.reset(this.bounds, this.animationCenterScale);
                 this.drawTile(tile, false);
@@ -274,8 +295,8 @@ TileModel.prototype.drawTilesAroundZoomLevel = function(zl, minX, maxY) {
 TileModel.prototype.drawTile = function(tile, clear) {
     var x = Math.round(tile.x);
     var y = Math.round(tile.y);
-    var width = Math.round(tile.x + tile.scaling * this.tileWidth) - x;
-    var height = Math.round(tile.y + tile.scaling * this.tileHeight) - y;
+    var width = Math.round(tile.x - x + tile.scaling * tile.tileWidth);
+    var height = Math.round(tile.y - y + tile.scaling * tile.tileHeight);
     if (clear) {
         this.ctx.clearRect(x, y, width, height);
     }

@@ -36,7 +36,9 @@ mapcontroller/MapController.js
 layermodel/Layer.js
 layermodel/Loader.js
 layermodel/Tile.js
+layermodel/VectorTile.js
 layermodel/TileModel.js
+layermodel/VectorTileModel.js
 layermodel/UTFGridModel.js
 layermodel/WMSInfo.js
 layermodel/WMSModel.js

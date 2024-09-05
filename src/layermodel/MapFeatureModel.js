@@ -15,13 +15,15 @@ export function MapFeatureModel() {
     this.propertyIndex = -1;
     this.idPropertyName = "id";
     this.geometryPropertyName = "geometry";
-    this.inverseFill = false;
     this.includePoints = false;
+    this.fillRule = "evenodd";
+    this.ctxShared = false;
     this.cssFunction = null;
     
     this.ctx = null;
-    this.css = null;
+    this.style = null;
     
+    this.inverseFillPath = "";
     this.glShaderCenter = null;
     this.glShaderScale = null;
     
@@ -167,7 +169,7 @@ MapFeatureModel.prototype.setAnimating = function(animating) {
 
 MapFeatureModel.prototype.setVertices = function() {  // Only works with point geometries.
     this.vertices = [];
-    var graphicSize = parseFloat(this.css.getPropertyValue("--graphic-size") || 8);
+    var graphicSize = parseFloat(this.style.getPropertyValue("--graphic-size") || 8);
     
     if (this.features != null) {
         for (var i = 0; i < this.filterFeatures.length; i++) {
@@ -209,7 +211,7 @@ MapFeatureModel.prototype.setMapFeatures = function() {
     if (this.centerScale == null) {
         return;
     }
-    if ((this.envelope == null) && (this.envelopeCheck || this.inverseFill)) {
+    if ((this.envelope == null) && this.envelopeCheck) {
         return;
     }
     
@@ -218,8 +220,10 @@ MapFeatureModel.prototype.setMapFeatures = function() {
         //this.ctx.clearColor(0, 0, 0, 0);
         //this.ctx.clear(this.ctx.COLOR_BUFFER_BIT);
     } else if (this.ctx != null) {
-        this.ctx.setTransform(1, 0, 0, 1, 0, 0);  // ctx.resetTransform();
-        this.ctx.clearRect(0, 0, this.bounds.width, this.bounds.height);
+        if (!this.ctxShared) {
+            this.ctx.setTransform(1, 0, 0, 1, 0, 0);  // ctx.resetTransform();
+            this.ctx.clearRect(0, 0, this.bounds.width, this.bounds.height);
+        }
     } else {
         this.mapFeatures = [];
         this.nonPointGeometries = [];
@@ -244,19 +248,36 @@ MapFeatureModel.prototype.setMapFeatures = function() {
         return;
     }
     
-    var css = { };
+    var css = {};
     if (this.ctx != null) {
         var scaling = this.centerScale.getNumPixs(1);
-        var dx = -this.centerScale.centerX * scaling + this.bounds.width / 2;
-        var dy = this.centerScale.centerY * scaling + this.bounds.height / 2;
-        this.ctx.setTransform(scaling, 0, 0, -scaling, dx, dy);
+        var yFactor = this.centerScale.yFactor;
+        var dx = this.bounds.width / 2 - this.centerScale.centerX * scaling;
+        var dy = this.bounds.height / 2 - this.centerScale.centerY * scaling * yFactor;
+        this.ctx.setTransform(scaling, 0, 0, scaling * yFactor, dx, dy);
         
-        this.ctx.fillStyle = css.fill = this.css.getPropertyValue("fill");
-        this.ctx.strokeStyle = css.stroke = this.css.getPropertyValue("stroke");
-        this.ctx.lineWidth = css.scaledStrokeWidth = (css.strokeWidth = parseFloat(this.css.getPropertyValue("stroke-width") || 1)) / scaling;
+        this.ctx.fillStyle   = css.fill                                         =            this.style.getPropertyValue("fill");
+        this.ctx.strokeStyle = css.stroke                                       =            this.style.getPropertyValue("stroke");
+        this.ctx.lineWidth   = css.scaledStrokeWidth     = (css.strokeWidth     = parseFloat(this.style.getPropertyValue("stroke-width"))) / scaling;
+        this.ctx.setLineDash(  css.scaledStrokeDasharray = (css.strokeDasharray =            this.style.getPropertyValue("stroke-dasharray").split(" ").map(a => parseFloat(a))).map(a => a / scaling));
+        this.ctx.lineCap     = css.strokeLinecap                                =            this.style.getPropertyValue("stroke-linecap");
+        this.ctx.lineJoin    = css.strokeLinejoin                               =            this.style.getPropertyValue("stroke-linejoin");
+        /*    Will be     */   css.strokeFilter                                 =            this.style.getPropertyValue("--stroke-filter") || "none";
+        /* applied to ctx */   css.scaledGraphicSize     = (css.graphicSize     = parseFloat(this.style.getPropertyValue("--graphic-size") || 8) + 1) / scaling;
+        /*  in due time.  */   css.inverseFill                                  = !!parseInt(this.style.getPropertyValue("--inverse-fill") || 0);
         
-        css.strokeFilter = this.css.getPropertyValue("--stroke-filter") || "none";
-        css.scaledGraphicSize = (css.graphicSize = parseFloat(this.css.getPropertyValue("--graphic-size") || 8) + 1) / scaling;
+        if (css.inverseFill) {
+            var t = this.ctx.getTransform();
+            var c = this.ctx.canvas;
+            var envelope = new Envelope(-t.e / t.a, -(t.f - c.height) / t.d, -(t.e - c.width) / t.a, -t.f / t.d);
+            envelope.grow(1.1);
+            var minX = envelope.minX;
+            var minY = envelope.minY;
+            var maxX = envelope.maxX;
+            var maxY = envelope.maxY;
+            var path = "M" + minX + " " + maxY + " " + " L" + maxX + " " + maxY + " " + maxX + " " + minY + " " + minX + " " + minY + " Z ";
+            this.drawPath(path, css);
+        }
     }
     
     if (this.features != null) {
@@ -265,19 +286,16 @@ MapFeatureModel.prototype.setMapFeatures = function() {
                 this.cssFunction(css, this.filterFeatures[i]);
                 var scaling = this.centerScale.getNumPixs(1);
                 
-                this.ctx.fillStyle = css.fill;
+                this.ctx.fillStyle   = css.fill;
                 this.ctx.strokeStyle = css.stroke;
-                this.ctx.lineWidth = css.scaledStrokeWidth = parseFloat(css.strokeWidth) / scaling;
-                
-                css.scaledGraphicSize = parseFloat(css.graphicSize) / scaling;
+                this.ctx.lineWidth   = css.scaledStrokeWidth     = parseFloat(css.strokeWidth) / scaling;
+                this.ctx.setLineDash(  css.scaledStrokeDasharray =            css.strokeDasharray.map(a => parseFloat(a) / scaling));
+                this.ctx.lineCap     = css.strokeLinecap;
+                this.ctx.lineJoin    = css.strokeLinejoin;
+                                       css.scaledGraphicSize     = parseFloat(css.graphicSize) / scaling;
             }
             
-            var geometry = this.filterFeatures[i].geometry;
-            if (geometry instanceof Geometry) {
-                this.assignGeometry(this.filterFeatures[i], geometry, css);
-            } else {  // geometry is a path string that renders on a (transformed) canvas.
-                this.drawPath(geometry, css.strokeFilter);
-            }
+            this.assignGeometry(this.filterFeatures[i], this.filterFeatures[i].geometry, css);
         }
     } else if (this.geometries != null) {
         for (var i = 0; i < this.geometries.length; i++) {
@@ -285,6 +303,12 @@ MapFeatureModel.prototype.setMapFeatures = function() {
         }
     } else {  // this.geometry != null
         this.assignGeometry(null, this.geometry, css);
+    }
+
+    if (this.ctx != null) {
+        if (css.inverseFill) {
+            this.drawPath("", css, true);
+        }
     }
 }
 
@@ -294,13 +318,26 @@ MapFeatureModel.prototype.assignGeometry = function(mapFeature, geometry, css) {
     }
     
     if (mapFeature != null) {
-        this.mapFeatures.push(mapFeature);
+        if (this.ctx != null) {
+        } else {
+            this.mapFeatures.push(mapFeature);
+        }
     }
     
-    if (geometry instanceof Point) {
+    if (!(geometry instanceof Geometry)) {  // geometry is a path string that renders on a (transformed) canvas.
+        this.drawPath(geometry, css);
+    } else if (geometry instanceof Point) {
         if (this.ctx != null) {
             this.ctx.beginPath();
-            this.ctx.arc(geometry.x, geometry.y, css.scaledGraphicSize / 2, 0, 2 * Math.PI);
+            if (css.rectWidth) {
+                var scaling = this.centerScale.getNumPixs(1);
+                var scaledOffsetX = css.offsetX / scaling;
+                var scaledRectWidth = css.rectWidth / scaling;
+                var scaledRectHeight = css.rectHeight / scaling;
+                this.ctx.rect(geometry.x + scaledOffsetX, geometry.y, scaledRectWidth, scaledRectHeight);
+            } else {
+                this.ctx.arc(geometry.x, geometry.y, css.scaledGraphicSize / 2, 0, 2 * Math.PI);
+            }
             this.ctx.fill();
             this.ctx.filter = css.strokeFilter;
             this.ctx.stroke();
@@ -310,8 +347,8 @@ MapFeatureModel.prototype.assignGeometry = function(mapFeature, geometry, css) {
         }
     } else if ((geometry instanceof LineString) || (geometry instanceof Polygon) || (geometry instanceof Envelope)) {
         if (this.ctx != null) {
-            var path = (new SVGConverter()).geometryToCoordPath(geometry);
-            this.drawPath(path, css.strokeFilter);
+            var path = (new SVGConverter()).geometryToWorldPath(geometry);
+            this.drawPath(path, css);
         } else {
             this.nonPointGeometries.push(geometry);
             if (this.includePoints) {
@@ -325,21 +362,26 @@ MapFeatureModel.prototype.assignGeometry = function(mapFeature, geometry, css) {
     }
 }
 
-MapFeatureModel.prototype.drawPath = function(path, strokeFilter) {
-    if (this.inverseFill) {
-        var minX = this.envelope.minX;
-        var minY = this.envelope.minY;
-        var maxX = this.envelope.maxX;
-        var maxY = this.envelope.maxY;
-        var path = "M " + minX + " " + minY + " " + " L " + maxX + " " + minY + " " + maxX + " " + maxY + " " + minX + " " + maxY + " Z " + path;
+MapFeatureModel.prototype.drawPath = function(path, css, last) {
+    if (css.inverseFill) {
+        if (!last) {
+            this.inverseFillPath += path;
+            return;
+        } else {
+            path = this.inverseFillPath + path;
+            this.inverseFillPath = "";
+        }
     }
-    if ((typeof Path2D === "function") && (navigator.userAgent.indexOf("Edge/") == -1)) {
-        var p = new Path2D(path);
-        this.ctx.fill(p, "evenodd");
-        this.ctx.filter = strokeFilter;
-        this.ctx.stroke(p);
+    if (typeof Path2D === "function") {
+        var stroke = !this.ctxShared? new Path2D(path): new Path2D(path.replace(/K/g, "M").replace(/Z/g, ""));
+        if (css.fill != "none") {
+            var fill = !this.ctxShared? stroke: new Path2D(path.replace(/K/g, "L"));
+            this.ctx.fill(fill, this.fillRule);
+        }
+        this.ctx.filter = css.strokeFilter;
+        this.ctx.stroke(stroke);
         this.ctx.filter = "none";
-    } else {  // Polyfill for IE11 and Edge.
+    } else {  // Polyfill for IE/Edge through version 13.
         this.ctx.beginPath();
         path = path.replace(/,/g, " ");
         var pathItems = path.split(" ");
@@ -353,8 +395,10 @@ MapFeatureModel.prototype.drawPath = function(path, strokeFilter) {
                 this.ctx.lineTo(pathItems[i], pathItems[++i]);
             }
         }
-        this.ctx.fill("evenodd");
-        this.ctx.filter = strokeFilter;
+        if (css.fill != "none") {
+            this.ctx.fill(this.fillRule);
+        }
+        this.ctx.filter = css.strokeFilter;
         this.ctx.stroke();
         this.ctx.filter = "none";
     }

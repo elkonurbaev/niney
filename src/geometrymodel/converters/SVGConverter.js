@@ -18,7 +18,7 @@ SVGConverter.prototype.geometryToPixPath = function(bounds, centerScale, geometr
     return path;
 }
 
-SVGConverter.prototype.geometryToCoordPath = function(geometry) {
+SVGConverter.prototype.geometryToWorldPath = function(geometry) {
     var path = "";
     var lineStrings = geometry.getLineStrings();
     for (var i = 0; i < lineStrings.length; i++) {

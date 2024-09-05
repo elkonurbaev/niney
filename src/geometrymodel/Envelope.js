@@ -100,6 +100,19 @@ Envelope.prototype.grow = function(factor) {
     this.invalidateEnvelope();
 }
 
+Envelope.prototype.intersection = function(envelope) {
+    if (!(envelope instanceof Envelope)) {
+        return;
+    }
+    
+    return new Envelope(
+        Math.max(this.minX, envelope.minX),
+        Math.max(this.minY, envelope.minY),
+        Math.min(this.maxX, envelope.maxX),
+        Math.min(this.maxY, envelope.maxY)
+    );
+}
+
 Envelope.prototype.toString = function() {
     return "Envelope(" + this.minX + ", " + this.minY + ", " + this.maxX + ", " + this.maxY + ")";
 }

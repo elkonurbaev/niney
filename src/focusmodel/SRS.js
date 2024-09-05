@@ -45,9 +45,12 @@ SRS.prototype.getZoomLevel = function(scale, policy) {
             }
         }
         return this.zoomLevels[this.zoomLevels.length - 1];
-    } else if (policy == SRS.NEAREST) {
+    } else if ((policy == SRS.NEAREST) || (policy >= 3)) {
         for (var i = 0; i < this.zoomLevels.length - 1; i++) {
-            if (scale >= (this.zoomLevels[i].scale + this.zoomLevels[i + 1].scale) / 2) {
+            if (
+                (scale >= (this.zoomLevels[i].scale + this.zoomLevels[i + 1].scale) / 2) ||
+                ((policy >= 3) && (policy == this.zoomLevels[i].zoomLevel))
+            ) {
                 return this.zoomLevels[i];
             }
         }

@@ -5,7 +5,7 @@
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
-/* Last merge : Wed Jun 3 15:48:56 CEST 2020  */
+/* Last merge : Wed Sep 4 16:23:36 CEST 2024  */
 
 /* Merging order :
 
@@ -47,7 +47,9 @@
 - layermodel/Layer.js
 - layermodel/Loader.js
 - layermodel/Tile.js
+- layermodel/VectorTile.js
 - layermodel/TileModel.js
+- layermodel/VectorTileModel.js
 - layermodel/UTFGridModel.js
 - layermodel/WMSInfo.js
 - layermodel/WMSModel.js
@@ -740,6 +742,19 @@ Envelope.prototype.grow = function(factor) {
     this.invalidateEnvelope();
 }
 
+Envelope.prototype.intersection = function(envelope) {
+    if (!(envelope instanceof Envelope)) {
+        return;
+    }
+    
+    return new Envelope(
+        Math.max(this.minX, envelope.minX),
+        Math.max(this.minY, envelope.minY),
+        Math.min(this.maxX, envelope.maxX),
+        Math.min(this.maxY, envelope.maxY)
+    );
+}
+
 Envelope.prototype.toString = function() {
     return "Envelope(" + this.minX + ", " + this.minY + ", " + this.maxX + ", " + this.maxY + ")";
 }
@@ -1112,7 +1127,7 @@ SVGConverter.prototype.geometryToPixPath = function(bounds, centerScale, geometr
     return path;
 }
 
-SVGConverter.prototype.geometryToCoordPath = function(geometry) {
+SVGConverter.prototype.geometryToWorldPath = function(geometry) {
     var path = "";
     var lineStrings = geometry.getLineStrings();
     for (var i = 0; i < lineStrings.length; i++) {
@@ -1137,18 +1152,46 @@ SVGConverter.prototype.geometryToCoordPath = function(geometry) {
 
 export function CSSConverter() { }
 
-CSSConverter.prototype.pointToPixCSS = function(bounds, centerScale, point) {
-    return {
+CSSConverter.prototype.pointToPixCSS = function(bounds, centerScale, point, css) {
+    var pixCSS = {
         left: Math.round(centerScale.getPixX(bounds.width, point.x)) + "px",
         top: Math.round(centerScale.getPixY(bounds.height, point.y)) + "px"
     };
+    
+    if (css == null) {
+        return pixCSS;
+    }
+    
+    var propertyNames = ["fontSize", "fontFamily", "fontWeight", "color", "textShadow"];
+    for (var i = 0; i < propertyNames.length; i++) {
+        var propertyName = propertyNames[i];
+        if (css[propertyName] != null) {
+            pixCSS[propertyName] = css[propertyName];
+        }
+    }
+    
+    return pixCSS;
 }
 
-CSSConverter.prototype.pointToWorldCSS = function(point) {
-    return {
+CSSConverter.prototype.pointToWorldCSS = function(point, css) {
+    var worldCSS = {
         left: Math.round(point.x) + "px",
         top: Math.round(point.y) + "px"
     };
+    
+    if (css == null) {
+        return worldCSS;
+    }
+    
+    var propertyNames = ["fontSize", "fontFamily", "fontWeight", "color", "textShadow"];
+    for (var i = 0; i < propertyNames.length; i++) {
+        var propertyName = propertyNames[i];
+        if (css[propertyName] != null) {
+            worldCSS[propertyName] = css[propertyName];
+        }
+    }
+    
+    return worldCSS;
 }
 
 
@@ -1498,12 +1541,14 @@ URLFilterConverter.prototype.filterToURLFilter = function(filter) {
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
-export function CenterScale(centerX, centerY, scale) {
+export function CenterScale(centerX, centerY, scale, yFactor) {
     this.coordPixFactor = 0.000352778;
     
     this.centerX = centerX;
     this.centerY = centerY;
     this.scale = scale;
+    
+    this.yFactor = (yFactor == null)? -1: yFactor;
 }
 
 CenterScale.prototype.equals = function(centerScale) {
@@ -1519,7 +1564,7 @@ CenterScale.prototype.equals = function(centerScale) {
 }
 
 CenterScale.prototype.clone = function() {
-    return new CenterScale(this.centerX, this.centerY, this.scale);
+    return new CenterScale(this.centerX, this.centerY, this.scale, this.yFactor);
 }
 
 CenterScale.prototype.subtract = function(centerScale) {
@@ -1538,12 +1583,12 @@ CenterScale.prototype.toEnvelope = function(width, height) {
 
 CenterScale.prototype.toOffset = function(pixXOffset, pixYOffset) {
     var a = this.coordPixFactor * this.scale;
-    return new CenterScale(this.centerX + pixXOffset * a, this.centerY - pixYOffset * a, this.scale);
+    return new CenterScale(this.centerX + pixXOffset * a, this.centerY + pixYOffset * a * this.yFactor, this.scale);
 }
 
 CenterScale.prototype.fromOffset = function(pixXOffset, pixYOffset) {
     var a = this.coordPixFactor * this.scale;
-    return new CenterScale(this.centerX - pixXOffset * a, this.centerY + pixYOffset * a, this.scale);
+    return new CenterScale(this.centerX - pixXOffset * a, this.centerY - pixYOffset * a * this.yFactor, this.scale);
 }
 
 CenterScale.prototype.getNumWorldCoords = function(numPixs) {
@@ -1552,13 +1597,13 @@ CenterScale.prototype.getNumWorldCoords = function(numPixs) {
 
 CenterScale.prototype.getWorldX = function(width, pixX) {
     pixX = pixX - (width / 2);
-    var worldX = this.centerX + (pixX * this.coordPixFactor * this.scale);
+    var worldX = this.centerX + pixX * this.coordPixFactor * this.scale;
     return worldX;
 }
 
 CenterScale.prototype.getWorldY = function(height, pixY) {
     pixY = pixY - (height / 2);
-    var worldY = this.centerY - (pixY * this.coordPixFactor * this.scale);
+    var worldY = this.centerY + pixY * this.coordPixFactor * this.scale * this.yFactor;
     return worldY;
 }
 
@@ -1573,7 +1618,7 @@ CenterScale.prototype.getPixX = function(width, worldX) {
 }
 
 CenterScale.prototype.getPixY = function(height, worldY) {
-    var pixY = (0 - worldY + this.centerY) / (this.coordPixFactor * this.scale);
+    var pixY = (worldY - this.centerY) / (this.coordPixFactor * this.scale) * this.yFactor;
     pixY = pixY + (height / 2);
     return pixY;
 }
@@ -1922,9 +1967,12 @@ SRS.prototype.getZoomLevel = function(scale, policy) {
             }
         }
         return this.zoomLevels[this.zoomLevels.length - 1];
-    } else if (policy == SRS.NEAREST) {
+    } else if ((policy == SRS.NEAREST) || (policy >= 3)) {
         for (var i = 0; i < this.zoomLevels.length - 1; i++) {
-            if (scale >= (this.zoomLevels[i].scale + this.zoomLevels[i + 1].scale) / 2) {
+            if (
+                (scale >= (this.zoomLevels[i].scale + this.zoomLevels[i + 1].scale) / 2) ||
+                ((policy >= 3) && (policy == this.zoomLevels[i].zoomLevel))
+            ) {
                 return this.zoomLevels[i];
             }
         }
@@ -2104,9 +2152,9 @@ export function MapController(element, env, scope) {
             var worldY = cs.getWorldY(height, mouseY);
             
             if (scope != null) {
-                scope.$apply(env.mouseMoveFunction(worldX, worldY));
+                scope.$apply(env.mouseMoveFunction(worldX, worldY, mouseEvent.ctrlKey, mouseEvent.shiftKey));
             } else {
-                env.mouseMoveFunction(worldX, worldY);
+                env.mouseMoveFunction(worldX, worldY, mouseEvent.ctrlKey, mouseEvent.shiftKey);
             }
         }
     }
@@ -2302,6 +2350,7 @@ export function Tile(minX, maxY, scale, tileX, tileY, tileWidth, tileHeight, url
     this.scaling = 1;
     this.completed = false;
     this.corrupted = false;
+    this.data = null;
 }
 
 Tile.prototype.reset = function(bounds, centerScale) {
@@ -2334,6 +2383,37 @@ Tile.prototype.toCSS = function() {
 
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* Merging js: layermodel/VectorTile.js begins */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+
+export function VectorTile(minX, maxY, scale, tileX, tileY, tileWidth, tileHeight, url) {
+    this.minX = minX;
+    this.maxY = maxY;
+    this.scale = scale;
+    this.tileX = tileX;
+    this.tileY = tileY;
+    this.tileWidth = tileWidth;
+    this.tileHeight = tileHeight;
+    this.url = url;
+    this.x = 0;
+    this.y = 0;
+    this.scaling = 1;
+    this.completed = false;
+    this.corrupted = false;
+    this.data = null;
+    
+    this.vectorData = [];
+    this.extent = 4096;
+    this.symbology = null;
+}
+
+VectorTile.prototype = new Tile();
+VectorTile.prototype.constructor = VectorTile;
+
+
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 /* Merging js: layermodel/TileModel.js begins */
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -2341,6 +2421,8 @@ Tile.prototype.toCSS = function() {
 export function TileModel() {
     this.bounds = null;
     this.srs = null;
+    this.maxZoomLevel = null;
+    this.maxEnvelope = null;
     this.centerScale = null;
     this.animationCenterScale = null;
     this.envelope = null;
@@ -2353,7 +2435,6 @@ export function TileModel() {
     this.tiles = [];
     this.tileIndex = {};
     this.ctx = null;  // Used only for tile models that draw on a canvas.
-    this.http = null;  // Used only for UTFGrid tile models.
 }
 
 TileModel.prototype.setBounds = function(bounds, envelope, animationEnvelope) {
@@ -2409,7 +2490,14 @@ TileModel.prototype.loadTiles = function() {
     if (envelope == null) {
         envelope = this.centerScale.toEnvelope(this.bounds.width, this.bounds.height);
     }
-    var zoomLevel = this.srs.getZoomLevel(this.centerScale.scale);
+    if (this.maxEnvelope != null) {
+        envelope = envelope.intersection(this.maxEnvelope);
+    }
+    if (envelope == null) {
+        return;
+    }
+    
+    var zoomLevel = this.srs.getZoomLevel(this.centerScale.scale, this.maxZoomLevel);
     var tileLimit = Math.pow(2, zoomLevel.zoomLevel);
     var leftTileX = Math.floor((envelope.minX - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
     var topTileY = Math.max(Math.floor((this.srs.maxY - envelope.maxY) / zoomLevel.resolution / this.tileHeight), 0);
@@ -2420,25 +2508,25 @@ TileModel.prototype.loadTiles = function() {
         for (var tileX = leftTileX; tileX <= rightTileX; tileX++) {
             var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);
             
-            if ((tile == null) || (tile.corrupted && (tile.corrupted + 7000 < performance.now()))) {
+            if ((tile == null) || (tile.corrupted && (tile.corrupted + 7000 < performance.now())) || this.tileNeedsReload(tile)) {
                 if (tile == null) {
                     var minX = tileX * this.tileWidth * zoomLevel.resolution + this.srs.minX;
                     var maxY = -(tileY * this.tileHeight * zoomLevel.resolution - this.srs.maxY);
                     
                     var url = null;
-                    if (this.protocol == "TMS") {
+                    if (this.protocol != "WMTS") {
                         url = this.layer.urlExtension;
                         url = url.replace("$Z", zoomLevel.zoomLevel);
                         url = url.replace("$X", ((tileX % tileLimit) + tileLimit) % tileLimit);
                         url = url.replace("$Y", tileY);
                         url = this.layer.baseURL + url;
-                    } else {  // WMTS
+                    } else {
                         var maxX = (tileX + 1) * this.tileWidth * zoomLevel.resolution + this.srs.minX;
                         var minY = -((tileY + 1) * this.tileHeight * zoomLevel.resolution - this.srs.maxY);
                         url = WMSProtocol.getMapURL(this.layer, this.srs, minX, minY, maxX, maxY, this.tileWidth, this.tileHeight, true, null);
                     }
                     
-                    tile = new Tile(minX, maxY, zoomLevel.scale, tileX, tileY, this.tileWidth, this.tileHeight, url);
+                    tile = this.createTile(minX, maxY, zoomLevel.scale, tileX, tileY, this.tileWidth, this.tileHeight, url);
                     this.addTile(zoomLevel.zoomLevel, tile);
                 } else {
                     tile.completed = false;
@@ -2449,23 +2537,7 @@ TileModel.prototype.loadTiles = function() {
                     this.loader.add(this.layer.name);
                 }
                 
-                if (this.ctx != null) {
-                    var f = function(t, env, success) { return function() { env.completeTile(t, success); }};
-                    
-                    tile.data = new Image();
-                    tile.data.addEventListener("load", f(tile, this, true));
-                    tile.data.addEventListener("error", f(tile, this, false));
-                    tile.data.src = tile.url;
-                }
-                
-                if (this.http != null) {
-                    var f = function(t) {
-                        return function(data, status, headers, config) {
-                            t.utfGrid = eval(data);
-                        }
-                    }(tile);
-                    this.http({ method: "GET", url: tile.url, cache: true }).success(f);
-                }
+                this.loadTileData(tile);
             }
         }
     }
@@ -2495,7 +2567,14 @@ TileModel.prototype.resetTiles = function() {
     if (envelope == null) {
         envelope = this.animationCenterScale.toEnvelope(this.bounds.width, this.bounds.height);
     }
-    var zoomLevel = this.srs.getZoomLevel(this.animationCenterScale.scale);
+    if (this.maxEnvelope != null) {
+        envelope = envelope.intersection(this.maxEnvelope);
+    }
+    if (envelope == null) {
+        return;
+    }
+
+    var zoomLevel = this.srs.getZoomLevel(this.animationCenterScale.scale, this.maxZoomLevel);
     var tileLimit = Math.pow(2, zoomLevel.zoomLevel);
     var leftTileX = Math.floor((envelope.minX - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
     var topTileY = Math.max(Math.floor((this.srs.maxY - envelope.maxY) / zoomLevel.resolution / this.tileHeight), 0);
@@ -2513,7 +2592,7 @@ TileModel.prototype.resetTiles = function() {
                 } else {
                     var minX = tileX * this.tileWidth * zoomLevel.resolution + this.srs.minX;
                     var maxY = -(tileY * this.tileHeight * zoomLevel.resolution - this.srs.maxY);
-                    this.drawTilesAroundZoomLevel(zoomLevel.zoomLevel, minX, maxY);
+                    this.drawTilesAroundZoomLevel(zoomLevel.zoomLevel, zoomLevel.resolution, minX, maxY);
                 }
             } else {
                 if (tile != null) {
@@ -2523,6 +2602,10 @@ TileModel.prototype.resetTiles = function() {
             }
         }
     }
+}
+
+TileModel.prototype.createTile = function(minX, maxY, scale, tileX, tileY, tileWidth, tileHeight, url) {
+    return new Tile(minX, maxY, scale, tileX, tileY, tileWidth, tileHeight, url);
 }
 
 TileModel.prototype.addTile = function(zoomLevel, tile) {
@@ -2543,8 +2626,23 @@ TileModel.prototype.getTile = function(zoomLevel, tileX, tileY) {
     return this.tiles[this.tileIndex[zoomLevel][tileX][tileY]];
 }
 
+TileModel.prototype.tileNeedsReload = function(tile) {
+    return false;
+}
+
+TileModel.prototype.loadTileData = function(tile) {
+    if (this.ctx != null) {
+        var f = function(t, env, success) { return function() { env.completeTile(t, success); }};
+        
+        tile.data = new Image();
+        tile.data.addEventListener("load", f(tile, this, true));
+        tile.data.addEventListener("error", f(tile, this, false));
+        tile.data.src = tile.url;
+    }
+}
+
 TileModel.prototype.completeTile = function(tile, success) {
-    var zoomLevel = this.srs.getZoomLevel(tile.scale);
+    var zoomLevel = this.srs.getZoomLevel(tile.scale, this.maxZoomLevel);
     if (this.getTile(zoomLevel.zoomLevel, tile.tileX, tile.tileY) != tile) {
         return;
     }
@@ -2557,7 +2655,10 @@ TileModel.prototype.completeTile = function(tile, success) {
     if (success) {
         tile.corrupted = false;
         
-        if ((this.animationCenterScale != null) && (this.srs.getZoomLevel(this.animationCenterScale.scale) == zoomLevel)) {
+        if (
+            (this.layer != null) && this.layer.visible &&
+            (this.animationCenterScale != null) && (this.srs.getZoomLevel(this.animationCenterScale.scale, this.maxZoomLevel).zoomLevel == zoomLevel.zoomLevel)
+        ) {
             tile.reset(this.bounds, this.animationCenterScale);
             if (this.ctx != null) {
                 this.drawTile(tile, true);
@@ -2570,39 +2671,39 @@ TileModel.prototype.completeTile = function(tile, success) {
     }
 }
 
-TileModel.prototype.drawTilesAroundZoomLevel = function(zl, minX, maxY) {
+TileModel.prototype.drawTilesAroundZoomLevel = function(zl, rs, minX, maxY) {
     // Find any completed tile in the zoom levels above the given zoom level.
-    for (var i = zl - 1; i >= 0; i--) {
-        var zoomLevel = this.srs.zoomLevels[i];
-        var zoomFactor = Math.pow(2, zl - i);
-        var subTileX = Math.round((minX - this.srs.minX) / zoomLevel.resolution / this.tileWidth * zoomFactor) / zoomFactor;
+    for (var zoomLevel = zl - 1, resolution = rs * 2; zoomLevel >= 0; zoomLevel--, resolution *= 2) {
+        var zoomFactor = Math.pow(2, zl - zoomLevel);
+        var subTileX = Math.round((minX - this.srs.minX) / resolution / this.tileWidth * zoomFactor) / zoomFactor;
         var tileX = Math.floor(subTileX);
-        var subTileY = Math.round((this.srs.maxY - maxY) / zoomLevel.resolution / this.tileHeight * zoomFactor) / zoomFactor;
+        var subTileY = Math.round((this.srs.maxY - maxY) / resolution / this.tileHeight * zoomFactor) / zoomFactor;
         var tileY = Math.max(Math.floor(subTileY), 0);
-        var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);
+        var tile = this.getTile(zoomLevel, tileX, tileY);
         if ((tile != null) && tile.completed && !tile.corrupted) {
             tile.resetWithPoint(this.bounds, this.animationCenterScale, minX, maxY);
+            
+            var width = tile.tileWidth / zoomFactor;
+            var height = tile.tileHeight / zoomFactor;
             this.ctx.drawImage(
                 tile.data,
-                (subTileX % 1) * this.tileWidth, (subTileY % 1) * this.tileHeight,
-                this.tileWidth / zoomFactor, this.tileHeight / zoomFactor,
+                (subTileX % 1) * tile.tileWidth, (subTileY % 1) * tile.tileHeight,
+                width, height,
                 Math.round(tile.x), Math.round(tile.y),
-                Math.ceil(tile.scaling * this.tileWidth / zoomFactor), Math.ceil(tile.scaling * this.tileHeight / zoomFactor)
+                Math.ceil(tile.scaling * width), Math.ceil(tile.scaling * height)
             );
             break;
         }
     }
 
     // Find completed tiles in the (single one) zoom level below the given zoom level.
-    if (zl == this.srs.zoomLevels.length - 1) {
-        return;
-    }
-    var zoomLevel = this.srs.zoomLevels[zl + 1];
-    var leftTileX = Math.round((minX - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
-    var topTileY = Math.max(Math.round((this.srs.maxY - maxY) / zoomLevel.resolution / this.tileHeight), 0);
+    var zoomLevel = zl + 1;
+    var resolution = rs / 2;
+    var leftTileX = Math.round((minX - this.srs.minX) / resolution / this.tileWidth);
+    var topTileY = Math.max(Math.round((this.srs.maxY - maxY) / resolution / this.tileHeight), 0);
     for (var tileY = topTileY; tileY <= topTileY + 1; tileY++) {
         for (var tileX = leftTileX; tileX <= leftTileX + 1; tileX++) {
-            var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);
+            var tile = this.getTile(zoomLevel, tileX, tileY);
             if ((tile != null) && tile.completed && !tile.corrupted) {
                 tile.reset(this.bounds, this.animationCenterScale);
                 this.drawTile(tile, false);
@@ -2614,13 +2715,50 @@ TileModel.prototype.drawTilesAroundZoomLevel = function(zl, minX, maxY) {
 TileModel.prototype.drawTile = function(tile, clear) {
     var x = Math.round(tile.x);
     var y = Math.round(tile.y);
-    var width = Math.round(tile.x + tile.scaling * this.tileWidth) - x;
-    var height = Math.round(tile.y + tile.scaling * this.tileHeight) - y;
+    var width = Math.round(tile.x - x + tile.scaling * tile.tileWidth);
+    var height = Math.round(tile.y - y + tile.scaling * tile.tileHeight);
     if (clear) {
         this.ctx.clearRect(x, y, width, height);
     }
     this.ctx.drawImage(tile.data, x, y, width, height);
 }
+
+
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* Merging js: layermodel/VectorTileModel.js begins */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+
+export function VectorTileModel() {
+    this.bounds = null;
+    this.srs = null;
+    this.maxZoomLevel = null;
+    this.maxEnvelope = null;
+    this.centerScale = null;
+    this.animationCenterScale = null;
+    this.envelope = null;
+    this.animationEnvelope = null;
+    this.layer = null;
+    this.loader = null;
+    this.protocol = "MVT";
+    this.tileWidth = 256;
+    this.tileHeight = 256;
+    this.tiles = [];
+    this.tileIndex = {};
+    this.ctx = null;  // Used only for tile models that draw on a canvas.
+}
+
+VectorTileModel.prototype = new TileModel();
+VectorTileModel.prototype.constructor = VectorTileModel;
+
+VectorTileModel.prototype.createTile = function(minX, maxY, scale, tileX, tileY, tileWidth, tileHeight, url) {
+    return new VectorTile(minX, maxY, scale, tileX, tileY, tileWidth, tileHeight, url);
+}
+
+VectorTileModel.prototype.tileNeedsReload = function(tile) { }  // Set by component;
+
+VectorTileModel.prototype.loadTileData = function(tile) { }  // Set by component;
 
 
 
@@ -2632,6 +2770,8 @@ TileModel.prototype.drawTile = function(tile, clear) {
 export function UTFGridModel() {
     this.bounds = null;
     this.srs = null;
+    this.maxZoomLevel = null;
+    this.maxEnvelope = null;
     this.centerScale = null;
     this.animationCenterScale = null;
     this.envelope = null;
@@ -2644,7 +2784,6 @@ export function UTFGridModel() {
     this.tiles = [];
     this.tileIndex = {};
     this.ctx = null;  // Not used for UTFGrid tile models.
-    this.http = null;
     
     this.resolution = 4;
 }
@@ -2652,8 +2791,17 @@ export function UTFGridModel() {
 UTFGridModel.prototype = new TileModel();
 UTFGridModel.prototype.constructor = UTFGridModel;
 
+UTFGridModel.prototype.loadTileData = function(tile) {
+    /*var f = function(t) {
+        return function(data, status, headers, config) {
+            t.data = eval(data);
+        }
+    }(tile);
+    this.http({ method: "GET", url: tile.url, cache: true }).success(f);*/
+}
+
 UTFGridModel.prototype.getFeature = function(pixX, pixY) {
-    var zoomLevel = this.srs.getZoomLevel(this.animationCenterScale.scale);
+    var zoomLevel = this.srs.getZoomLevel(this.animationCenterScale.scale, this.maxZoomLevel);
     var worldX = this.animationCenterScale.getWorldX(this.bounds.width, pixX);
     var worldY = this.animationCenterScale.getWorldY(this.bounds.height, pixY);
     var tileX = Math.floor((worldX - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
@@ -2663,7 +2811,7 @@ UTFGridModel.prototype.getFeature = function(pixX, pixY) {
         return null;
     }
     
-    var utfGrid = tile.utfGrid;
+    var utfGrid = tile.data;
     if (utfGrid == null) {
         return null;
     }
@@ -2947,13 +3095,15 @@ export function MapFeatureModel() {
     this.propertyIndex = -1;
     this.idPropertyName = "id";
     this.geometryPropertyName = "geometry";
-    this.inverseFill = false;
     this.includePoints = false;
+    this.fillRule = "evenodd";
+    this.ctxShared = false;
     this.cssFunction = null;
     
     this.ctx = null;
-    this.css = null;
+    this.style = null;
     
+    this.inverseFillPath = "";
     this.glShaderCenter = null;
     this.glShaderScale = null;
     
@@ -3099,7 +3249,7 @@ MapFeatureModel.prototype.setAnimating = function(animating) {
 
 MapFeatureModel.prototype.setVertices = function() {  // Only works with point geometries.
     this.vertices = [];
-    var graphicSize = parseFloat(this.css.getPropertyValue("--graphic-size") || 8);
+    var graphicSize = parseFloat(this.style.getPropertyValue("--graphic-size") || 8);
     
     if (this.features != null) {
         for (var i = 0; i < this.filterFeatures.length; i++) {
@@ -3141,7 +3291,7 @@ MapFeatureModel.prototype.setMapFeatures = function() {
     if (this.centerScale == null) {
         return;
     }
-    if ((this.envelope == null) && (this.envelopeCheck || this.inverseFill)) {
+    if ((this.envelope == null) && this.envelopeCheck) {
         return;
     }
     
@@ -3150,8 +3300,10 @@ MapFeatureModel.prototype.setMapFeatures = function() {
         //this.ctx.clearColor(0, 0, 0, 0);
         //this.ctx.clear(this.ctx.COLOR_BUFFER_BIT);
     } else if (this.ctx != null) {
-        this.ctx.setTransform(1, 0, 0, 1, 0, 0);  // ctx.resetTransform();
-        this.ctx.clearRect(0, 0, this.bounds.width, this.bounds.height);
+        if (!this.ctxShared) {
+            this.ctx.setTransform(1, 0, 0, 1, 0, 0);  // ctx.resetTransform();
+            this.ctx.clearRect(0, 0, this.bounds.width, this.bounds.height);
+        }
     } else {
         this.mapFeatures = [];
         this.nonPointGeometries = [];
@@ -3176,19 +3328,36 @@ MapFeatureModel.prototype.setMapFeatures = function() {
         return;
     }
     
-    var css = { };
+    var css = {};
     if (this.ctx != null) {
         var scaling = this.centerScale.getNumPixs(1);
-        var dx = -this.centerScale.centerX * scaling + this.bounds.width / 2;
-        var dy = this.centerScale.centerY * scaling + this.bounds.height / 2;
-        this.ctx.setTransform(scaling, 0, 0, -scaling, dx, dy);
+        var yFactor = this.centerScale.yFactor;
+        var dx = this.bounds.width / 2 - this.centerScale.centerX * scaling;
+        var dy = this.bounds.height / 2 - this.centerScale.centerY * scaling * yFactor;
+        this.ctx.setTransform(scaling, 0, 0, scaling * yFactor, dx, dy);
         
-        this.ctx.fillStyle = css.fill = this.css.getPropertyValue("fill");
-        this.ctx.strokeStyle = css.stroke = this.css.getPropertyValue("stroke");
-        this.ctx.lineWidth = css.scaledStrokeWidth = (css.strokeWidth = parseFloat(this.css.getPropertyValue("stroke-width") || 1)) / scaling;
+        this.ctx.fillStyle   = css.fill                                         =            this.style.getPropertyValue("fill");
+        this.ctx.strokeStyle = css.stroke                                       =            this.style.getPropertyValue("stroke");
+        this.ctx.lineWidth   = css.scaledStrokeWidth     = (css.strokeWidth     = parseFloat(this.style.getPropertyValue("stroke-width"))) / scaling;
+        this.ctx.setLineDash(  css.scaledStrokeDasharray = (css.strokeDasharray =            this.style.getPropertyValue("stroke-dasharray").split(" ").map(a => parseFloat(a))).map(a => a / scaling));
+        this.ctx.lineCap     = css.strokeLinecap                                =            this.style.getPropertyValue("stroke-linecap");
+        this.ctx.lineJoin    = css.strokeLinejoin                               =            this.style.getPropertyValue("stroke-linejoin");
+        /*    Will be     */   css.strokeFilter                                 =            this.style.getPropertyValue("--stroke-filter") || "none";
+        /* applied to ctx */   css.scaledGraphicSize     = (css.graphicSize     = parseFloat(this.style.getPropertyValue("--graphic-size") || 8) + 1) / scaling;
+        /*  in due time.  */   css.inverseFill                                  = !!parseInt(this.style.getPropertyValue("--inverse-fill") || 0);
         
-        css.strokeFilter = this.css.getPropertyValue("--stroke-filter") || "none";
-        css.scaledGraphicSize = (css.graphicSize = parseFloat(this.css.getPropertyValue("--graphic-size") || 8) + 1) / scaling;
+        if (css.inverseFill) {
+            var t = this.ctx.getTransform();
+            var c = this.ctx.canvas;
+            var envelope = new Envelope(-t.e / t.a, -(t.f - c.height) / t.d, -(t.e - c.width) / t.a, -t.f / t.d);
+            envelope.grow(1.1);
+            var minX = envelope.minX;
+            var minY = envelope.minY;
+            var maxX = envelope.maxX;
+            var maxY = envelope.maxY;
+            var path = "M" + minX + " " + maxY + " " + " L" + maxX + " " + maxY + " " + maxX + " " + minY + " " + minX + " " + minY + " Z ";
+            this.drawPath(path, css);
+        }
     }
     
     if (this.features != null) {
@@ -3197,19 +3366,16 @@ MapFeatureModel.prototype.setMapFeatures = function() {
                 this.cssFunction(css, this.filterFeatures[i]);
                 var scaling = this.centerScale.getNumPixs(1);
                 
-                this.ctx.fillStyle = css.fill;
+                this.ctx.fillStyle   = css.fill;
                 this.ctx.strokeStyle = css.stroke;
-                this.ctx.lineWidth = css.scaledStrokeWidth = parseFloat(css.strokeWidth) / scaling;
-                
-                css.scaledGraphicSize = parseFloat(css.graphicSize) / scaling;
+                this.ctx.lineWidth   = css.scaledStrokeWidth     = parseFloat(css.strokeWidth) / scaling;
+                this.ctx.setLineDash(  css.scaledStrokeDasharray =            css.strokeDasharray.map(a => parseFloat(a) / scaling));
+                this.ctx.lineCap     = css.strokeLinecap;
+                this.ctx.lineJoin    = css.strokeLinejoin;
+                                       css.scaledGraphicSize     = parseFloat(css.graphicSize) / scaling;
             }
             
-            var geometry = this.filterFeatures[i].geometry;
-            if (geometry instanceof Geometry) {
-                this.assignGeometry(this.filterFeatures[i], geometry, css);
-            } else {  // geometry is a path string that renders on a (transformed) canvas.
-                this.drawPath(geometry, css.strokeFilter);
-            }
+            this.assignGeometry(this.filterFeatures[i], this.filterFeatures[i].geometry, css);
         }
     } else if (this.geometries != null) {
         for (var i = 0; i < this.geometries.length; i++) {
@@ -3217,6 +3383,12 @@ MapFeatureModel.prototype.setMapFeatures = function() {
         }
     } else {  // this.geometry != null
         this.assignGeometry(null, this.geometry, css);
+    }
+
+    if (this.ctx != null) {
+        if (css.inverseFill) {
+            this.drawPath("", css, true);
+        }
     }
 }
 
@@ -3226,13 +3398,26 @@ MapFeatureModel.prototype.assignGeometry = function(mapFeature, geometry, css) {
     }
     
     if (mapFeature != null) {
-        this.mapFeatures.push(mapFeature);
+        if (this.ctx != null) {
+        } else {
+            this.mapFeatures.push(mapFeature);
+        }
     }
     
-    if (geometry instanceof Point) {
+    if (!(geometry instanceof Geometry)) {  // geometry is a path string that renders on a (transformed) canvas.
+        this.drawPath(geometry, css);
+    } else if (geometry instanceof Point) {
         if (this.ctx != null) {
             this.ctx.beginPath();
-            this.ctx.arc(geometry.x, geometry.y, css.scaledGraphicSize / 2, 0, 2 * Math.PI);
+            if (css.rectWidth) {
+                var scaling = this.centerScale.getNumPixs(1);
+                var scaledOffsetX = css.offsetX / scaling;
+                var scaledRectWidth = css.rectWidth / scaling;
+                var scaledRectHeight = css.rectHeight / scaling;
+                this.ctx.rect(geometry.x + scaledOffsetX, geometry.y, scaledRectWidth, scaledRectHeight);
+            } else {
+                this.ctx.arc(geometry.x, geometry.y, css.scaledGraphicSize / 2, 0, 2 * Math.PI);
+            }
             this.ctx.fill();
             this.ctx.filter = css.strokeFilter;
             this.ctx.stroke();
@@ -3242,8 +3427,8 @@ MapFeatureModel.prototype.assignGeometry = function(mapFeature, geometry, css) {
         }
     } else if ((geometry instanceof LineString) || (geometry instanceof Polygon) || (geometry instanceof Envelope)) {
         if (this.ctx != null) {
-            var path = (new SVGConverter()).geometryToCoordPath(geometry);
-            this.drawPath(path, css.strokeFilter);
+            var path = (new SVGConverter()).geometryToWorldPath(geometry);
+            this.drawPath(path, css);
         } else {
             this.nonPointGeometries.push(geometry);
             if (this.includePoints) {
@@ -3257,21 +3442,26 @@ MapFeatureModel.prototype.assignGeometry = function(mapFeature, geometry, css) {
     }
 }
 
-MapFeatureModel.prototype.drawPath = function(path, strokeFilter) {
-    if (this.inverseFill) {
-        var minX = this.envelope.minX;
-        var minY = this.envelope.minY;
-        var maxX = this.envelope.maxX;
-        var maxY = this.envelope.maxY;
-        var path = "M " + minX + " " + minY + " " + " L " + maxX + " " + minY + " " + maxX + " " + maxY + " " + minX + " " + maxY + " Z " + path;
+MapFeatureModel.prototype.drawPath = function(path, css, last) {
+    if (css.inverseFill) {
+        if (!last) {
+            this.inverseFillPath += path;
+            return;
+        } else {
+            path = this.inverseFillPath + path;
+            this.inverseFillPath = "";
+        }
     }
-    if ((typeof Path2D === "function") && (navigator.userAgent.indexOf("Edge/") == -1)) {
-        var p = new Path2D(path);
-        this.ctx.fill(p, "evenodd");
-        this.ctx.filter = strokeFilter;
-        this.ctx.stroke(p);
+    if (typeof Path2D === "function") {
+        var stroke = !this.ctxShared? new Path2D(path): new Path2D(path.replace(/K/g, "M").replace(/Z/g, ""));
+        if (css.fill != "none") {
+            var fill = !this.ctxShared? stroke: new Path2D(path.replace(/K/g, "L"));
+            this.ctx.fill(fill, this.fillRule);
+        }
+        this.ctx.filter = css.strokeFilter;
+        this.ctx.stroke(stroke);
         this.ctx.filter = "none";
-    } else {  // Polyfill for IE11 and Edge.
+    } else {  // Polyfill for IE/Edge through version 13.
         this.ctx.beginPath();
         path = path.replace(/,/g, " ");
         var pathItems = path.split(" ");
@@ -3285,8 +3475,10 @@ MapFeatureModel.prototype.drawPath = function(path, strokeFilter) {
                 this.ctx.lineTo(pathItems[i], pathItems[++i]);
             }
         }
-        this.ctx.fill("evenodd");
-        this.ctx.filter = strokeFilter;
+        if (css.fill != "none") {
+            this.ctx.fill(this.fillRule);
+        }
+        this.ctx.filter = css.strokeFilter;
         this.ctx.stroke();
         this.ctx.filter = "none";
     }

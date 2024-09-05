@@ -156,9 +156,9 @@ export function MapController(element, env, scope) {
             var worldY = cs.getWorldY(height, mouseY);
             
             if (scope != null) {
-                scope.$apply(env.mouseMoveFunction(worldX, worldY));
+                scope.$apply(env.mouseMoveFunction(worldX, worldY, mouseEvent.ctrlKey, mouseEvent.shiftKey));
             } else {
-                env.mouseMoveFunction(worldX, worldY);
+                env.mouseMoveFunction(worldX, worldY, mouseEvent.ctrlKey, mouseEvent.shiftKey);
             }
         }
     }

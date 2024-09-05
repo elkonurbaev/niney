@@ -12,6 +12,7 @@ export function Tile(minX, maxY, scale, tileX, tileY, tileWidth, tileHeight, url
     this.scaling = 1;
     this.completed = false;
     this.corrupted = false;
+    this.data = null;
 }
 
 Tile.prototype.reset = function(bounds, centerScale) {
