@@ -19,8 +19,11 @@ export function MapFeatureModel() {
     this.fillRule = "evenodd";
     this.ctxShared = false;
     this.cssFunction = null;
+    this.label = false;
     
+    this.patterns = null;
     this.ctx = null;
+    this.ctxHasSnoopMargin = false;
     this.style = null;
     
     this.inverseFillPath = "";
@@ -37,7 +40,7 @@ export function MapFeatureModel() {
 MapFeatureModel.prototype.setFilter = function(filterExpression) {
     this.filter = null;
     if (filterExpression != null) {
-        var match = filterExpression.match(/(\[(\d+)\]|[\w\.]*)\s*([=<>]=)\s*(.*)/);
+        var match = filterExpression.match(/(\[(\d+)\]|[\w\.]*)\s*([=<>]=)\s*(.*)/);  // Does not support IN operator.
         if (match[2] != null) {
             this.filter = new Filter(parseInt(match[2]), match[4], match[3]);  // propertyIndex
         } else {
@@ -96,12 +99,13 @@ MapFeatureModel.prototype.setFeatures = function(features) {
             
             for (var j = 0; j < geometries.length; j++) {
                 if ((this.filter != null) && (this.filter.propertyName != null) && (
-                    ((this.filter.propertyName == "") && (this.filter.operator == FilterModel.EQUALS)            && (i != this.filter.value)) ||                 // e.g. "== 0", the first feature
-                    ((this.filter.propertyName == "") && (this.filter.operator == FilterModel.LESS_OR_EQUALS)    && !(i <= this.filter.value)) ||                // e.g. "<= 2", the first 3 features
-                    ((this.filter.propertyName == "") && (this.filter.operator == FilterModel.GREATER_OR_EQUALS) && !(i >= this.filter.value)) ||                // e.g. ">= 6", all features, except first 5
-                    ((this.filter.propertyName != "") && (this.filter.operator == FilterModel.EQUALS)            && (filterValues[j] != this.filter.value)) ||   // e.g. "foo == bar"
-                    ((this.filter.propertyName != "") && (this.filter.operator == FilterModel.LESS_OR_EQUALS)    && !(filterValues[j] <= this.filter.value)) ||  // e.g. "foo <= bar"
-                    ((this.filter.propertyName != "") && (this.filter.operator == FilterModel.GREATER_OR_EQUALS) && !(filterValues[j] >= this.filter.value))     // e.g. "foo >= bar"
+                    ((this.filter.propertyName == "") && (this.filter.operator == FilterModel.EQUALS)            && (i != this.filter.value)) ||                  // e.g. "== 0", the first feature
+                    ((this.filter.propertyName == "") && (this.filter.operator == FilterModel.LESS_OR_EQUALS)    && !(i <= this.filter.value)) ||                 // e.g. "<= 2", the first 3 features
+                    ((this.filter.propertyName == "") && (this.filter.operator == FilterModel.GREATER_OR_EQUALS) && !(i >= this.filter.value)) ||                 // e.g. ">= 6", all features, except first 5
+                    ((this.filter.propertyName != "") && (this.filter.operator == FilterModel.EQUALS)            && (filterValues[j] != this.filter.value)) ||    // e.g. "foo == bar"
+                    ((this.filter.propertyName != "") && (this.filter.operator == FilterModel.LESS_OR_EQUALS)    && !(filterValues[j] <= this.filter.value)) ||   // e.g. "foo <= bar"
+                    ((this.filter.propertyName != "") && (this.filter.operator == FilterModel.GREATER_OR_EQUALS) && !(filterValues[j] >= this.filter.value)) ||   // e.g. "foo >= bar"
+                    ((this.filter.propertyName != "") && (this.filter.operator == FilterModel.IN)                && !this.filter.value.includes(filterValues[j])) // e.g. "foo IN [bar]"
                 )) {
                     continue;
                 }
@@ -256,43 +260,47 @@ MapFeatureModel.prototype.setMapFeatures = function() {
         var dy = this.bounds.height / 2 - this.centerScale.centerY * scaling * yFactor;
         this.ctx.setTransform(scaling, 0, 0, scaling * yFactor, dx, dy);
         
-        this.ctx.fillStyle   = css.fill                                         =            this.style.getPropertyValue("fill");
-        this.ctx.strokeStyle = css.stroke                                       =            this.style.getPropertyValue("stroke");
-        this.ctx.lineWidth   = css.scaledStrokeWidth     = (css.strokeWidth     = parseFloat(this.style.getPropertyValue("stroke-width"))) / scaling;
-        this.ctx.setLineDash(  css.scaledStrokeDasharray = (css.strokeDasharray =            this.style.getPropertyValue("stroke-dasharray").split(" ").map(a => parseFloat(a))).map(a => a / scaling));
-        this.ctx.lineCap     = css.strokeLinecap                                =            this.style.getPropertyValue("stroke-linecap");
-        this.ctx.lineJoin    = css.strokeLinejoin                               =            this.style.getPropertyValue("stroke-linejoin");
-        /*    Will be     */   css.strokeFilter                                 =            this.style.getPropertyValue("--stroke-filter") || "none";
-        /* applied to ctx */   css.scaledGraphicSize     = (css.graphicSize     = parseFloat(this.style.getPropertyValue("--graphic-size") || 8) + 1) / scaling;
-        /*  in due time.  */   css.inverseFill                                  = !!parseInt(this.style.getPropertyValue("--inverse-fill") || 0);
+      if (this.style.getPropertyValue("fill").match(/^url/))
+       (this.ctx.fillStyle   = css.fill                                           = this.patterns[this.style.getPropertyValue("fill")]).setTransform({a: 1 / scaling, b: 0, c: 0, d: 1 / scaling, e: 0, f: 0});
+      else
+        this.ctx.fillStyle   = css.fill                                           =               this.style.getPropertyValue("fill");
+        this.ctx.strokeStyle = css.stroke                                         =               this.style.getPropertyValue("stroke");
+        this.ctx.lineWidth   = css.scaledStrokeWidth      = (css.strokeWidth      =    parseFloat(this.style.getPropertyValue("stroke-width").replace(/^([\d.]{4})[\d]+/, "$1"))) / scaling;  // Max significance of 3, e.g. 1.25 or 12.5 or 10.
+      if (this.style.getPropertyValue("stroke-dasharray") != "none")
+        this.ctx.setLineDash(  css.scaledStrokeDasharray  = (css.strokeDasharray  =               this.style.getPropertyValue("stroke-dasharray").split(/[, ]+/).map(a => parseFloat(a))).map(a => a / scaling));
+        this.ctx.lineCap     = css.strokeLinecap                                  =               this.style.getPropertyValue("stroke-linecap");
+        this.ctx.lineJoin    = css.strokeLinejoin                                 =               this.style.getPropertyValue("stroke-linejoin");
+        /*    Will be    */    css.strokeFilter                                   =               this.style.getPropertyValue("--stroke-filter") || "none";
+        /*    applied    */    css.scaledGraphicSize      = (css.graphicSize      =    parseFloat(this.style.getPropertyValue("--graphic-size") || 8) + 1) / scaling;
+        /*    to ctx     */    css.inverseFill     = this.ctxHasSnoopMargin? false:    !!parseInt(this.style.getPropertyValue("--inverse-fill") || 0);
+        /*      in       */    css.confineFill                                    =    !!parseInt(this.style.getPropertyValue("--confine-fill") || 0);
+        /*   due time.   */    css.scaledConfineFillWidth = (css.confineFillWidth =    parseFloat(this.style.getPropertyValue("stroke-width").replace(/^[\d.]{1,4}|px$/g, "") || 12)) / scaling;  // No decimal point allowed. No trailing zero allowed, e.g. 10 must be 9 or 11.
+        this.ctx.font       = (css.scaledFontSize         = (css.fontSize         =    parseFloat(this.style.getPropertyValue("font-size"))) / scaling) + "px "
+                                                          + (css.fontFamily       =               this.style.getPropertyValue("font-family"));
+        this.ctx.textAlign    = "center";
+        this.ctx.textBaseline = "middle";
         
-        if (css.inverseFill) {
-            var t = this.ctx.getTransform();
-            var c = this.ctx.canvas;
-            var envelope = new Envelope(-t.e / t.a, -(t.f - c.height) / t.d, -(t.e - c.width) / t.a, -t.f / t.d);
-            envelope.grow(1.1);
-            var minX = envelope.minX;
-            var minY = envelope.minY;
-            var maxX = envelope.maxX;
-            var maxY = envelope.maxY;
-            var path = "M" + minX + " " + maxY + " " + " L" + maxX + " " + maxY + " " + maxX + " " + minY + " " + minX + " " + minY + " Z ";
-            this.drawPath(path, css);
-        }
+        this.startInverseFill(css);
     }
     
     if (this.features != null) {
         for (var i = 0; i < this.filterFeatures.length; i++) {
             if (this.cssFunction != null) {  // Implies a canvas.
-                this.cssFunction(css, this.filterFeatures[i]);
                 var scaling = this.centerScale.getNumPixs(1);
+                this.cssFunction(css, this.filterFeatures[i], scaling);
                 
+              if (css.fill instanceof CanvasPattern)
+               (this.ctx.fillStyle   = css.fill).setTransform({a: 1 / scaling, b: 0, c: 0, d: 1 / scaling, e: 0, f: 0});
+              else
                 this.ctx.fillStyle   = css.fill;
                 this.ctx.strokeStyle = css.stroke;
                 this.ctx.lineWidth   = css.scaledStrokeWidth     = parseFloat(css.strokeWidth) / scaling;
+              if (css.strokeDasharray != null)
                 this.ctx.setLineDash(  css.scaledStrokeDasharray =            css.strokeDasharray.map(a => parseFloat(a) / scaling));
                 this.ctx.lineCap     = css.strokeLinecap;
                 this.ctx.lineJoin    = css.strokeLinejoin;
                                        css.scaledGraphicSize     = parseFloat(css.graphicSize) / scaling;
+                this.ctx.font       = (css.scaledFontSize        = parseFloat(css.fontSize) / scaling) + "px " + css.fontFamily;
             }
             
             this.assignGeometry(this.filterFeatures[i], this.filterFeatures[i].geometry, css);
@@ -304,11 +312,25 @@ MapFeatureModel.prototype.setMapFeatures = function() {
     } else {  // this.geometry != null
         this.assignGeometry(null, this.geometry, css);
     }
-
+    
     if (this.ctx != null) {
-        if (css.inverseFill) {
-            this.drawPath("", css, true);
-        }
+        this.completeInverseFill(css);
+    }
+}
+
+MapFeatureModel.prototype.startInverseFill = function(css) {
+    if (!css.inverseFill) {
+        return;
+    }
+    
+    var t = this.ctx.getTransform();
+    var c = this.ctx.canvas;
+    var envelope = (new Envelope(-t.e / t.a, -(t.f - c.height) / t.d, -(t.e - c.width) / t.a, -t.f / t.d)).grow(1.1);
+    var path = "M" + envelope.minX + " " + envelope.maxY + " H" + envelope.maxX + " V" + envelope.minY + " H" + envelope.minX + " Z ";
+    if (!css.confineFill) {
+        this.inverseFillPath = path;
+    } else {
+        this.ctx.fill(new Path2D(path), this.fillRule);
     }
 }
 
@@ -362,45 +384,52 @@ MapFeatureModel.prototype.assignGeometry = function(mapFeature, geometry, css) {
     }
 }
 
-MapFeatureModel.prototype.drawPath = function(path, css, last) {
-    if (css.inverseFill) {
-        if (!last) {
-            this.inverseFillPath += path;
-            return;
-        } else {
-            path = this.inverseFillPath + path;
-            this.inverseFillPath = "";
-        }
+MapFeatureModel.prototype.completeInverseFill = function(css) {
+    if (!css.inverseFill) {
+        return;
     }
-    if (typeof Path2D === "function") {
-        var stroke = !this.ctxShared? new Path2D(path): new Path2D(path.replace(/K/g, "M").replace(/Z/g, ""));
-        if (css.fill != "none") {
+    
+    if (!css.confineFill) {
+        this.drawPath(this.inverseFillPath, css, true);
+        this.inverseFillPath = "";
+    }
+}
+
+MapFeatureModel.prototype.drawPath = function(path, css, last) {
+    if (this.label) {
+        this.drawText(css);
+        return;
+    }
+    
+    if (css.inverseFill && !css.confineFill && !last) {
+        this.inverseFillPath += path;
+        return;
+    }
+    
+    var stroke = !this.ctxShared? new Path2D(path): new Path2D(path.replace(/K/g, "M").replace(/Z/g, ""));
+    if (css.fill != "none") {
+        if (!css.confineFill) {
             var fill = !this.ctxShared? stroke: new Path2D(path.replace(/K/g, "L"));
             this.ctx.fill(fill, this.fillRule);
+        } else if (!css.inverseFill) {
+            var backupStyles = {strokeStyle: this.ctx.strokeStyle, lineWidth: this.ctx.lineWidth};
+            this.ctx.strokeStyle = css.fill;
+            this.ctx.lineWidth   = css.scaledConfineFillWidth;
+            this.ctx.stroke(stroke);
+            Object.assign(this.ctx, backupStyles);
         }
-        this.ctx.filter = css.strokeFilter;
-        this.ctx.stroke(stroke);
-        this.ctx.filter = "none";
-    } else {  // Polyfill for IE/Edge through version 13.
-        this.ctx.beginPath();
-        path = path.replace(/,/g, " ");
-        var pathItems = path.split(" ");
-        for (var i = 0; i < pathItems.length; i++) {
-            if ((pathItems[i] == "") || (pathItems[i] == "Z") || (pathItems[i] == "L")) {
-                continue;
-            }
-            if (pathItems[i] == "M") {
-                this.ctx.moveTo(pathItems[++i], pathItems[++i]);
-            } else {
-                this.ctx.lineTo(pathItems[i], pathItems[++i]);
-            }
-        }
-        if (css.fill != "none") {
-            this.ctx.fill(this.fillRule);
-        }
-        this.ctx.filter = css.strokeFilter;
-        this.ctx.stroke();
-        this.ctx.filter = "none";
     }
+    this.ctx.filter = css.strokeFilter;
+    this.ctx.stroke(stroke);
+    this.ctx.filter = "none";
+}
+
+MapFeatureModel.prototype.drawText = function(css) {
+    if ((css.labelText == null) || (css.labelPoint == null)) {
+        return;
+    }
+    
+    this.ctx.strokeText(css.labelText, css.labelPoint.x, css.labelPoint.y);
+    this.ctx.fillText(css.labelText, css.labelPoint.x, css.labelPoint.y);
 }
 

@@ -5,7 +5,7 @@
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
-/* Last merge : Wed Sep 4 16:23:36 CEST 2024  */
+/* Last merge : Sun Nov 3 1:30:07 CET 2024  */
 
 /* Merging order :
 
@@ -24,6 +24,7 @@
 - geometrymodel/converters/WKTConverter.js
 - geometrymodel/converters/SVGConverter.js
 - geometrymodel/converters/CSSConverter.js
+- geometrymodel/converters/JSONConverter.js
 - featuremodel/Feature.js
 - featuremodel/FeatureModel.js
 - featuremodel/FeatureType.js
@@ -391,7 +392,7 @@ Geometry.prototype.removeChild = function(child) {
 }
 
 Geometry.prototype.isChild = function(child) {
-    for (var i = 0; i < this.childGeometries.length; ++i) {
+    for (var i = 0; i < this.childGeometries.length; i++) {
         if (this.childGeometries[i] == child) {
             return true;
         }
@@ -401,7 +402,7 @@ Geometry.prototype.isChild = function(child) {
 
 Geometry.prototype.getPoints = function() {
     var points = [];
-    for (var i = 0; i < this.childGeometries.length; ++i) {
+    for (var i = 0; i < this.childGeometries.length; i++) {
         points = points.concat(this.childGeometries[i].getPoints());
     }
     return points;
@@ -416,7 +417,7 @@ Geometry.prototype.getCenterPoint = function() {
     var points = this.getPoints();
     var sumX = 0;
     var sumY = 0;
-    for (var i = 0; i < points.length; ++i) {
+    for (var i = 0; i < points.length; i++) {
         sumX += points[i].x;
         sumY += points[i].y;
     }
@@ -438,7 +439,7 @@ Geometry.prototype.getEnvelope = function() {
         var minY = Number.MAX_VALUE;
         var maxX = -Number.MAX_VALUE;
         var maxY = -Number.MAX_VALUE;
-        for (var i = 0; i < points.length; ++i) {
+        for (var i = 0; i < points.length; i++) {
             if (minX > points[i].x) {
                 minX = points[i].x;
             }
@@ -455,6 +456,16 @@ Geometry.prototype.getEnvelope = function() {
         this.envelope = new Envelope(minX, minY, maxX, maxY);
     }
     return this.envelope;
+}
+
+Geometry.prototype.round = function(numDecimals) {
+    for (var i = 0; i < this.childGeometries.length; i++) {
+        this.childGeometries[i].round(numDecimals);
+    }
+    
+    if (this.envelope != null) {
+        this.envelope.round(numDecimals);
+    }
 }
 
 Geometry.prototype.intersects = function(geometry) {
@@ -487,6 +498,10 @@ Geometry.prototype.invalidateEnvelope = function() {
     }
 }
 
+Geometry.prototype.getLabelPoint = function(numSlices) {
+    return this.getCenterPoint();
+}
+
 
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -503,7 +518,7 @@ export function GeometryCollection(geometries) {
         return;
     }
     
-    for (var i = 0; i < geometries.length; ++i) {
+    for (var i = 0; i < geometries.length; i++) {
         geometries[i].setParent(this);
     }
 }
@@ -513,11 +528,12 @@ GeometryCollection.prototype.constructor = GeometryCollection;
 
 GeometryCollection.prototype.clone = function() {
     var clonedGeometries = [];
-    for (var i = 0; i < this.childGeometries.length; ++i) {
+    for (var i = 0; i < this.childGeometries.length; i++) {
         clonedGeometries.push(this.childGeometries[i].clone());
     }
     return new GeometryCollection(clonedGeometries);
 }
+
 
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -558,6 +574,16 @@ Point.prototype.getEnvelope = function() {
         this.envelope = new Envelope(this.x, this.y, this.x, this.y);
     }
     return this.envelope;
+}
+
+Point.prototype.round = function(numDecimals) {
+    var pow = Math.pow(10, numDecimals);
+    this.x = Math.round(this.x * pow) / pow;
+    this.y = Math.round(this.y * pow) / pow;
+    
+    if (this.envelope != null) {
+        this.envelope.round(numDecimals);
+    }
 }
 
 Point.prototype.intersects = function(geometry) {
@@ -666,6 +692,16 @@ Envelope.prototype.getEnvelope = function() {
     return this.envelope;
 }
 
+Envelope.prototype.round = function(numDecimals) {
+    var pow = Math.pow(10, numDecimals);
+    this.minX = Math.round(this.minX * pow) / pow;
+    this.minY = Math.round(this.minY * pow) / pow;
+    this.maxX = Math.round(this.maxX * pow) / pow;
+    this.maxY = Math.round(this.maxY * pow) / pow;
+    
+    Geometry.prototype.round.call(this, numDecimals);
+}
+
 Envelope.prototype.intersects = function(geometry) {
     if (geometry instanceof Point) {
         return geometry.intersects(this);
@@ -740,6 +776,8 @@ Envelope.prototype.grow = function(factor) {
     this.childGeometries[1].setXY(maxX, maxY);
     
     this.invalidateEnvelope();
+    
+    return this;
 }
 
 Envelope.prototype.intersection = function(envelope) {
@@ -827,7 +865,7 @@ export function LineString(points) {
         return;
     }
     
-    for (var i = 0; i < points.length; ++i) {
+    for (var i = 0; i < points.length; i++) {
         points[i].setParent(this);
     }
 }
@@ -877,7 +915,7 @@ LineString.prototype.getLineStrings = function() {
 
 LineString.prototype.clone = function() {
     var clonedPoints = [];
-    for (var i = 0; i < this.childGeometries.length; ++i) {
+    for (var i = 0; i < this.childGeometries.length; i++) {
         clonedPoints.push(this.childGeometries[i].clone());
     }
     return new LineString(clonedPoints);
@@ -885,7 +923,7 @@ LineString.prototype.clone = function() {
 
 LineString.prototype.getLength = function() {
     var length = 0;
-    for (var i = 1; i < this.childGeometries.length; ++i) {
+    for (var i = 1; i < this.childGeometries.length; i++) {
         length += this.childGeometries[i].getDistance(this.childGeometries[i - 1]);
     }
     return length;
@@ -893,12 +931,29 @@ LineString.prototype.getLength = function() {
 
 LineString.prototype.getArea = function() {
     var area = 0;
-    for (var i = 0; i < this.childGeometries.length; ++i) {
+    for (var i = 0; i < this.childGeometries.length; i++) {
         var j = (i + 1) % this.childGeometries.length;
         area += this.childGeometries[i].x * this.childGeometries[j].y;
         area -= this.childGeometries[i].y * this.childGeometries[j].x;
     }
     return Math.abs(area / 2);
+}
+
+LineString.prototype.getLabelPoint = function(numSlices) {
+    var labelDistance = this.getLength() / 2;
+    var cumulativeDistance = 0;
+    for (var i = 1; i < this.childGeometries.length; i++) {
+        var point = this.childGeometries[i];
+        var previousPoint = this.childGeometries[i - 1];
+        var additionalDistance = point.getDistance(previousPoint);
+        if (cumulativeDistance + additionalDistance >= labelDistance) {
+            var ratio = (labelDistance - cumulativeDistance) / additionalDistance;
+            var pointX = (point.x - previousPoint.x) * ratio + previousPoint.x;
+            var pointY = (point.y - previousPoint.y) * ratio + previousPoint.y;
+            return new Point(pointX, pointY);
+        }
+        cumulativeDistance += additionalDistance;
+    }
 }
 
 
@@ -939,10 +994,146 @@ Polygon.prototype.intersects = function(geometry) {
 
 Polygon.prototype.clone = function() {
     var clonedLineStrings = [];
-    for (var i = 0; i < this.childGeometries.length; ++i) {
+    for (var i = 0; i < this.childGeometries.length; i++) {
         clonedLineStrings.push(this.childGeometries[i].clone());
     }
     return new Polygon(clonedLineStrings);
+}
+
+Polygon.prototype.getLength = function() {
+    return this.childGeometries[0].getLength();
+}
+
+Polygon.prototype.getArea = function() {
+    return this.childGeometries[0].getArea();
+}
+
+Polygon.prototype.getLabelPoint = function(numSlices) {
+    var horizontalScanLines = [];
+    var envelope = this.getEnvelope();
+    for (var i = 0; i < numSlices; i++) {
+        var y = envelope.minY + envelope.getHeight() / (numSlices + 1) * (i + 1);
+        horizontalScanLines.push(this.getHorizontalScanLine(y));
+        horizontalScanLines[i].malusFactor = 1 - 0.2 / (numSlices - 1) * Math.abs((numSlices - 1) / 2 - i);
+    }
+    var horizontalScanLine = horizontalScanLines.sort(function(a, b) { return b.distance * b.malusFactor - a.distance * a.malusFactor; })[0];
+    var pointX = (horizontalScanLine.x0 + horizontalScanLine.x1) / 2;
+    var pointY = horizontalScanLine.y;
+    var verticalScanLine = this.getVerticalScanLine(pointX, pointY);
+    var marginFactor = 0.3;
+    var marginMinY = verticalScanLine.y0 + marginFactor * (verticalScanLine.y1 - verticalScanLine.y0);
+    var marginMaxY = verticalScanLine.y1 - marginFactor * (verticalScanLine.y1 - verticalScanLine.y0);
+    if (pointY <= marginMinY) {
+        return new Point(pointX, marginMinY);
+    }
+    if (pointY >= marginMaxY) {
+        return new Point(pointX, marginMaxY);
+    }
+    return new Point(pointX, pointY);
+}
+
+Polygon.prototype.getHorizontalScanLine = function(y) {
+    var points = this.getPoints();
+    var segments = [];
+    for (var i = 1; i < points.length; i++) {
+        if (points[i - 1].y == points[i].y) {
+            continue;  // Skip horizontal segments;
+        }
+        segments.push([points[i - 1], points[i]]);
+    }
+    
+    var selectedSegments = [];
+    for (var j = 0; j < segments.length; j++) {
+        var segment = segments[j];
+        var minY = Math.min(segment[0].y, segment[1].y);
+        var maxY = Math.max(segment[0].y, segment[1].y);
+        var nextSegment = (j < segments.length - 1)? segments[j + 1]: segments[0];
+        var nextMinY = Math.min(nextSegment[0].y, nextSegment[1].y);
+        var nextMaxY = Math.max(nextSegment[0].y, nextSegment[1].y);
+        if ((y < minY) || (y > maxY)) {
+            continue;  // No intersection, so skip current segment.
+        }
+        if (((y == minY) && (y == nextMaxY)) || ((y == maxY) && (y == nextMinY))) {
+            continue;  // Treat current and next segment as one, so skip current segment.
+        }
+        if (((y == minY) && (y == nextMinY)) || ((y == maxY) && (y == nextMaxY))) {
+            if (j < segments.length - 1) {
+                j++;                            // Skip both current and next segment;
+                continue;
+            } else {
+                selectedSegments.splice(0, 1);  // Skip last segment and remove first segment;
+                break;
+            }
+        }
+        selectedSegments.push({
+            x: (y - segment[0].y) / (segment[1].y - segment[0].y) * (segment[1].x - segment[0].x) + segment[0].x,
+            segment: segment
+        });
+    }
+    selectedSegments.sort(function(a, b) { return a.x - b.x; });
+    
+    var scanLines = [];
+    for (var k = 0; k < selectedSegments.length; k = k + 2) {
+        scanLines.push({
+            x0: selectedSegments[k].x,
+            x1: selectedSegments[k + 1].x,
+            y: y,
+            distance: selectedSegments[k + 1].x - selectedSegments[k].x
+        });
+    }
+    return scanLines.sort(function(a, b) { return b.distance - a.distance; })[0];  // Returns the longest scanline.
+}
+
+Polygon.prototype.getVerticalScanLine = function(x, y) {
+    var points = this.getPoints();
+    var segments = [];
+    for (var i = 1; i < points.length; i++) {
+        if (points[i - 1].x == points[i].x) {
+            continue;  // Skip vertical segments;
+        }
+        segments.push([points[i - 1], points[i]]);
+    }
+    
+    var selectedSegments = [];
+    for (var j = 0; j < segments.length; j++) {
+        var segment = segments[j];
+        var minX = Math.min(segment[0].x, segment[1].x);
+        var maxX = Math.max(segment[0].x, segment[1].x);
+        var nextSegment = (j < segments.length - 1)? segments[j + 1]: segments[0];
+        var nextMinX = Math.min(nextSegment[0].x, nextSegment[1].x);
+        var nextMaxX = Math.max(nextSegment[0].x, nextSegment[1].x);
+        if ((x < minX) || (x > maxX)) {
+            continue;  // No intersection, so skip current segment.
+        }
+        if (((x == minX) && (x == nextMaxX)) || ((x == maxX) && (x == nextMinX))) {
+            continue;  // Treat current and next segment as one, so skip current segment.
+        }
+        if (((x == minX) && (x == nextMinX)) || ((x == maxX) && (x == nextMaxX))) {
+            if (j < segments.length - 1) {
+                j++;                            // Skip both current and next segment;
+                continue;
+            } else {
+                selectedSegments.splice(0, 1);  // Skip last segment and remove first segment;
+                break;
+            }
+        }
+        selectedSegments.push({
+            y: (x - segment[0].x) / (segment[1].x - segment[0].x) * (segment[1].y - segment[0].y) + segment[0].y,
+            segment: segment
+        });
+    }
+    selectedSegments.sort(function(a, b) { return a.y - b.y; });
+    
+    for (var k = 0; k < selectedSegments.length; k = k + 2) {
+        if ((y >= selectedSegments[k].y) && (y <= selectedSegments[k + 1].y)) {  // Returns the scanline that matches the given y.
+            return {
+                x: x,
+                y0: selectedSegments[k].y,
+                y1: selectedSegments[k + 1].y,
+                distance: selectedSegments[k + 1].y - selectedSegments[k].y
+            };
+        }
+    }
 }
 
 
@@ -1025,7 +1216,7 @@ WKTConverter.prototype.wktToLineString = function(wkt) {
     var points = [];
     wkt = wkt.match(this.lineStringRegExp)[1];
     var pointStrings = wkt.split(/,\s?/);
-    for (var i = 0; i < pointStrings.length; ++i) {
+    for (var i = 0; i < pointStrings.length; i++) {
         var coordStrings = pointStrings[i].split(" ");
         points.push(new Point(parseFloat(coordStrings[0]), parseFloat(coordStrings[1])));
     }
@@ -1059,7 +1250,7 @@ WKTConverter.prototype.geometryToWKT = function(geometry) {
 
 WKTConverter.prototype.geometryCollectionToWKT = function(geometryCollection) {
     var wkt = "GEOMETRYCOLLECTION(";
-    for (var i = 0; i < geometryCollection.childGeometries.length; ++i) {
+    for (var i = 0; i < geometryCollection.childGeometries.length; i++) {
         wkt += this.geometryToWKT(geometryCollection.childGeometries[i]);
         if (i < geometryCollection.childGeometries.length - 1) {
             wkt += ",";
@@ -1082,7 +1273,7 @@ WKTConverter.prototype.polygonToWKT = function(polygon) {
 
 WKTConverter.prototype.childCoordsToWKT = function(geometry) {
     var wkt = "(";
-    for (var i = 0; i < geometry.childGeometries.length; ++i) {
+    for (var i = 0; i < geometry.childGeometries.length; i++) {
         var child = geometry.childGeometries[i];
         if (child instanceof Point) {
             wkt += child.x + " " + child.y;
@@ -1108,6 +1299,22 @@ WKTConverter.prototype.wktToCoordPath = function(wkt) {
 
 
 export function SVGConverter() { }
+
+SVGConverter.prototype.pathToGeometry = function(path) {
+    var points = [];
+    var pointStrings = path.replace(/^M *| +Z.*$/g, "").split(/ +[KL] */);  // Converts the first linestring only, because it is hard to determine whether subsequent linestrings are interior or exterior.
+    for (var i = 0; i < pointStrings.length; i++) {
+        var coordStrings = pointStrings[i].split(" ");
+        points.push(new Point(parseFloat(coordStrings[0]), parseFloat(coordStrings[1])));
+    }
+    if (points.length == 1) {
+        return points[0];
+    }
+    if (!points[0].equals(points[points.length - 1])) {
+        return new LineString(points);
+    }
+    return new Polygon([new LineString(points)]);
+}
 
 SVGConverter.prototype.geometryToPixPath = function(bounds, centerScale, geometry) {
     var path = "";
@@ -1192,6 +1399,55 @@ CSSConverter.prototype.pointToWorldCSS = function(point, css) {
     }
     
     return worldCSS;
+}
+
+
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* Merging js: geometrymodel/converters/JSONConverter.js begins */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+
+export function JsonConverter() { }
+
+JsonConverter.prototype.geometryToJson = function(geometry, stringify) {
+    var getType = function(geometry) {
+        if (geometry instanceof GeometryCollection) {
+            return "GeometryCollection";
+        }
+        if (geometry instanceof Point) {
+            return "Point";
+        }
+        if (geometry instanceof LineString) {
+            return "LineString";
+        }
+        if (geometry instanceof Polygon) {
+            return "Polygon";
+        }
+        if (geometry instanceof Envelope) {
+            return "Envelope";
+        }
+        return "Geometry";
+    };
+    var getCoordinates = function(geometry) {
+        if (geometry instanceof Point) {
+            return [geometry.x, geometry.y];
+        }
+        var coordinates = [];      
+        for (var i = 0; i < geometry.childGeometries.length; i++) {
+            coordinates.push(getCoordinates(geometry.childGeometries[i]));
+        }
+        return coordinates;
+    };
+    var json = {
+        type: getType(geometry),
+        coordinates: getCoordinates(geometry)
+    };
+    
+    if (stringify) {
+        return JSON.stringify(json);
+    }
+    return json;
 }
 
 
@@ -1371,7 +1627,7 @@ ToURLFeatureCommand.prototype.getURL = function(propertyValues) {
     if (propertyValues == null) {
         return null;
     }
-    for (var i = 0; i < propertyValues.length; ++i) {
+    for (var i = 0; i < propertyValues.length; i++) {
         if (this.isURL(propertyValues[i])) {
             return propertyValues[i];
         }
@@ -1494,6 +1750,7 @@ export function FilterModel() {
 FilterModel.EQUALS = 0;
 FilterModel.LESS_OR_EQUALS = 1;
 FilterModel.GREATER_OR_EQUALS = 2;
+FilterModel.IN = 3;
 
 
 
@@ -1506,7 +1763,7 @@ export function Filter(propertyIndexOrName, value, operator) {
     this.propertyIndex = (typeof propertyIndexOrName == "number"? propertyIndexOrName: null);
     this.propertyName = (typeof propertyIndexOrName == "string"? propertyIndexOrName: null);
     this.value = (parseFloat(value) == value)? parseFloat(value): value;
-    this.operator = ((operator == "<=")? FilterModel.LESS_OR_EQUALS: (operator == ">=")? FilterModel.GREATER_OR_EQUALS: FilterModel.EQUALS);
+    this.operator = (operator.toUpperCase() == "IN")? FilterModel.IN: (operator == "<=")? FilterModel.LESS_OR_EQUALS: (operator == ">=")? FilterModel.GREATER_OR_EQUALS: FilterModel.EQUALS;
     this.title = null;
 }
 
@@ -1853,9 +2110,21 @@ export function EnvelopeModel(boundsModel, focusModel) {
     this.bounds = null;
     this.centerScale = null;
     this.animationCenterScale = null;
+    this.incubationCenterScale = null;
     
     this.envelope = null;
     this.animationEnvelope = null;
+    this.incubationEnvelope = null;
+}
+
+EnvelopeModel.prototype.setEnvelope = function(envelope) {
+    var bounds = this.boundsModel.bounds;
+    var centerScale = this.focusModel.centerScale;
+    
+    var centerX = envelope.minX + envelope.getWidth() / 2;
+    var centerY = envelope.minY + envelope.getHeight() / 2;
+    var scale = Math.max(envelope.getWidth() / bounds.width, envelope.getHeight() / bounds.height) / centerScale.coordPixFactor * 1.05;
+    this.focusModel.setCenterScale(new CenterScale(centerX, centerY, scale), FocusModel.IF_REQUIRED_UPPER);
 }
 
 EnvelopeModel.prototype.getEnvelope = function() {
@@ -1866,6 +2135,7 @@ EnvelopeModel.prototype.getEnvelope = function() {
         this.bounds = bounds;
         this.envelope = null;
         this.animationEnvelope = null;
+        this.incubationEnvelope = null;
     }
     if (this.centerScale != centerScale) {
         this.centerScale = centerScale;
@@ -1887,6 +2157,7 @@ EnvelopeModel.prototype.getAnimationEnvelope = function() {
         this.bounds = bounds;
         this.envelope = null;
         this.animationEnvelope = null;
+        this.incubationEnvelope = null;
     }
     if (this.animationCenterScale != animationCenterScale) {
         this.animationCenterScale = animationCenterScale;
@@ -1898,6 +2169,28 @@ EnvelopeModel.prototype.getAnimationEnvelope = function() {
     }
     
     return this.animationEnvelope;
+}
+
+EnvelopeModel.prototype.getIncubationEnvelope = function() {
+    var bounds = this.boundsModel.bounds;
+    var incubationCenterScale = this.focusModel.incubationCenterScale;
+    
+    if (this.bounds != bounds) {
+        this.bounds = bounds;
+        this.envelope = null;
+        this.animationEnvelope = null;
+        this.incubationEnvelope = null;
+    }
+    if (this.incubtionCenterScale != incubationCenterScale) {
+        this.incubationCenterScale = incubationCenterScale;
+        this.incubationEnvelope = null;
+    }
+    
+    if ((this.incubationEnvelope == null) && (bounds != null) && (incubationCenterScale != null)) {
+        this.incubationEnvelope = incubationCenterScale.toEnvelope(bounds.width, bounds.height);
+    }
+    
+    return this.incubationEnvelope;
 }
 
 
@@ -2403,8 +2696,7 @@ export function VectorTile(minX, maxY, scale, tileX, tileY, tileWidth, tileHeigh
     this.corrupted = false;
     this.data = null;
     
-    this.vectorData = [];
-    this.extent = 4096;
+    this.snoopData = null;
     this.symbology = null;
 }
 
@@ -2430,6 +2722,7 @@ export function TileModel() {
     this.layer = null;
     this.loader = null;
     this.protocol = "TMS";
+    this.numResetRuns = 1;
     this.tileWidth = 256;
     this.tileHeight = 256;
     this.tiles = [];
@@ -2437,8 +2730,43 @@ export function TileModel() {
     this.ctx = null;  // Used only for tile models that draw on a canvas.
 }
 
+TileModel.prototype.setBoundsAndCenterScales = function(bounds, centerScale, animationCenterScale, envelope, animationEnvelope) {
+    if (bounds == null) {
+        return;
+    }
+    
+    var boundsChanged = false;
+    var centerScaleChanged = false;
+    var animationCenterScaleChanged = false;
+    if (!bounds.equals(this.bounds)) {
+        this.bounds = bounds;
+        boundsChanged = true;
+    }
+    if (!centerScale.equals(this.centerScale)) {
+        this.centerScale = centerScale;
+        centerScaleChanged = true;
+    }
+    if (!animationCenterScale.equals(this.animationCenterScale)) {
+        this.animationCenterScale = animationCenterScale;
+        animationCenterScaleChanged = true;
+    }
+    
+    this.envelope = envelope;
+    this.animationEnvelope = animationEnvelope;
+    
+    if (boundsChanged || centerScaleChanged) {
+        this.loadTiles();
+    }
+    if (boundsChanged || animationCenterScaleChanged) {
+        this.resetTiles();
+    }
+}
+
 TileModel.prototype.setBounds = function(bounds, envelope, animationEnvelope) {
-    if ((bounds == null) || (bounds.equals(this.bounds))) {
+    if (bounds == null) {
+        return;
+    }
+    if (bounds.equals(this.bounds)) {
         return;
     }
     
@@ -2462,6 +2790,10 @@ TileModel.prototype.setAnimationCenterScale = function(animationCenterScale, ani
 }
 
 TileModel.prototype.setLayer = function(layer) {
+    if (this.layer == layer) {
+        return;
+    }
+    
     if ((this.loader != null) && (this.layer != null)) {
         this.loader.remove(this.layer.name);
     }
@@ -2472,7 +2804,7 @@ TileModel.prototype.setLayer = function(layer) {
     this.tiles = [];
     this.tileIndex = {};
     this.loadTiles();
-    this.resetTiles();
+    //this.resetTiles();
 }
 
 TileModel.prototype.loadTiles = function() {
@@ -2498,47 +2830,22 @@ TileModel.prototype.loadTiles = function() {
     }
     
     var zoomLevel = this.srs.getZoomLevel(this.centerScale.scale, this.maxZoomLevel);
-    var tileLimit = Math.pow(2, zoomLevel.zoomLevel);
-    var leftTileX = Math.floor((envelope.minX - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
-    var topTileY = Math.max(Math.floor((this.srs.maxY - envelope.maxY) / zoomLevel.resolution / this.tileHeight), 0);
-    var rightTileX = Math.floor((envelope.maxX - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
-    var bottomTileY = Math.min(Math.floor((this.srs.maxY - envelope.minY) / zoomLevel.resolution / this.tileHeight), tileLimit - 1);
-    
-    for (var tileY = topTileY; tileY <= bottomTileY; tileY++) {
-        for (var tileX = leftTileX; tileX <= rightTileX; tileX++) {
-            var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);
-            
-            if ((tile == null) || (tile.corrupted && (tile.corrupted + 7000 < performance.now())) || this.tileNeedsReload(tile)) {
-                if (tile == null) {
-                    var minX = tileX * this.tileWidth * zoomLevel.resolution + this.srs.minX;
-                    var maxY = -(tileY * this.tileHeight * zoomLevel.resolution - this.srs.maxY);
-                    
-                    var url = null;
-                    if (this.protocol != "WMTS") {
-                        url = this.layer.urlExtension;
-                        url = url.replace("$Z", zoomLevel.zoomLevel);
-                        url = url.replace("$X", ((tileX % tileLimit) + tileLimit) % tileLimit);
-                        url = url.replace("$Y", tileY);
-                        url = this.layer.baseURL + url;
-                    } else {
-                        var maxX = (tileX + 1) * this.tileWidth * zoomLevel.resolution + this.srs.minX;
-                        var minY = -((tileY + 1) * this.tileHeight * zoomLevel.resolution - this.srs.maxY);
-                        url = WMSProtocol.getMapURL(this.layer, this.srs, minX, minY, maxX, maxY, this.tileWidth, this.tileHeight, true, null);
-                    }
-                    
-                    tile = this.createTile(minX, maxY, zoomLevel.scale, tileX, tileY, this.tileWidth, this.tileHeight, url);
-                    this.addTile(zoomLevel.zoomLevel, tile);
-                } else {
-                    tile.completed = false;
-                    tile.corrupted = false;
-                }
-                
-                if (this.loader != null) {
-                    this.loader.add(this.layer.name);
-                }
-                
-                this.loadTileData(tile);
+    var tp = this.getTilePositions(zoomLevel, envelope);
+    for (var i = 0; i < tp.length; i++) {
+        var tile = tp[i].tile;
+        if ((tile == null) || (tile.corrupted && (tile.corrupted + 7000 < performance.now())) || tp[i].tileNeedsReload) {
+            if (tile == null) {
+                tile = this.createAndAddTile(zoomLevel, tp[i].tileX, tp[i].tileY);
+            } else {
+                tile.completed = false;
+                tile.corrupted = false;
             }
+            
+            if (this.loader != null) {
+                this.loader.add(this.layer.name);
+            }
+            
+            this.loadTileData(tile);
         }
     }
 }
@@ -2573,8 +2880,33 @@ TileModel.prototype.resetTiles = function() {
     if (envelope == null) {
         return;
     }
-
+    
     var zoomLevel = this.srs.getZoomLevel(this.animationCenterScale.scale, this.maxZoomLevel);
+    var tp = this.getTilePositions(zoomLevel, envelope);
+    for (var j = 0; j < this.numResetRuns; j++) {
+        for (var k = 0; k < tp.length; k++) {
+            var tile = tp[k].tile;
+            if (this.ctx != null) {
+                if ((tile != null) && tile.completed && !tile.corrupted && !tp[k].tileNeedsReload) {
+                    tile.reset(this.bounds, this.animationCenterScale);
+                    this.drawTile(tile, false, j);
+                } else if (j == 0) {
+                    var minX = tp[k].tileX * this.tileWidth * zoomLevel.resolution + this.srs.minX;
+                    var maxY = -(tp[k].tileY * this.tileHeight * zoomLevel.resolution - this.srs.maxY);
+                    this.drawTilesAroundZoomLevel(zoomLevel.zoomLevel, zoomLevel.resolution, minX, maxY);
+                }
+            } else {
+                if ((tile != null) && and (j == 0)) {
+                    tile.reset(this.bounds, this.animationCenterScale);
+                    tile.completed = true;
+                }
+            }
+        }
+    }
+}
+
+TileModel.prototype.getTilePositions = function(zoomLevel, envelope) {
+    var tilePositions = [];
     var tileLimit = Math.pow(2, zoomLevel.zoomLevel);
     var leftTileX = Math.floor((envelope.minX - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
     var topTileY = Math.max(Math.floor((this.srs.maxY - envelope.maxY) / zoomLevel.resolution / this.tileHeight), 0);
@@ -2584,24 +2916,41 @@ TileModel.prototype.resetTiles = function() {
     for (var tileY = topTileY; tileY <= bottomTileY; tileY++) {
         for (var tileX = leftTileX; tileX <= rightTileX; tileX++) {
             var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);
-            
-            if (this.ctx != null) {
-                if ((tile != null) && tile.completed && !tile.corrupted) {
-                    tile.reset(this.bounds, this.animationCenterScale);
-                    this.drawTile(tile, true);
-                } else {
-                    var minX = tileX * this.tileWidth * zoomLevel.resolution + this.srs.minX;
-                    var maxY = -(tileY * this.tileHeight * zoomLevel.resolution - this.srs.maxY);
-                    this.drawTilesAroundZoomLevel(zoomLevel.zoomLevel, zoomLevel.resolution, minX, maxY);
-                }
-            } else {
-                if (tile != null) {
-                    tile.reset(this.bounds, this.animationCenterScale);
-                    tile.completed = true;
-                }
-            }
+            tilePositions.push({
+                tileX: tileX,
+                tileY: tileY,
+                tile: tile,
+                tileNeedsReload: tile? this.tileNeedsReload(tile): null
+            });
         }
     }
+    
+    return tilePositions;
+}
+
+TileModel.prototype.createAndAddTile = function(zoomLevel, tileX, tileY) {
+    var minX = tileX * this.tileWidth * zoomLevel.resolution + this.srs.minX;
+    var maxY = -(tileY * this.tileHeight * zoomLevel.resolution - this.srs.maxY);
+    
+    var url = null;
+    if (this.protocol != "WMTS") {
+        var tileLimit = Math.pow(2, zoomLevel.zoomLevel);
+        url = this.layer.urlExtension;
+        url = url.replace("$Z", zoomLevel.zoomLevel);
+        url = url.replace("$X", ((tileX % tileLimit) + tileLimit) % tileLimit);
+        url = url.replace("$Y", tileY);
+        url = this.layer.baseURL + url;
+    } else {
+        var maxX = (tileX + 1) * this.tileWidth * zoomLevel.resolution + this.srs.minX;
+        var minY = -((tileY + 1) * this.tileHeight * zoomLevel.resolution - this.srs.maxY);
+        url = WMSProtocol.getMapURL(this.layer, this.srs, minX, minY, maxX, maxY, this.tileWidth, this.tileHeight, true, null);
+    }
+    
+    var tile = this.createTile(minX, maxY, zoomLevel.scale, tileX, tileY, this.tileWidth, this.tileHeight, url);
+    
+    this.addTile(zoomLevel.zoomLevel, tile);
+    
+    return tile;
 }
 
 TileModel.prototype.createTile = function(minX, maxY, scale, tileX, tileY, tileWidth, tileHeight, url) {
@@ -2609,13 +2958,16 @@ TileModel.prototype.createTile = function(minX, maxY, scale, tileX, tileY, tileW
 }
 
 TileModel.prototype.addTile = function(zoomLevel, tile) {
+    var tileX = tile.tileX;
+    var tileY = tile.tileY;
+    
     if (this.tileIndex[zoomLevel] == null) {
         this.tileIndex[zoomLevel] = {};
     }
-    if (this.tileIndex[zoomLevel][tile.tileX] == null) {
-        this.tileIndex[zoomLevel][tile.tileX] = {};
+    if (this.tileIndex[zoomLevel][tileX] == null) {
+        this.tileIndex[zoomLevel][tileX] = {};
     }
-    this.tileIndex[zoomLevel][tile.tileX][tile.tileY] = this.tiles.push(tile) - 1;
+    this.tileIndex[zoomLevel][tileX][tileY] = this.tiles.push(tile) - 1;
 }
 
 TileModel.prototype.getTile = function(zoomLevel, tileX, tileY) {
@@ -2659,10 +3011,7 @@ TileModel.prototype.completeTile = function(tile, success) {
             (this.layer != null) && this.layer.visible &&
             (this.animationCenterScale != null) && (this.srs.getZoomLevel(this.animationCenterScale.scale, this.maxZoomLevel).zoomLevel == zoomLevel.zoomLevel)
         ) {
-            tile.reset(this.bounds, this.animationCenterScale);
-            if (this.ctx != null) {
-                this.drawTile(tile, true);
-            }
+            this.resetTiles();
         }
     } else {
         tile.corrupted = performance.now();
@@ -2680,18 +3029,9 @@ TileModel.prototype.drawTilesAroundZoomLevel = function(zl, rs, minX, maxY) {
         var subTileY = Math.round((this.srs.maxY - maxY) / resolution / this.tileHeight * zoomFactor) / zoomFactor;
         var tileY = Math.max(Math.floor(subTileY), 0);
         var tile = this.getTile(zoomLevel, tileX, tileY);
-        if ((tile != null) && tile.completed && !tile.corrupted) {
+        if ((tile != null) && tile.completed && !tile.corrupted && !this.tileNeedsReload(tile)) {
             tile.resetWithPoint(this.bounds, this.animationCenterScale, minX, maxY);
-            
-            var width = tile.tileWidth / zoomFactor;
-            var height = tile.tileHeight / zoomFactor;
-            this.ctx.drawImage(
-                tile.data,
-                (subTileX % 1) * tile.tileWidth, (subTileY % 1) * tile.tileHeight,
-                width, height,
-                Math.round(tile.x), Math.round(tile.y),
-                Math.ceil(tile.scaling * width), Math.ceil(tile.scaling * height)
-            );
+            this.drawTilePartly(tile, (subTileX % 1) * tile.tileWidth, (subTileY % 1) * tile.tileHeight, tile.tileWidth / zoomFactor, tile.tileHeight / zoomFactor);
             break;
         }
     }
@@ -2704,15 +3044,15 @@ TileModel.prototype.drawTilesAroundZoomLevel = function(zl, rs, minX, maxY) {
     for (var tileY = topTileY; tileY <= topTileY + 1; tileY++) {
         for (var tileX = leftTileX; tileX <= leftTileX + 1; tileX++) {
             var tile = this.getTile(zoomLevel, tileX, tileY);
-            if ((tile != null) && tile.completed && !tile.corrupted) {
+            if ((tile != null) && tile.completed && !tile.corrupted && !this.tileNeedsReload(tile)) {
                 tile.reset(this.bounds, this.animationCenterScale);
-                this.drawTile(tile, false);
+                this.drawTile(tile, true);
             }
         }
     }
 }
 
-TileModel.prototype.drawTile = function(tile, clear) {
+TileModel.prototype.drawTile = function(tile, clear, run) {
     var x = Math.round(tile.x);
     var y = Math.round(tile.y);
     var width = Math.round(tile.x - x + tile.scaling * tile.tileWidth);
@@ -2720,7 +3060,21 @@ TileModel.prototype.drawTile = function(tile, clear) {
     if (clear) {
         this.ctx.clearRect(x, y, width, height);
     }
-    this.ctx.drawImage(tile.data, x, y, width, height);
+    this.drawTileImage(tile, x, y, width, height, run);
+}
+
+TileModel.prototype.drawTileImage = function(tile, dx, dy, dWidth, dHeight, run) {
+    this.ctx.drawImage(tile.data, dx, dy, dWidth, dHeight);
+}
+
+TileModel.prototype.drawTilePartly = function(tile, x, y, width, height) {
+    this.ctx.drawImage(
+        tile.data,
+        x, y,
+        width, height,
+        Math.round(tile.x), Math.round(tile.y),
+        Math.ceil(tile.scaling * width), Math.ceil(tile.scaling * height)
+    );
 }
 
 
@@ -2742,11 +3096,14 @@ export function VectorTileModel() {
     this.layer = null;
     this.loader = null;
     this.protocol = "MVT";
+    this.numResetRuns = 2;
     this.tileWidth = 256;
     this.tileHeight = 256;
     this.tiles = [];
     this.tileIndex = {};
     this.ctx = null;  // Used only for tile models that draw on a canvas.
+    
+    this.snoopMargin = 32;
 }
 
 VectorTileModel.prototype = new TileModel();
@@ -2759,6 +3116,40 @@ VectorTileModel.prototype.createTile = function(minX, maxY, scale, tileX, tileY,
 VectorTileModel.prototype.tileNeedsReload = function(tile) { }  // Set by component;
 
 VectorTileModel.prototype.loadTileData = function(tile) { }  // Set by component;
+
+VectorTileModel.prototype.drawTileImage = function(tile, dx, dy, dWidth, dHeight, run) {
+    if (run == 0) {
+        this.ctx.drawImage(tile.data, dx, dy, dWidth, dHeight);
+    } else if (tile.snoopData != null) {
+        var scaledSnoopMargin = Math.round(tile.scaling * this.snoopMargin);
+        this.ctx.drawImage(
+            tile.snoopData,
+            0, 0,
+            tile.tileWidth + 2 * this.snoopMargin, tile.tileHeight + 2 * this.snoopMargin,
+            dx - scaledSnoopMargin, dy - scaledSnoopMargin,
+            dWidth + 2 * scaledSnoopMargin, dHeight + 2 * scaledSnoopMargin
+        );
+    }
+}
+
+VectorTileModel.prototype.drawTilePartly = function(tile, x, y, width, height) {
+    this.ctx.drawImage(
+        tile.data,
+        x, y,
+        width, height,
+        Math.round(tile.x), Math.round(tile.y),
+        Math.ceil(tile.scaling * width), Math.ceil(tile.scaling * height)
+    );
+    if (tile.snoopData != null) {
+        this.ctx.drawImage(
+            tile.snoopData,
+            x + this.snoopMargin, y + this.snoopMargin,
+            width, height,
+            Math.round(tile.x), Math.round(tile.y),
+            Math.ceil(tile.scaling * width), Math.ceil(tile.scaling * height)
+        );
+    }
+}
 
 
 
@@ -2779,6 +3170,7 @@ export function UTFGridModel() {
     this.layer = null;
     this.loader = null;
     this.protocol = "UTFGrid";
+    this.numResetRuns = 1;
     this.tileWidth = 256;
     this.tileHeight = 256;
     this.tiles = [];
@@ -2806,7 +3198,7 @@ UTFGridModel.prototype.getFeature = function(pixX, pixY) {
     var worldY = this.animationCenterScale.getWorldY(this.bounds.height, pixY);
     var tileX = Math.floor((worldX - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
     var tileY = Math.max(Math.floor((this.srs.maxY - worldY) / zoomLevel.resolution / this.tileHeight), 0);
-    var tile = this.getTile(tileX, tileY, zoomLevel.scale);
+    var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);
     if (tile == null) {
         return null;
     }
@@ -3099,8 +3491,11 @@ export function MapFeatureModel() {
     this.fillRule = "evenodd";
     this.ctxShared = false;
     this.cssFunction = null;
+    this.label = false;
     
+    this.patterns = null;
     this.ctx = null;
+    this.ctxHasSnoopMargin = false;
     this.style = null;
     
     this.inverseFillPath = "";
@@ -3117,7 +3512,7 @@ export function MapFeatureModel() {
 MapFeatureModel.prototype.setFilter = function(filterExpression) {
     this.filter = null;
     if (filterExpression != null) {
-        var match = filterExpression.match(/(\[(\d+)\]|[\w\.]*)\s*([=<>]=)\s*(.*)/);
+        var match = filterExpression.match(/(\[(\d+)\]|[\w\.]*)\s*([=<>]=)\s*(.*)/);  // Does not support IN operator.
         if (match[2] != null) {
             this.filter = new Filter(parseInt(match[2]), match[4], match[3]);  // propertyIndex
         } else {
@@ -3176,12 +3571,13 @@ MapFeatureModel.prototype.setFeatures = function(features) {
             
             for (var j = 0; j < geometries.length; j++) {
                 if ((this.filter != null) && (this.filter.propertyName != null) && (
-                    ((this.filter.propertyName == "") && (this.filter.operator == FilterModel.EQUALS)            && (i != this.filter.value)) ||                 // e.g. "== 0", the first feature
-                    ((this.filter.propertyName == "") && (this.filter.operator == FilterModel.LESS_OR_EQUALS)    && !(i <= this.filter.value)) ||                // e.g. "<= 2", the first 3 features
-                    ((this.filter.propertyName == "") && (this.filter.operator == FilterModel.GREATER_OR_EQUALS) && !(i >= this.filter.value)) ||                // e.g. ">= 6", all features, except first 5
-                    ((this.filter.propertyName != "") && (this.filter.operator == FilterModel.EQUALS)            && (filterValues[j] != this.filter.value)) ||   // e.g. "foo == bar"
-                    ((this.filter.propertyName != "") && (this.filter.operator == FilterModel.LESS_OR_EQUALS)    && !(filterValues[j] <= this.filter.value)) ||  // e.g. "foo <= bar"
-                    ((this.filter.propertyName != "") && (this.filter.operator == FilterModel.GREATER_OR_EQUALS) && !(filterValues[j] >= this.filter.value))     // e.g. "foo >= bar"
+                    ((this.filter.propertyName == "") && (this.filter.operator == FilterModel.EQUALS)            && (i != this.filter.value)) ||                  // e.g. "== 0", the first feature
+                    ((this.filter.propertyName == "") && (this.filter.operator == FilterModel.LESS_OR_EQUALS)    && !(i <= this.filter.value)) ||                 // e.g. "<= 2", the first 3 features
+                    ((this.filter.propertyName == "") && (this.filter.operator == FilterModel.GREATER_OR_EQUALS) && !(i >= this.filter.value)) ||                 // e.g. ">= 6", all features, except first 5
+                    ((this.filter.propertyName != "") && (this.filter.operator == FilterModel.EQUALS)            && (filterValues[j] != this.filter.value)) ||    // e.g. "foo == bar"
+                    ((this.filter.propertyName != "") && (this.filter.operator == FilterModel.LESS_OR_EQUALS)    && !(filterValues[j] <= this.filter.value)) ||   // e.g. "foo <= bar"
+                    ((this.filter.propertyName != "") && (this.filter.operator == FilterModel.GREATER_OR_EQUALS) && !(filterValues[j] >= this.filter.value)) ||   // e.g. "foo >= bar"
+                    ((this.filter.propertyName != "") && (this.filter.operator == FilterModel.IN)                && !this.filter.value.includes(filterValues[j])) // e.g. "foo IN [bar]"
                 )) {
                     continue;
                 }
@@ -3336,43 +3732,47 @@ MapFeatureModel.prototype.setMapFeatures = function() {
         var dy = this.bounds.height / 2 - this.centerScale.centerY * scaling * yFactor;
         this.ctx.setTransform(scaling, 0, 0, scaling * yFactor, dx, dy);
         
-        this.ctx.fillStyle   = css.fill                                         =            this.style.getPropertyValue("fill");
-        this.ctx.strokeStyle = css.stroke                                       =            this.style.getPropertyValue("stroke");
-        this.ctx.lineWidth   = css.scaledStrokeWidth     = (css.strokeWidth     = parseFloat(this.style.getPropertyValue("stroke-width"))) / scaling;
-        this.ctx.setLineDash(  css.scaledStrokeDasharray = (css.strokeDasharray =            this.style.getPropertyValue("stroke-dasharray").split(" ").map(a => parseFloat(a))).map(a => a / scaling));
-        this.ctx.lineCap     = css.strokeLinecap                                =            this.style.getPropertyValue("stroke-linecap");
-        this.ctx.lineJoin    = css.strokeLinejoin                               =            this.style.getPropertyValue("stroke-linejoin");
-        /*    Will be     */   css.strokeFilter                                 =            this.style.getPropertyValue("--stroke-filter") || "none";
-        /* applied to ctx */   css.scaledGraphicSize     = (css.graphicSize     = parseFloat(this.style.getPropertyValue("--graphic-size") || 8) + 1) / scaling;
-        /*  in due time.  */   css.inverseFill                                  = !!parseInt(this.style.getPropertyValue("--inverse-fill") || 0);
+      if (this.style.getPropertyValue("fill").match(/^url/))
+       (this.ctx.fillStyle   = css.fill                                           = this.patterns[this.style.getPropertyValue("fill")]).setTransform({a: 1 / scaling, b: 0, c: 0, d: 1 / scaling, e: 0, f: 0});
+      else
+        this.ctx.fillStyle   = css.fill                                           =               this.style.getPropertyValue("fill");
+        this.ctx.strokeStyle = css.stroke                                         =               this.style.getPropertyValue("stroke");
+        this.ctx.lineWidth   = css.scaledStrokeWidth      = (css.strokeWidth      =    parseFloat(this.style.getPropertyValue("stroke-width").replace(/^([\d.]{4})[\d]+/, "$1"))) / scaling;  // Max significance of 3, e.g. 1.25 or 12.5 or 10.
+      if (this.style.getPropertyValue("stroke-dasharray") != "none")
+        this.ctx.setLineDash(  css.scaledStrokeDasharray  = (css.strokeDasharray  =               this.style.getPropertyValue("stroke-dasharray").split(/[, ]+/).map(a => parseFloat(a))).map(a => a / scaling));
+        this.ctx.lineCap     = css.strokeLinecap                                  =               this.style.getPropertyValue("stroke-linecap");
+        this.ctx.lineJoin    = css.strokeLinejoin                                 =               this.style.getPropertyValue("stroke-linejoin");
+        /*    Will be    */    css.strokeFilter                                   =               this.style.getPropertyValue("--stroke-filter") || "none";
+        /*    applied    */    css.scaledGraphicSize      = (css.graphicSize      =    parseFloat(this.style.getPropertyValue("--graphic-size") || 8) + 1) / scaling;
+        /*    to ctx     */    css.inverseFill     = this.ctxHasSnoopMargin? false:    !!parseInt(this.style.getPropertyValue("--inverse-fill") || 0);
+        /*      in       */    css.confineFill                                    =    !!parseInt(this.style.getPropertyValue("--confine-fill") || 0);
+        /*   due time.   */    css.scaledConfineFillWidth = (css.confineFillWidth =    parseFloat(this.style.getPropertyValue("stroke-width").replace(/^[\d.]{1,4}|px$/g, "") || 12)) / scaling;  // No decimal point allowed. No trailing zero allowed, e.g. 10 must be 9 or 11.
+        this.ctx.font       = (css.scaledFontSize         = (css.fontSize         =    parseFloat(this.style.getPropertyValue("font-size"))) / scaling) + "px "
+                                                          + (css.fontFamily       =               this.style.getPropertyValue("font-family"));
+        this.ctx.textAlign    = "center";
+        this.ctx.textBaseline = "middle";
         
-        if (css.inverseFill) {
-            var t = this.ctx.getTransform();
-            var c = this.ctx.canvas;
-            var envelope = new Envelope(-t.e / t.a, -(t.f - c.height) / t.d, -(t.e - c.width) / t.a, -t.f / t.d);
-            envelope.grow(1.1);
-            var minX = envelope.minX;
-            var minY = envelope.minY;
-            var maxX = envelope.maxX;
-            var maxY = envelope.maxY;
-            var path = "M" + minX + " " + maxY + " " + " L" + maxX + " " + maxY + " " + maxX + " " + minY + " " + minX + " " + minY + " Z ";
-            this.drawPath(path, css);
-        }
+        this.startInverseFill(css);
     }
     
     if (this.features != null) {
         for (var i = 0; i < this.filterFeatures.length; i++) {
             if (this.cssFunction != null) {  // Implies a canvas.
-                this.cssFunction(css, this.filterFeatures[i]);
                 var scaling = this.centerScale.getNumPixs(1);
+                this.cssFunction(css, this.filterFeatures[i], scaling);
                 
+              if (css.fill instanceof CanvasPattern)
+               (this.ctx.fillStyle   = css.fill).setTransform({a: 1 / scaling, b: 0, c: 0, d: 1 / scaling, e: 0, f: 0});
+              else
                 this.ctx.fillStyle   = css.fill;
                 this.ctx.strokeStyle = css.stroke;
                 this.ctx.lineWidth   = css.scaledStrokeWidth     = parseFloat(css.strokeWidth) / scaling;
+              if (css.strokeDasharray != null)
                 this.ctx.setLineDash(  css.scaledStrokeDasharray =            css.strokeDasharray.map(a => parseFloat(a) / scaling));
                 this.ctx.lineCap     = css.strokeLinecap;
                 this.ctx.lineJoin    = css.strokeLinejoin;
                                        css.scaledGraphicSize     = parseFloat(css.graphicSize) / scaling;
+                this.ctx.font       = (css.scaledFontSize        = parseFloat(css.fontSize) / scaling) + "px " + css.fontFamily;
             }
             
             this.assignGeometry(this.filterFeatures[i], this.filterFeatures[i].geometry, css);
@@ -3384,11 +3784,25 @@ MapFeatureModel.prototype.setMapFeatures = function() {
     } else {  // this.geometry != null
         this.assignGeometry(null, this.geometry, css);
     }
-
+    
     if (this.ctx != null) {
-        if (css.inverseFill) {
-            this.drawPath("", css, true);
-        }
+        this.completeInverseFill(css);
+    }
+}
+
+MapFeatureModel.prototype.startInverseFill = function(css) {
+    if (!css.inverseFill) {
+        return;
+    }
+    
+    var t = this.ctx.getTransform();
+    var c = this.ctx.canvas;
+    var envelope = (new Envelope(-t.e / t.a, -(t.f - c.height) / t.d, -(t.e - c.width) / t.a, -t.f / t.d)).grow(1.1);
+    var path = "M" + envelope.minX + " " + envelope.maxY + " H" + envelope.maxX + " V" + envelope.minY + " H" + envelope.minX + " Z ";
+    if (!css.confineFill) {
+        this.inverseFillPath = path;
+    } else {
+        this.ctx.fill(new Path2D(path), this.fillRule);
     }
 }
 
@@ -3442,46 +3856,53 @@ MapFeatureModel.prototype.assignGeometry = function(mapFeature, geometry, css) {
     }
 }
 
-MapFeatureModel.prototype.drawPath = function(path, css, last) {
-    if (css.inverseFill) {
-        if (!last) {
-            this.inverseFillPath += path;
-            return;
-        } else {
-            path = this.inverseFillPath + path;
-            this.inverseFillPath = "";
-        }
+MapFeatureModel.prototype.completeInverseFill = function(css) {
+    if (!css.inverseFill) {
+        return;
     }
-    if (typeof Path2D === "function") {
-        var stroke = !this.ctxShared? new Path2D(path): new Path2D(path.replace(/K/g, "M").replace(/Z/g, ""));
-        if (css.fill != "none") {
+    
+    if (!css.confineFill) {
+        this.drawPath(this.inverseFillPath, css, true);
+        this.inverseFillPath = "";
+    }
+}
+
+MapFeatureModel.prototype.drawPath = function(path, css, last) {
+    if (this.label) {
+        this.drawText(css);
+        return;
+    }
+    
+    if (css.inverseFill && !css.confineFill && !last) {
+        this.inverseFillPath += path;
+        return;
+    }
+    
+    var stroke = !this.ctxShared? new Path2D(path): new Path2D(path.replace(/K/g, "M").replace(/Z/g, ""));
+    if (css.fill != "none") {
+        if (!css.confineFill) {
             var fill = !this.ctxShared? stroke: new Path2D(path.replace(/K/g, "L"));
             this.ctx.fill(fill, this.fillRule);
+        } else if (!css.inverseFill) {
+            var backupStyles = {strokeStyle: this.ctx.strokeStyle, lineWidth: this.ctx.lineWidth};
+            this.ctx.strokeStyle = css.fill;
+            this.ctx.lineWidth   = css.scaledConfineFillWidth;
+            this.ctx.stroke(stroke);
+            Object.assign(this.ctx, backupStyles);
         }
-        this.ctx.filter = css.strokeFilter;
-        this.ctx.stroke(stroke);
-        this.ctx.filter = "none";
-    } else {  // Polyfill for IE/Edge through version 13.
-        this.ctx.beginPath();
-        path = path.replace(/,/g, " ");
-        var pathItems = path.split(" ");
-        for (var i = 0; i < pathItems.length; i++) {
-            if ((pathItems[i] == "") || (pathItems[i] == "Z") || (pathItems[i] == "L")) {
-                continue;
-            }
-            if (pathItems[i] == "M") {
-                this.ctx.moveTo(pathItems[++i], pathItems[++i]);
-            } else {
-                this.ctx.lineTo(pathItems[i], pathItems[++i]);
-            }
-        }
-        if (css.fill != "none") {
-            this.ctx.fill(this.fillRule);
-        }
-        this.ctx.filter = css.strokeFilter;
-        this.ctx.stroke();
-        this.ctx.filter = "none";
     }
+    this.ctx.filter = css.strokeFilter;
+    this.ctx.stroke(stroke);
+    this.ctx.filter = "none";
+}
+
+MapFeatureModel.prototype.drawText = function(css) {
+    if ((css.labelText == null) || (css.labelPoint == null)) {
+        return;
+    }
+    
+    this.ctx.strokeText(css.labelText, css.labelPoint.x, css.labelPoint.y);
+    this.ctx.fillText(css.labelText, css.labelPoint.x, css.labelPoint.y);
 }
 
 

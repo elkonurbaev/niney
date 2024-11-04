@@ -5,9 +5,21 @@ export function EnvelopeModel(boundsModel, focusModel) {
     this.bounds = null;
     this.centerScale = null;
     this.animationCenterScale = null;
+    this.incubationCenterScale = null;
     
     this.envelope = null;
     this.animationEnvelope = null;
+    this.incubationEnvelope = null;
+}
+
+EnvelopeModel.prototype.setEnvelope = function(envelope) {
+    var bounds = this.boundsModel.bounds;
+    var centerScale = this.focusModel.centerScale;
+    
+    var centerX = envelope.minX + envelope.getWidth() / 2;
+    var centerY = envelope.minY + envelope.getHeight() / 2;
+    var scale = Math.max(envelope.getWidth() / bounds.width, envelope.getHeight() / bounds.height) / centerScale.coordPixFactor * 1.05;
+    this.focusModel.setCenterScale(new CenterScale(centerX, centerY, scale), FocusModel.IF_REQUIRED_UPPER);
 }
 
 EnvelopeModel.prototype.getEnvelope = function() {
@@ -18,6 +30,7 @@ EnvelopeModel.prototype.getEnvelope = function() {
         this.bounds = bounds;
         this.envelope = null;
         this.animationEnvelope = null;
+        this.incubationEnvelope = null;
     }
     if (this.centerScale != centerScale) {
         this.centerScale = centerScale;
@@ -39,6 +52,7 @@ EnvelopeModel.prototype.getAnimationEnvelope = function() {
         this.bounds = bounds;
         this.envelope = null;
         this.animationEnvelope = null;
+        this.incubationEnvelope = null;
     }
     if (this.animationCenterScale != animationCenterScale) {
         this.animationCenterScale = animationCenterScale;
@@ -50,5 +64,27 @@ EnvelopeModel.prototype.getAnimationEnvelope = function() {
     }
     
     return this.animationEnvelope;
+}
+
+EnvelopeModel.prototype.getIncubationEnvelope = function() {
+    var bounds = this.boundsModel.bounds;
+    var incubationCenterScale = this.focusModel.incubationCenterScale;
+    
+    if (this.bounds != bounds) {
+        this.bounds = bounds;
+        this.envelope = null;
+        this.animationEnvelope = null;
+        this.incubationEnvelope = null;
+    }
+    if (this.incubtionCenterScale != incubationCenterScale) {
+        this.incubationCenterScale = incubationCenterScale;
+        this.incubationEnvelope = null;
+    }
+    
+    if ((this.incubationEnvelope == null) && (bounds != null) && (incubationCenterScale != null)) {
+        this.incubationEnvelope = incubationCenterScale.toEnvelope(bounds.width, bounds.height);
+    }
+    
+    return this.incubationEnvelope;
 }
 

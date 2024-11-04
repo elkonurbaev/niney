@@ -13,6 +13,7 @@ geometrymodel/Polygon.js
 geometrymodel/converters/WKTConverter.js
 geometrymodel/converters/SVGConverter.js
 geometrymodel/converters/CSSConverter.js
+geometrymodel/converters/JSONConverter.js
 featuremodel/Feature.js
 featuremodel/FeatureModel.js
 featuremodel/FeatureType.js

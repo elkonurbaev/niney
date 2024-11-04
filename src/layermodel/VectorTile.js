@@ -14,8 +14,7 @@ export function VectorTile(minX, maxY, scale, tileX, tileY, tileWidth, tileHeigh
     this.corrupted = false;
     this.data = null;
     
-    this.vectorData = [];
-    this.extent = 4096;
+    this.snoopData = null;
     this.symbology = null;
 }
 

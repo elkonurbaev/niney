@@ -7,7 +7,7 @@ export function LineString(points) {
         return;
     }
     
-    for (var i = 0; i < points.length; ++i) {
+    for (var i = 0; i < points.length; i++) {
         points[i].setParent(this);
     }
 }
@@ -57,7 +57,7 @@ LineString.prototype.getLineStrings = function() {
 
 LineString.prototype.clone = function() {
     var clonedPoints = [];
-    for (var i = 0; i < this.childGeometries.length; ++i) {
+    for (var i = 0; i < this.childGeometries.length; i++) {
         clonedPoints.push(this.childGeometries[i].clone());
     }
     return new LineString(clonedPoints);
@@ -65,7 +65,7 @@ LineString.prototype.clone = function() {
 
 LineString.prototype.getLength = function() {
     var length = 0;
-    for (var i = 1; i < this.childGeometries.length; ++i) {
+    for (var i = 1; i < this.childGeometries.length; i++) {
         length += this.childGeometries[i].getDistance(this.childGeometries[i - 1]);
     }
     return length;
@@ -73,11 +73,28 @@ LineString.prototype.getLength = function() {
 
 LineString.prototype.getArea = function() {
     var area = 0;
-    for (var i = 0; i < this.childGeometries.length; ++i) {
+    for (var i = 0; i < this.childGeometries.length; i++) {
         var j = (i + 1) % this.childGeometries.length;
         area += this.childGeometries[i].x * this.childGeometries[j].y;
         area -= this.childGeometries[i].y * this.childGeometries[j].x;
     }
     return Math.abs(area / 2);
+}
+
+LineString.prototype.getLabelPoint = function(numSlices) {
+    var labelDistance = this.getLength() / 2;
+    var cumulativeDistance = 0;
+    for (var i = 1; i < this.childGeometries.length; i++) {
+        var point = this.childGeometries[i];
+        var previousPoint = this.childGeometries[i - 1];
+        var additionalDistance = point.getDistance(previousPoint);
+        if (cumulativeDistance + additionalDistance >= labelDistance) {
+            var ratio = (labelDistance - cumulativeDistance) / additionalDistance;
+            var pointX = (point.x - previousPoint.x) * ratio + previousPoint.x;
+            var pointY = (point.y - previousPoint.y) * ratio + previousPoint.y;
+            return new Point(pointX, pointY);
+        }
+        cumulativeDistance += additionalDistance;
+    }
 }
 

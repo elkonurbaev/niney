@@ -33,6 +33,16 @@ Point.prototype.getEnvelope = function() {
     return this.envelope;
 }
 
+Point.prototype.round = function(numDecimals) {
+    var pow = Math.pow(10, numDecimals);
+    this.x = Math.round(this.x * pow) / pow;
+    this.y = Math.round(this.y * pow) / pow;
+    
+    if (this.envelope != null) {
+        this.envelope.round(numDecimals);
+    }
+}
+
 Point.prototype.intersects = function(geometry) {
     if (geometry instanceof Point) {
         return this.equals(geometry);

@@ -7,7 +7,7 @@ export function GeometryCollection(geometries) {
         return;
     }
     
-    for (var i = 0; i < geometries.length; ++i) {
+    for (var i = 0; i < geometries.length; i++) {
         geometries[i].setParent(this);
     }
 }
@@ -17,8 +17,9 @@ GeometryCollection.prototype.constructor = GeometryCollection;
 
 GeometryCollection.prototype.clone = function() {
     var clonedGeometries = [];
-    for (var i = 0; i < this.childGeometries.length; ++i) {
+    for (var i = 0; i < this.childGeometries.length; i++) {
         clonedGeometries.push(this.childGeometries[i].clone());
     }
     return new GeometryCollection(clonedGeometries);
 }
+

@@ -71,7 +71,7 @@ WKTConverter.prototype.wktToLineString = function(wkt) {
     var points = [];
     wkt = wkt.match(this.lineStringRegExp)[1];
     var pointStrings = wkt.split(/,\s?/);
-    for (var i = 0; i < pointStrings.length; ++i) {
+    for (var i = 0; i < pointStrings.length; i++) {
         var coordStrings = pointStrings[i].split(" ");
         points.push(new Point(parseFloat(coordStrings[0]), parseFloat(coordStrings[1])));
     }
@@ -105,7 +105,7 @@ WKTConverter.prototype.geometryToWKT = function(geometry) {
 
 WKTConverter.prototype.geometryCollectionToWKT = function(geometryCollection) {
     var wkt = "GEOMETRYCOLLECTION(";
-    for (var i = 0; i < geometryCollection.childGeometries.length; ++i) {
+    for (var i = 0; i < geometryCollection.childGeometries.length; i++) {
         wkt += this.geometryToWKT(geometryCollection.childGeometries[i]);
         if (i < geometryCollection.childGeometries.length - 1) {
             wkt += ",";
@@ -128,7 +128,7 @@ WKTConverter.prototype.polygonToWKT = function(polygon) {
 
 WKTConverter.prototype.childCoordsToWKT = function(geometry) {
     var wkt = "(";
-    for (var i = 0; i < geometry.childGeometries.length; ++i) {
+    for (var i = 0; i < geometry.childGeometries.length; i++) {
         var child = geometry.childGeometries[i];
         if (child instanceof Point) {
             wkt += child.x + " " + child.y;

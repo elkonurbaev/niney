@@ -1,5 +1,21 @@
 export function SVGConverter() { }
 
+SVGConverter.prototype.pathToGeometry = function(path) {
+    var points = [];
+    var pointStrings = path.replace(/^M *| +Z.*$/g, "").split(/ +[KL] */);  // Converts the first linestring only, because it is hard to determine whether subsequent linestrings are interior or exterior.
+    for (var i = 0; i < pointStrings.length; i++) {
+        var coordStrings = pointStrings[i].split(" ");
+        points.push(new Point(parseFloat(coordStrings[0]), parseFloat(coordStrings[1])));
+    }
+    if (points.length == 1) {
+        return points[0];
+    }
+    if (!points[0].equals(points[points.length - 1])) {
+        return new LineString(points);
+    }
+    return new Polygon([new LineString(points)]);
+}
+
 SVGConverter.prototype.geometryToPixPath = function(bounds, centerScale, geometry) {
     var path = "";
     var lineStrings = geometry.getLineStrings();

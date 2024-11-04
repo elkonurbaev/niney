@@ -15,7 +15,7 @@ ToURLFeatureCommand.prototype.getURL = function(propertyValues) {
     if (propertyValues == null) {
         return null;
     }
-    for (var i = 0; i < propertyValues.length; ++i) {
+    for (var i = 0; i < propertyValues.length; i++) {
         if (this.isURL(propertyValues[i])) {
             return propertyValues[i];
         }

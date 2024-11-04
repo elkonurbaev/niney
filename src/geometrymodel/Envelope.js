@@ -24,6 +24,16 @@ Envelope.prototype.getEnvelope = function() {
     return this.envelope;
 }
 
+Envelope.prototype.round = function(numDecimals) {
+    var pow = Math.pow(10, numDecimals);
+    this.minX = Math.round(this.minX * pow) / pow;
+    this.minY = Math.round(this.minY * pow) / pow;
+    this.maxX = Math.round(this.maxX * pow) / pow;
+    this.maxY = Math.round(this.maxY * pow) / pow;
+    
+    Geometry.prototype.round.call(this, numDecimals);
+}
+
 Envelope.prototype.intersects = function(geometry) {
     if (geometry instanceof Point) {
         return geometry.intersects(this);
@@ -98,6 +108,8 @@ Envelope.prototype.grow = function(factor) {
     this.childGeometries[1].setXY(maxX, maxY);
     
     this.invalidateEnvelope();
+    
+    return this;
 }
 
 Envelope.prototype.intersection = function(envelope) {

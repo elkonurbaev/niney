@@ -43,7 +43,7 @@ Geometry.prototype.removeChild = function(child) {
 }
 
 Geometry.prototype.isChild = function(child) {
-    for (var i = 0; i < this.childGeometries.length; ++i) {
+    for (var i = 0; i < this.childGeometries.length; i++) {
         if (this.childGeometries[i] == child) {
             return true;
         }
@@ -53,7 +53,7 @@ Geometry.prototype.isChild = function(child) {
 
 Geometry.prototype.getPoints = function() {
     var points = [];
-    for (var i = 0; i < this.childGeometries.length; ++i) {
+    for (var i = 0; i < this.childGeometries.length; i++) {
         points = points.concat(this.childGeometries[i].getPoints());
     }
     return points;
@@ -68,7 +68,7 @@ Geometry.prototype.getCenterPoint = function() {
     var points = this.getPoints();
     var sumX = 0;
     var sumY = 0;
-    for (var i = 0; i < points.length; ++i) {
+    for (var i = 0; i < points.length; i++) {
         sumX += points[i].x;
         sumY += points[i].y;
     }
@@ -90,7 +90,7 @@ Geometry.prototype.getEnvelope = function() {
         var minY = Number.MAX_VALUE;
         var maxX = -Number.MAX_VALUE;
         var maxY = -Number.MAX_VALUE;
-        for (var i = 0; i < points.length; ++i) {
+        for (var i = 0; i < points.length; i++) {
             if (minX > points[i].x) {
                 minX = points[i].x;
             }
@@ -107,6 +107,16 @@ Geometry.prototype.getEnvelope = function() {
         this.envelope = new Envelope(minX, minY, maxX, maxY);
     }
     return this.envelope;
+}
+
+Geometry.prototype.round = function(numDecimals) {
+    for (var i = 0; i < this.childGeometries.length; i++) {
+        this.childGeometries[i].round(numDecimals);
+    }
+    
+    if (this.envelope != null) {
+        this.envelope.round(numDecimals);
+    }
 }
 
 Geometry.prototype.intersects = function(geometry) {
@@ -137,5 +147,9 @@ Geometry.prototype.invalidateEnvelope = function() {
     if (this.$parent != null) {
         this.$parent.invalidateEnvelope();
     }
+}
+
+Geometry.prototype.getLabelPoint = function(numSlices) {
+    return this.getCenterPoint();
 }
 

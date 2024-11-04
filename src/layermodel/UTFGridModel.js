@@ -10,6 +10,7 @@ export function UTFGridModel() {
     this.layer = null;
     this.loader = null;
     this.protocol = "UTFGrid";
+    this.numResetRuns = 1;
     this.tileWidth = 256;
     this.tileHeight = 256;
     this.tiles = [];
@@ -37,7 +38,7 @@ UTFGridModel.prototype.getFeature = function(pixX, pixY) {
     var worldY = this.animationCenterScale.getWorldY(this.bounds.height, pixY);
     var tileX = Math.floor((worldX - this.srs.minX) / zoomLevel.resolution / this.tileWidth);
     var tileY = Math.max(Math.floor((this.srs.maxY - worldY) / zoomLevel.resolution / this.tileHeight), 0);
-    var tile = this.getTile(tileX, tileY, zoomLevel.scale);
+    var tile = this.getTile(zoomLevel.zoomLevel, tileX, tileY);
     if (tile == null) {
         return null;
     }
