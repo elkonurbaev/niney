@@ -335,6 +335,9 @@ MapFeatureModel.prototype.startInverseFill = function(css) {
 }
 
 MapFeatureModel.prototype.assignGeometry = function(mapFeature, geometry, css) {
+    if (css.visibility == "hidden") {
+        return;
+    }
     if (this.envelopeCheck && !geometry.intersects(this.envelope)) {
         return;
     }

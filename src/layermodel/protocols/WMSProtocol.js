@@ -35,6 +35,7 @@ WMSProtocol.getMapURL = function(layer, srs, minX, minY, maxX, maxY, tileWidth, 
     url += "&EXCEPTIONS=application/vnd.ogc.se_xml";
     
     if (infoPoint != null) {
+        url += "&QUERY_LAYERS=" + layer.name;
         url += "&X=" + infoPoint.x;
         url += "&Y=" + infoPoint.y;
     }

@@ -5,7 +5,7 @@
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
-/* Last merge : Sun Nov 3 1:30:07 CET 2024  */
+/* Last merge : wo 23 apr 2025 15:27:21 CEST  */
 
 /* Merging order :
 
@@ -1763,7 +1763,7 @@ export function Filter(propertyIndexOrName, value, operator) {
     this.propertyIndex = (typeof propertyIndexOrName == "number"? propertyIndexOrName: null);
     this.propertyName = (typeof propertyIndexOrName == "string"? propertyIndexOrName: null);
     this.value = (parseFloat(value) == value)? parseFloat(value): value;
-    this.operator = (operator.toUpperCase() == "IN")? FilterModel.IN: (operator == "<=")? FilterModel.LESS_OR_EQUALS: (operator == ">=")? FilterModel.GREATER_OR_EQUALS: FilterModel.EQUALS;
+    this.operator = (operator && (operator.toUpperCase() == "IN"))? FilterModel.IN: (operator == "<=")? FilterModel.LESS_OR_EQUALS: (operator == ">=")? FilterModel.GREATER_OR_EQUALS: FilterModel.EQUALS;
     this.title = null;
 }
 
@@ -3807,6 +3807,9 @@ MapFeatureModel.prototype.startInverseFill = function(css) {
 }
 
 MapFeatureModel.prototype.assignGeometry = function(mapFeature, geometry, css) {
+    if (css.visibility == "hidden") {
+        return;
+    }
     if (this.envelopeCheck && !geometry.intersects(this.envelope)) {
         return;
     }
@@ -3949,6 +3952,7 @@ WMSProtocol.getMapURL = function(layer, srs, minX, minY, maxX, maxY, tileWidth, 
     url += "&EXCEPTIONS=application/vnd.ogc.se_xml";
     
     if (infoPoint != null) {
+        url += "&QUERY_LAYERS=" + layer.name;
         url += "&X=" + infoPoint.x;
         url += "&Y=" + infoPoint.y;
     }
